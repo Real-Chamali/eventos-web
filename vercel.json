@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "env": {
+    "NEXT_PUBLIC_SUPABASE_URL": "@next_public_supabase_url",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@next_public_supabase_anon_key",
+    "SUPABASE_SERVICE_ROLE_KEY": "@supabase_service_role_key",
+    "NEXT_PUBLIC_SENTRY_DSN": "@next_public_sentry_dsn",
+    "NEXT_PUBLIC_APP_VERSION": "@next_public_app_version",
+    "NEXT_PUBLIC_APP_URL": "@next_public_app_url",
+    "NODE_ENV": "production"
+  },
+  "installCommand": "npm install",
+  "framework": "nextjs"
+}
