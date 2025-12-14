@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import confetti from 'canvas-confetti'
+import { logger } from '@/lib/utils/logger'
+import { useToast } from '@/lib/hooks'
 
 interface Quote {
   id: string
@@ -31,6 +33,7 @@ export default function QuoteDetailPage() {
   const [loading, setLoading] = useState(true)
   const [closing, setClosing] = useState(false)
   const supabase = createClient()
+  const { error: toastError } = useToast()
 
   useEffect(() => {
     loadQuote()
@@ -54,15 +57,15 @@ export default function QuoteDetailPage() {
         .single()
         .then(res => {
           if (res.error) {
-            console.error('Error loading quote:', res.error)
-            alert('Error al cargar la cotización')
+            logger.error('QuoteDetailPage', 'Error loading quote', res.error)
+            toastError('Error al cargar la cotización')
           } else {
             setQuote(res.data)
           }
         })
     } catch (err) {
-      console.error('Unexpected error:', err)
-      alert('Error inesperado al cargar la cotización')
+      logger.error('QuoteDetailPage', 'Unexpected error loading quote', err as Error)
+      toastError('Error inesperado al cargar la cotización')
     } finally {
       setLoading(false)
     }
@@ -78,7 +81,8 @@ export default function QuoteDetailPage() {
       })
 
       if (error) {
-        alert('Error al cerrar la venta: ' + error.message)
+        toastError('Error al cerrar la venta: ' + error.message)
+        logger.error('QuoteDetailPage', 'Error closing sale', error)
         setClosing(false)
         return
       }
@@ -96,7 +100,8 @@ export default function QuoteDetailPage() {
       }, 1000)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      alert('Error: ' + message)
+      toastError('Error: ' + message)
+      logger.error('QuoteDetailPage', 'Unexpected error closing sale', err as Error)
       setClosing(false)
     }
   }
@@ -180,5 +185,3 @@ export default function QuoteDetailPage() {
     </div>
   )
 }
-
-

@@ -38,10 +38,11 @@ const validated = CreateQuoteSchema.parse(data)
 // utils/logger.ts
 export const logger = {
   error: (context: string, error: any) => {
-    console.error(`[${context}]`, error)
-    // Enviar a servicio como Sentry, LogRocket, etc
+    // Implementación de logger estructurado
   },
-  info: (context: string, msg: string) => console.info(`[${context}]`, msg)
+  info: (context: string, msg: string) => {
+    // Implementación de logger estructurado
+  }
 }
 ```
 

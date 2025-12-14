@@ -4,11 +4,14 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+import { logger } from '@/lib/utils/logger'
+import { useToast } from '@/lib/hooks'
 
 export default function AdminSidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const { error: toastError } = useToast()
 
   const handleLogout = async () => {
     try {
@@ -16,8 +19,8 @@ export default function AdminSidebar() {
       router.push('/login')
       router.refresh()
     } catch (error) {
-      console.error('Error signing out:', error)
-      alert('Error al cerrar sesión')
+      logger.error('AdminSidebar', 'Error signing out', error as Error)
+      toastError('Error al cerrar sesión')
     }
   }
 
@@ -61,5 +64,3 @@ export default function AdminSidebar() {
     </div>
   )
 }
-
-

@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
+import { logger } from '@/lib/utils/logger'
 
 export default async function DashboardLayout({
   children,
@@ -23,7 +24,7 @@ export default async function DashboardLayout({
     .single()
 
   if (profileError) {
-    console.error('Error fetching profile:', profileError)
+    logger.error('DashboardLayout', 'Error fetching profile', profileError)
     redirect('/login')
   }
 
@@ -40,5 +41,3 @@ export default async function DashboardLayout({
     </div>
   )
 }
-
-

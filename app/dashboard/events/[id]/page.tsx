@@ -22,7 +22,8 @@ export default function EventPage() {
       const timeLeft = animationEnd - Date.now()
 
       if (timeLeft <= 0) {
-        return clearInterval(interval)
+        clearInterval(interval)
+        return
       }
 
       const particleCount = 50 * (timeLeft / duration)
@@ -37,6 +38,11 @@ export default function EventPage() {
         origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
       })
     }, 250)
+
+    // Cleanup: limpiar el interval cuando el componente se desmonte
+    return () => {
+      clearInterval(interval)
+    }
   }, [])
 
   return (
