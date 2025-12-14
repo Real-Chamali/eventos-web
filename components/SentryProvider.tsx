@@ -15,10 +15,11 @@ import { logger } from '@/lib/utils/logger'
 
 export function SentryProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
+    // Declarar subscription en el scope del useEffect para que esté disponible en el cleanup
+    let subscription: { unsubscribe: () => void } | null = null
+    
     // Solo inicializar Sentry si está configurado
     if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
-      let subscription: { unsubscribe: () => void } | null = null
-      
       const initializeSentry = async () => {
         try {
           // Dynamic import para evitar errores si Sentry no está disponible
@@ -63,13 +64,14 @@ export function SentryProvider({ children }: { children: React.ReactNode }) {
       }
       
       void initializeSentry()
-      
-      return () => {
-        subscription?.unsubscribe()
-      }
     } else {
       // Sin Sentry configurado - solo usar logger interno
       logger.info('SentryProvider', 'Sentry no configurado, usando logger interno')
+    }
+    
+    // Cleanup function siempre retornada, independientemente de si Sentry está configurado
+    return () => {
+      subscription?.unsubscribe()
     }
   }, [])
 
