@@ -13,7 +13,7 @@ export async function register() {
     try {
       const { initSentry } = await import('./sentry.config')
       initSentry()
-    } catch (error) {
+    } catch {
       // Silenciar errores de Sentry - usar logger interno en su lugar
       console.warn('Sentry no disponible, usando logger interno')
     }

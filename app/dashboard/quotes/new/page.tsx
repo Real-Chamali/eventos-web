@@ -36,7 +36,7 @@ export default function NewQuotePage() {
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { success: toastSuccess, error: toastError } = useToast()
   const debouncedSearchClient = useDebounce(searchClient, 300)
 
@@ -70,7 +70,9 @@ export default function NewQuotePage() {
     return () => {
       cancelled = true
     }
-  }, [supabase, toastError])
+    // toastError no debe estar en las dependencias - solo se usa para notificaciones, no para lógica de datos
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase])
 
   useEffect(() => {
     let cancelled = false
@@ -110,7 +112,9 @@ export default function NewQuotePage() {
     return () => {
       cancelled = true
     }
-  }, [debouncedSearchClient, supabase, toastError])
+    // toastError no debe estar en las dependencias - solo se usa para notificaciones, no para lógica de datos
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearchClient, supabase])
 
   const addService = useCallback(() => {
     if (services.length > 0) {

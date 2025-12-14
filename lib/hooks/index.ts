@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import toast from 'react-hot-toast'
@@ -99,9 +99,10 @@ export function useCanAccess(permission: string) {
 
 /**
  * Hook para notificaciones toast
+ * Retorna referencias estables usando useMemo para evitar re-renders innecesarios
  */
 export function useToast() {
-  return {
+  return useMemo(() => ({
     success: (message: string) => {
       toast.success(message, {
         duration: 4000,
@@ -120,7 +121,7 @@ export function useToast() {
     dismiss: (toastId: string) => {
       toast.dismiss(toastId)
     },
-  }
+  }), [])
 }
 
 /**
