@@ -1,4 +1,5 @@
 import * as Sentry from '@sentry/nextjs'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * Initialize Sentry for error tracking and monitoring
@@ -23,8 +24,9 @@ export function initSentry() {
   // Only initialize Sentry if DSN is provided
   if (!sentryDSN) {
     if (!IS_PRODUCTION) {
-      console.warn(
-        '[Sentry] NEXT_PUBLIC_SENTRY_DSN not configured. Error tracking disabled.'
+      logger.warn(
+        'Sentry',
+        'NEXT_PUBLIC_SENTRY_DSN not configured. Error tracking disabled.'
       )
     }
     return
@@ -43,6 +45,18 @@ export function initSentry() {
     
     // Automatically capture unhandled promise rejections
     attachStacktrace: true,
+    
+    // Deshabilitar integración de editor (solo funciona en macOS)
+    // Esto evita warnings cuando intenta abrir archivos en Linux
+    ...(process.env.NODE_ENV === 'development' && {
+      beforeBreadcrumb(breadcrumb) {
+        // Filtrar breadcrumbs relacionados con editor
+        if (breadcrumb.category === 'console' && breadcrumb.message?.includes('editor')) {
+          return null
+        }
+        return breadcrumb
+      },
+    }),
     
     // Capture breadcrumbs for better context
     maxBreadcrumbs: 50,

@@ -111,13 +111,14 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = await createClient()
+    const payload = validation.data
 
     const { data, error } = await supabase
       .from('services')
       .insert({
-        name: body.name,
-        base_price: body.base_price,
-        cost_price: body.cost_price,
+        name: payload.name,
+        base_price: payload.base_price,
+        cost_price: payload.cost_price,
         created_at: new Date().toISOString(),
       })
       .select()

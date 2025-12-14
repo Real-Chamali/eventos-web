@@ -5,6 +5,7 @@
 
 import DOMPurify from 'isomorphic-dompurify'
 import crypto from 'crypto'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * Sanitizar HTML para prevenir XSS
@@ -41,27 +42,63 @@ export function validateCSRFToken(token: string, sessionToken: string): boolean 
 }
 
 /**
- * Encriptar string (requiere SECRET_KEY en env)
+ * Generate a secure key from a password using PBKDF2
+ */
+function deriveKey(password: string, salt: Buffer): Buffer {
+  return crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256')
+}
+
+/**
+ * Encriptar string usando AES-256-GCM (más seguro que createCipher)
+ * Requiere ENCRYPTION_KEY en env para producción
  */
 export function encryptData(data: string, key: string = process.env.ENCRYPTION_KEY || 'default'): string {
   try {
-    const cipher = crypto.createCipher('aes-256-cbc', key)
-    return cipher.update(data, 'utf8', 'hex') + cipher.final('hex')
+    const algorithm = 'aes-256-gcm'
+    const iv = crypto.randomBytes(16)
+    const salt = crypto.randomBytes(16)
+    const derivedKey = deriveKey(key, salt)
+    
+    const cipher = crypto.createCipheriv(algorithm, derivedKey, iv)
+    let encrypted = cipher.update(data, 'utf8', 'hex')
+    encrypted += cipher.final('hex')
+    
+    const authTag = cipher.getAuthTag()
+    
+    // Formato: salt:iv:authTag:encrypted
+    return `${salt.toString('hex')}:${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`
   } catch (error) {
-    console.error('Encryption error:', error)
+    logger.error('Security', 'Encryption error', error instanceof Error ? error : new Error(String(error)))
     return data
   }
 }
 
 /**
- * Desencriptar string
+ * Desencriptar string usando AES-256-GCM
  */
 export function decryptData(encrypted: string, key: string = process.env.ENCRYPTION_KEY || 'default'): string {
   try {
-    const decipher = crypto.createDecipher('aes-256-cbc', key)
-    return decipher.update(encrypted, 'hex', 'utf8') + decipher.final('utf8')
+    const parts = encrypted.split(':')
+    if (parts.length !== 4) {
+      throw new Error('Invalid encrypted data format')
+    }
+    
+    const [saltHex, ivHex, authTagHex, encryptedData] = parts
+    const salt = Buffer.from(saltHex, 'hex')
+    const iv = Buffer.from(ivHex, 'hex')
+    const authTag = Buffer.from(authTagHex, 'hex')
+    const derivedKey = deriveKey(key, salt)
+    
+    const algorithm = 'aes-256-gcm'
+    const decipher = crypto.createDecipheriv(algorithm, derivedKey, iv)
+    decipher.setAuthTag(authTag)
+    
+    let decrypted = decipher.update(encryptedData, 'hex', 'utf8')
+    decrypted += decipher.final('utf8')
+    
+    return decrypted
   } catch (error) {
-    console.error('Decryption error:', error)
+    logger.error('Security', 'Decryption error', error instanceof Error ? error : new Error(String(error)))
     return ''
   }
 }

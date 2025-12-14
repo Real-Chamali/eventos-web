@@ -3,13 +3,21 @@ import { NextResponse, type NextRequest } from 'next/server'
 import type { CookieOptions } from '@supabase/ssr'
 
 export async function updateSession(request: NextRequest) {
+  // Validar variables de entorno
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return NextResponse.next({ request })
+  }
+  
   let supabaseResponse = NextResponse.next({
     request,
   })
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    supabaseUrl,
+    supabaseAnonKey,
     {
       cookies: {
         getAll() {
@@ -41,39 +49,36 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Si el usuario está autenticado y está en /login, redirigir según su rol
-  if (user && pathname === '/login') {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-
-    const role = profile?.role || 'vendor'
-    const url = request.nextUrl.clone()
-    url.pathname = role === 'admin' ? '/admin' : '/dashboard'
-    return NextResponse.redirect(url)
-  }
-
-  // Proteger rutas según el rol
+  // Obtener el perfil del usuario una sola vez si está autenticado
+  let userRole: string | null = null
   if (user) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
       .single()
+    
+    userRole = profile?.role || 'vendor'
+  }
 
-    const role = profile?.role || 'vendor'
+  // Si el usuario está autenticado y está en /login, redirigir según su rol
+  if (user && pathname === '/login') {
+    const url = request.nextUrl.clone()
+    url.pathname = userRole === 'admin' ? '/admin' : '/dashboard'
+    return NextResponse.redirect(url)
+  }
 
+  // Proteger rutas según el rol
+  if (user && userRole) {
     // Si intenta acceder a /admin y no es admin
-    if (pathname.startsWith('/admin') && role !== 'admin') {
+    if (pathname.startsWith('/admin') && userRole !== 'admin') {
       const url = request.nextUrl.clone()
       url.pathname = '/dashboard'
       return NextResponse.redirect(url)
     }
 
     // Si intenta acceder a /dashboard y es admin
-    if (pathname.startsWith('/dashboard') && role === 'admin') {
+    if (pathname.startsWith('/dashboard') && userRole === 'admin') {
       const url = request.nextUrl.clone()
       url.pathname = '/admin'
       return NextResponse.redirect(url)

@@ -45,12 +45,14 @@ export async function verifyAuth(request: NextRequest) {
 export async function checkAdmin(userId: string): Promise<boolean> {
   try {
     const supabase = await createClient()
-
-    const res = await supabase.from('profiles').select('role').eq('user_id', userId).single()
+    const res = await supabase.from('profiles').select('role').eq('id', userId).single()
     const data = res.data as { role?: string } | null
     const error = res.error
 
-    if (error || !data) return false
+    if (error || !data) {
+      return false
+    }
+    
     return data.role === 'admin'
   } catch (error) {
     logger.error('Auth Middleware', 'Failed to check admin role', error as Error)

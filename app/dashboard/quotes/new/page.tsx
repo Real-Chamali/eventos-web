@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { CreateQuoteSchema } from '@/lib/validations/schemas'
-import { useToast } from '@/lib/hooks'
+import { useToast, useDebounce } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 
 interface Client {
@@ -38,64 +38,84 @@ export default function NewQuotePage() {
   const router = useRouter()
   const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
+  const debouncedSearchClient = useDebounce(searchClient, 300)
 
   useEffect(() => {
-    loadServices()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    let cancelled = false
+    
+    const loadServices = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('services')
+          .select('*')
+          .order('name')
+        
+        if (cancelled) return
+        
+        if (error) {
+          logger.error('NewQuotePage', 'Error loading services', error)
+          toastError('Error al cargar los servicios')
+        } else if (data) {
+          setServices(data)
+        }
+      } catch (err) {
+        if (cancelled) return
+        logger.error('NewQuotePage', 'Unexpected error loading services', err as Error)
+        toastError('Error inesperado al cargar los servicios')
+      }
+    }
+    
+    void loadServices()
+    
+    return () => {
+      cancelled = true
+    }
+  }, [supabase, toastError])
 
   useEffect(() => {
-    if (searchClient.length > 0) {
-      searchClients()
-    } else {
-      setClients([])
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchClient])
-
-  const loadServices = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('services')
-        .select('*')
-        .order('name')
-      
-      if (error) {
-        logger.error('NewQuotePage', 'Error loading services', error)
-        toastError('Error al cargar los servicios')
-      } else if (data) {
-        setServices(data)
+    let cancelled = false
+    
+    const searchClients = async (searchTerm: string) => {
+      if (!searchTerm.trim()) {
+        if (!cancelled) {
+          setClients([])
+        }
+        return
       }
-    } catch (err) {
-      logger.error('NewQuotePage', 'Unexpected error loading services', err as Error)
-      toastError('Error inesperado al cargar los servicios')
-    }
-  }
 
-  const searchClients = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .ilike('name', `%${searchClient}%`)
-        .limit(10)
-      
-      if (error) {
-        logger.error('NewQuotePage', 'Error searching clients', error)
-        toastError('Error al buscar clientes')
-      } else {
-        setClients(data || [])
+      try {
+        const { data, error } = await supabase
+          .from('clients')
+          .select('*')
+          .ilike('name', `%${searchTerm}%`)
+          .limit(10)
+        
+        if (cancelled) return
+        
+        if (error) {
+          logger.error('NewQuotePage', 'Error searching clients', error)
+          toastError('Error al buscar clientes')
+        } else {
+          setClients(data || [])
+        }
+      } catch (err) {
+        if (cancelled) return
+        logger.error('NewQuotePage', 'Unexpected error searching clients', err as Error)
+        toastError('Error inesperado al buscar clientes')
       }
-    } catch (err) {
-      logger.error('NewQuotePage', 'Unexpected error searching clients', err as Error)
-      toastError('Error inesperado al buscar clientes')
     }
-  }
+    
+    void searchClients(debouncedSearchClient)
+    
+    return () => {
+      cancelled = true
+    }
+  }, [debouncedSearchClient, supabase, toastError])
 
-  const addService = () => {
+  const addService = useCallback(() => {
     if (services.length > 0) {
-      setQuoteServices([
-        ...quoteServices,
+      setQuoteServices((prev) => [
+        ...prev,
         {
           service_id: services[0].id,
           quantity: 1,
@@ -103,31 +123,33 @@ export default function NewQuotePage() {
         },
       ])
     }
-  }
+  }, [services])
 
-  const updateService = (index: number, field: keyof QuoteService, value: number | string) => {
-    const updated = [...quoteServices]
-    
-    if (field === 'quantity') {
-      const v = Number(value) || 1
-      updated[index] = { ...updated[index], quantity: Math.max(1, v) }
-    } else if (field === 'final_price') {
-      const v = Number(value) || 0
-      updated[index] = { ...updated[index], final_price: Math.max(0, v) }
-    } else {
-      updated[index] = { ...updated[index], [field]: value }
-    }
-    
-    setQuoteServices(updated)
-  }
+  const updateService = useCallback((index: number, field: keyof QuoteService, value: number | string) => {
+    setQuoteServices((prev) => {
+      const updated = [...prev]
+      
+      if (field === 'quantity') {
+        const v = Number(value) || 1
+        updated[index] = { ...updated[index], quantity: Math.max(1, v) }
+      } else if (field === 'final_price') {
+        const v = Number(value) || 0
+        updated[index] = { ...updated[index], final_price: Math.max(0, v) }
+      } else {
+        updated[index] = { ...updated[index], [field]: value }
+      }
+      
+      return updated
+    })
+  }, [])
 
-  const removeService = (index: number) => {
-    setQuoteServices(quoteServices.filter((_, i) => i !== index))
-  }
+  const removeService = useCallback((index: number) => {
+    setQuoteServices((prev) => prev.filter((_, i) => i !== index))
+  }, [])
 
-  const getTotal = () => {
+  const total = useMemo(() => {
     return quoteServices.reduce((sum, qs) => sum + (qs.final_price * qs.quantity), 0)
-  }
+  }, [quoteServices])
 
   const saveDraft = async () => {
     // Limpiar errores previos
@@ -155,7 +177,7 @@ export default function NewQuotePage() {
         quantity: qs.quantity,
         final_price: qs.final_price,
       })),
-      total_price: getTotal(),
+      total_price: total,
     })
 
     if (!validationResult.success) {
@@ -188,7 +210,7 @@ export default function NewQuotePage() {
           client_id: selectedClient.id,
           vendor_id: user.id,
           status: 'draft',
-          total_price: getTotal(),
+          total_price: total,
         })
         .select()
         .single()
@@ -231,9 +253,9 @@ export default function NewQuotePage() {
     }
   }
 
-  const selectedService = (serviceId: string) => {
+  const selectedService = useCallback((serviceId: string) => {
     return services.find((s) => s.id === serviceId)
-  }
+  }, [services])
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -411,7 +433,7 @@ export default function NewQuotePage() {
             <div className="flex justify-between items-center">
               <span className="text-lg font-semibold text-gray-900 dark:text-white">Total:</span>
               <span className="text-2xl font-bold text-blue-600">
-                ${getTotal().toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                ${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </span>
             </div>
           </div>
@@ -439,5 +461,3 @@ export default function NewQuotePage() {
     </div>
   )
 }
-
-

@@ -3,9 +3,9 @@
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createClient } from '@/utils/supabase/client'
-import { useRouter } from 'next/navigation'
 import { LoginSchema } from '@/lib/validations/schemas'
 import { useToast } from '@/lib/hooks'
+import { logger } from '@/lib/utils/logger'
 
 type LoginFormData = {
   email: string
@@ -13,7 +13,6 @@ type LoginFormData = {
 }
 
 export default function LoginPage() {
-  const router = useRouter()
   const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
   
@@ -45,16 +44,17 @@ export default function LoginPage() {
         const role = profile?.role || 'vendor'
         
         toastSuccess(`¡Bienvenido de vuelta, ${authData.user.email}!`)
+        logger.info('LoginPage', 'User logged in', { userId: authData.user.id, role })
         
-        // Pequeño delay para que se vea el toast
-        setTimeout(() => {
-          router.push(role === 'admin' ? '/admin' : '/dashboard')
-          router.refresh()
-        }, 500)
+        // Usar window.location para forzar recarga completa y asegurar que las cookies estén establecidas
+        // Esto evita problemas de timing con el middleware
+        const targetPath = role === 'admin' ? '/admin' : '/dashboard'
+        window.location.href = targetPath
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err)
       toastError(errorMessage)
+      logger.error('LoginPage', 'Login error', err as Error)
     }
   }
 
@@ -133,5 +133,3 @@ export default function LoginPage() {
     </div>
   )
 }
-
-

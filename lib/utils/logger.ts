@@ -28,20 +28,28 @@ class Logger {
     }`
   }
 
-  private async sendToService(): Promise<void> {
-    // En producción, enviar a Sentry, LogRocket, etc
+  private async sendToService(entry: LogEntry): Promise<void> {
+    // En producción, enviar a servicio de error tracking si está configurado
     if (!this.isDevelopment && process.env.NEXT_PUBLIC_SENTRY_DSN) {
       try {
-        // Ejemplo con Sentry - descomentar cuando Sentry esté configurado
-        // await Sentry.captureException(new Error(entry.message), {
-        //   level: entry.level.toLowerCase() as SeverityLevel,
-        //   tags: { context: entry.context },
-        //   extra: entry.data,
-        // })
+        // Dynamic import para evitar errores si Sentry no está disponible
+        const Sentry = await import('@sentry/nextjs')
+        if (Sentry && entry.level === LogLevel.ERROR) {
+          Sentry.captureException(new Error(entry.message), {
+            tags: { context: entry.context },
+            extra: entry.data,
+          })
+        }
       } catch {
-        // Silenciar errores de logging
+        // Silenciar errores de logging - usar solo logger interno
       }
     }
+    
+    // En producción sin Sentry, los logs se pueden enviar a:
+    // - Supabase (tabla de logs)
+    // - Servicio de logging externo
+    // - Archivo de logs
+    // Por ahora, solo se muestran en consola en desarrollo
   }
 
   private log(level: LogLevel, context: string, message: string, data?: Record<string, unknown>): void {
@@ -73,8 +81,8 @@ class Logger {
       }
     }
 
-    // Enviar a servicio externo
-    this.sendToService()
+    // Enviar a servicio externo (no bloqueante)
+    void this.sendToService(entry)
   }
 
   debug(context: string, message: string, data?: Record<string, unknown>): void {
@@ -94,8 +102,11 @@ class Logger {
       timestamp: new Date().toISOString(),
       level: LogLevel.ERROR,
       context,
-      message,
-      data,
+      message: error ? `${message}: ${error.message}` : message,
+      data: {
+        ...data,
+        ...(error && { error: error.message, stack: error.stack }),
+      },
       stack: error?.stack,
     }
 
@@ -105,7 +116,8 @@ class Logger {
       console.error(formatted, error, data)
     }
 
-    this.sendToService()
+    // Enviar a servicio externo (no bloqueante)
+    void this.sendToService(entry)
   }
 }
 
