@@ -95,12 +95,12 @@
 ## 🔗 Enlaces Importantes
 
 ### Configuración
-- **Branch Protection:** https://github.com/Victhorrr/eventos-web/settings/branches
-- **Repositorio:** https://github.com/Victhorrr/eventos-web
+- **Branch Protection:** https://github.com/Real-Chamali/eventos-web/settings/branches
+- **Repositorio:** https://github.com/Real-Chamali/eventos-web
 
 ### Pull Request
-- **Crear PR:** https://github.com/Victhorrr/eventos-web/compare/main...2025-12-14-jy0q
-- **Ver PRs:** https://github.com/Victhorrr/eventos-web/pulls
+- **Crear PR:** https://github.com/Real-Chamali/eventos-web/compare/main...2025-12-14-jy0q
+- **Ver PRs:** https://github.com/Real-Chamali/eventos-web/pulls
 
 ### Documentación
 - **Branch Protection Setup:** `.github/BRANCH_PROTECTION_SETUP.md`

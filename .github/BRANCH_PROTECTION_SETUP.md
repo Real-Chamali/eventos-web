@@ -1,7 +1,7 @@
 # 🔒 Configuración de Branch Protection Rules
 
 **Fecha:** 14 de Diciembre de 2025  
-**Repositorio:** https://github.com/Victhorrr/eventos-web
+**Repositorio:** https://github.com/Real-Chamali/eventos-web
 
 ---
 

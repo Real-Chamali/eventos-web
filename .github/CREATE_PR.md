@@ -9,7 +9,7 @@
 ### Opción 1: Desde GitHub Web (Recomendado)
 
 1. **Ve a tu repositorio:**
-   https://github.com/Victhorrr/eventos-web
+   https://github.com/Real-Chamali/eventos-web
 
 2. **Haz clic en "Pull requests"** (en la barra superior)
 
@@ -91,7 +91,7 @@ gh pr create \
 
 Puedes usar este enlace directo para crear el PR:
 
-https://github.com/Victhorrr/eventos-web/compare/main...2025-12-14-jy0q
+https://github.com/Real-Chamali/eventos-web/compare/main...2025-12-14-jy0q
 
 ---
 

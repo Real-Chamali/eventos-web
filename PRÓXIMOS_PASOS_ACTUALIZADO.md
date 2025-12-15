@@ -179,7 +179,7 @@ npm run playwright
 
 - **Branch Protection:** https://github.com/Victhorrr/eventos-web/settings/branches
 - **Crear PR:** https://github.com/Victhorrr/eventos-web/compare/main...2025-12-14-jy0q
-- **Repositorio:** https://github.com/Victhorrr/eventos-web
+- **Repositorio:** https://github.com/Real-Chamali/eventos-web
 - **Documentación:** Ver archivos `.md` en la raíz
 
 ---

@@ -10,7 +10,7 @@ echo ""
 echo "🔗 ENLACE DIRECTO PARA CREAR EL PR:"
 echo "-----------------------------------"
 echo ""
-echo "https://github.com/Victhorrr/eventos-web/compare/main...2025-12-14-jy0q"
+echo "https://github.com/Real-Chamali/eventos-web/compare/main...2025-12-14-jy0q"
 echo ""
 
 echo "📋 PASOS:"
