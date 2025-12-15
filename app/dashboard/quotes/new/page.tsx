@@ -53,7 +53,15 @@ export default function NewQuotePage() {
         if (cancelled) return
         
         if (error) {
-          logger.error('NewQuotePage', 'Error loading services', error)
+          // Convertir error de Supabase a Error estándar
+          const errorMessage = error?.message || 'Error loading services'
+          const errorForLogging = error instanceof Error 
+            ? error 
+            : new Error(errorMessage)
+          logger.error('NewQuotePage', 'Error loading services', errorForLogging, {
+            supabaseError: errorMessage,
+            supabaseCode: error?.code,
+          })
           toastError('Error al cargar los servicios')
         } else if (data) {
           setServices(data)
@@ -95,7 +103,16 @@ export default function NewQuotePage() {
         if (cancelled) return
         
         if (error) {
-          logger.error('NewQuotePage', 'Error searching clients', error)
+          // Convertir error de Supabase a Error estándar
+          const errorMessage = error?.message || 'Error searching clients'
+          const errorForLogging = error instanceof Error 
+            ? error 
+            : new Error(errorMessage)
+          logger.error('NewQuotePage', 'Error searching clients', errorForLogging, {
+            supabaseError: errorMessage,
+            supabaseCode: error?.code,
+            searchTerm: searchTerm,
+          })
           toastError('Error al buscar clientes')
         } else {
           setClients(data || [])
@@ -220,8 +237,21 @@ export default function NewQuotePage() {
         .single()
 
       if (error) {
-        toastError('Error al guardar: ' + error.message)
-        logger.error('NewQuotePage', 'Error saving quote', error)
+        const errorMessage = error?.message || 'Error saving quote'
+        toastError('Error al guardar: ' + errorMessage)
+        // Convertir error de Supabase a Error estándar
+        const errorForLogging = error instanceof Error 
+          ? error 
+          : new Error(errorMessage)
+        logger.error('NewQuotePage', 'Error saving quote', errorForLogging, {
+          supabaseError: errorMessage,
+          supabaseCode: error?.code,
+          quoteData: {
+            client_id: selectedClient?.id,
+            total_price: total,
+            services_count: quoteServices.length,
+          },
+        })
         setLoading(false)
         return
       }

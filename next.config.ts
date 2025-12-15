@@ -1,8 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // turbopack config removed - using default Next.js behavior
   reactStrictMode: true,
+  // Configurar turbopack root para silenciar warning
+  experimental: {
+    turbo: {
+      root: process.cwd(),
+    },
+  },
 };
 
 // Solo usar Sentry si está configurado

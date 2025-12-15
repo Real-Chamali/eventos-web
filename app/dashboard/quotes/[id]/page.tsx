@@ -57,7 +57,16 @@ export default function QuoteDetailPage() {
         .single()
         .then(res => {
           if (res.error) {
-            logger.error('QuoteDetailPage', 'Error loading quote', res.error)
+            // Convertir error de Supabase a Error estándar
+            const errorMessage = res.error?.message || 'Error loading quote'
+            const errorForLogging = res.error instanceof Error 
+              ? res.error 
+              : new Error(errorMessage)
+            logger.error('QuoteDetailPage', 'Error loading quote', errorForLogging, {
+              supabaseError: errorMessage,
+              supabaseCode: res.error?.code,
+              quoteId: quoteId,
+            })
             toastError('Error al cargar la cotización')
           } else {
             setQuote(res.data)
@@ -81,8 +90,17 @@ export default function QuoteDetailPage() {
       })
 
       if (error) {
-        toastError('Error al cerrar la venta: ' + error.message)
-        logger.error('QuoteDetailPage', 'Error closing sale', error)
+        const errorMessage = error?.message || 'Error closing sale'
+        toastError('Error al cerrar la venta: ' + errorMessage)
+        // Convertir error de Supabase a Error estándar
+        const errorForLogging = error instanceof Error 
+          ? error 
+          : new Error(errorMessage)
+        logger.error('QuoteDetailPage', 'Error closing sale', errorForLogging, {
+          supabaseError: errorMessage,
+          supabaseCode: error?.code,
+          quoteId: quoteId,
+        })
         setClosing(false)
         return
       }

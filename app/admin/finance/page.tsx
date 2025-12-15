@@ -33,7 +33,15 @@ export default function AdminFinancePage() {
         .limit(30)
 
       if (error) {
-        logger.error('AdminFinancePage', 'Error loading finance data', error)
+        // Convertir error de Supabase a Error estándar
+        const errorMessage = error?.message || 'Error loading finance data'
+        const errorForLogging = error instanceof Error 
+          ? error 
+          : new Error(errorMessage)
+        logger.error('AdminFinancePage', 'Error loading finance data', errorForLogging, {
+          supabaseError: errorMessage,
+          supabaseCode: error?.code,
+        })
         toastError('Error al cargar los datos financieros')
       } else {
         setFinanceData(data || [])
