@@ -23,8 +23,25 @@ jobs:
         node-version: ${{ matrix.node-version }}
         cache: 'npm'
     
+    - name: Clear npm cache
+      run: npm cache clean --force
+    
     - name: Install dependencies
       run: npm ci
+    
+    - name: Verify Jest installation
+      run: |
+        if npm list vitest 2>/dev/null; then
+          echo "ERROR: Vitest todavía está instalado. Verifica package.json"
+          npm list vitest
+          exit 1
+        fi
+        if ! npm list jest 2>/dev/null; then
+          echo "ERROR: Jest no está instalado"
+          exit 1
+        fi
+        echo "✅ Jest está instalado correctamente"
+        npm list jest
     
     - name: Run linter
       run: npm run lint
@@ -86,3 +103,4 @@ jobs:
       run: |
         echo "Deploying to production..."
         # Agregar comando de deployment real (Vercel, Heroku, etc)
+
