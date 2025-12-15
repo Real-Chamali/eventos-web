@@ -69,3 +69,4 @@ npm run dev
 
 **Para instrucciones detalladas, ver:** `GUIA_PASO_A_PASO_COMPLETA.md`
 
+

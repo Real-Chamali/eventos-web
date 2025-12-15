@@ -161,3 +161,4 @@ Después de seguir estos pasos:
 
 **¿Necesitas ayuda con algún paso específico?** La guía completa está en `GUIA_PASO_A_PASO_COMPLETA.md`
 
+
