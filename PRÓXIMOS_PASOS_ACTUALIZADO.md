@@ -12,7 +12,7 @@
 #### 1. ✅ Configurar Branch Protection en GitHub (5 minutos)
 
 **Enlace directo:**
-https://github.com/Victhorrr/eventos-web/settings/branches
+https://github.com/Real-Chamali/eventos-web/settings/branches
 
 **O ejecuta:**
 ```bash
@@ -28,7 +28,7 @@ https://github.com/Victhorrr/eventos-web/settings/branches
 #### 2. ✅ Crear Pull Request (2 minutos)
 
 **Enlace directo:**
-https://github.com/Victhorrr/eventos-web/compare/main...2025-12-14-jy0q
+https://github.com/Real-Chamali/eventos-web/compare/main...2025-12-14-jy0q
 
 **O ejecuta:**
 ```bash
@@ -177,8 +177,8 @@ npm run playwright
 
 ## 🔗 Enlaces Útiles
 
-- **Branch Protection:** https://github.com/Victhorrr/eventos-web/settings/branches
-- **Crear PR:** https://github.com/Victhorrr/eventos-web/compare/main...2025-12-14-jy0q
+- **Branch Protection:** https://github.com/Real-Chamali/eventos-web/settings/branches
+- **Crear PR:** https://github.com/Real-Chamali/eventos-web/compare/main...2025-12-14-jy0q
 - **Repositorio:** https://github.com/Real-Chamali/eventos-web
 - **Documentación:** Ver archivos `.md` en la raíz
 
