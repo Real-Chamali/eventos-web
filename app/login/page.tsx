@@ -7,6 +7,9 @@ import { LoginSchema } from '@/lib/validations/schemas'
 import { useToast } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 
+// Forzar renderizado dinámico para evitar prerendering durante build
+export const dynamic = 'force-dynamic'
+
 type LoginFormData = {
   email: string
   password: string
