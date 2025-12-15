@@ -74,6 +74,10 @@ jobs:
         NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
         NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
     
+    - name: Install Playwright browsers
+      run: npx playwright install --with-deps
+      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
     - name: Run E2E tests
       run: npm run playwright
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
