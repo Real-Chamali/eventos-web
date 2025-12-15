@@ -41,7 +41,7 @@ Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 - Error handling global
 
 ### 🧪 Testing Completo
-- Unit tests (Vitest)
+- Unit tests (Jest)
 - E2E tests (Playwright)
 - CI/CD con GitHub Actions
 - Coverage reporting
@@ -51,7 +51,7 @@ Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 - **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS
 - **Backend**: Supabase (PostgreSQL + Auth)
 - **Validación**: Zod, React Hook Form
-- **Testing**: Vitest, Playwright
+- **Testing**: Jest, Playwright
 - **Herramientas**: ESLint, Prettier, GitHub Actions
 
 ## 📚 Documentación
