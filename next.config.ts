@@ -2,12 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // Configurar turbopack root para silenciar warning
-  experimental: {
-    turbo: {
-      root: process.cwd(),
-    },
-  },
+  // El warning de turbopack.root es informativo y no afecta la funcionalidad
+  // Next.js infiere automáticamente el root del workspace
 };
 
 // Solo usar Sentry si está configurado

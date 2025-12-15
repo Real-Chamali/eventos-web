@@ -42,7 +42,7 @@ export default function QuoteDetailPage() {
 
   const loadQuote = async () => {
     try {
-      await supabase
+      const { data, error } = await supabase
         .from('quotes')
         .select(`
           *,
@@ -55,23 +55,22 @@ export default function QuoteDetailPage() {
         `)
         .eq('id', quoteId)
         .single()
-        .then(res => {
-          if (res.error) {
-            // Convertir error de Supabase a Error estándar
-            const errorMessage = res.error?.message || 'Error loading quote'
-            const errorForLogging = res.error instanceof Error 
-              ? res.error 
-              : new Error(errorMessage)
-            logger.error('QuoteDetailPage', 'Error loading quote', errorForLogging, {
-              supabaseError: errorMessage,
-              supabaseCode: res.error?.code,
-              quoteId: quoteId,
-            })
-            toastError('Error al cargar la cotización')
-          } else {
-            setQuote(res.data)
-          }
+
+      if (error) {
+        // Convertir error de Supabase a Error estándar
+        const errorMessage = error?.message || 'Error loading quote'
+        const errorForLogging = error instanceof Error 
+          ? error 
+          : new Error(errorMessage)
+        logger.error('QuoteDetailPage', 'Error loading quote', errorForLogging, {
+          supabaseError: errorMessage,
+          supabaseCode: error?.code,
+          quoteId: quoteId,
         })
+        toastError('Error al cargar la cotización')
+      } else {
+        setQuote(data)
+      }
     } catch (err) {
       logger.error('QuoteDetailPage', 'Unexpected error loading quote', err as Error)
       toastError('Error inesperado al cargar la cotización')

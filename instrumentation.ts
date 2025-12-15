@@ -16,9 +16,9 @@ export async function register() {
     } catch (error) {
       // Silenciar errores de Sentry - usar logger interno en su lugar
       // No podemos usar logger aquí porque instrumentation.ts se ejecuta antes de que el logger esté disponible
-      // Usar console.warn es apropiado aquí ya que es el único mecanismo disponible en este punto
+      // Solo mostrar warning en desarrollo para evitar ruido en producción
       if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
+        // Usar console.warn es apropiado aquí ya que es el único mecanismo disponible en este punto
         console.warn('Sentry no disponible, usando logger interno', error)
       }
     }

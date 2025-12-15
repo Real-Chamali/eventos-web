@@ -24,7 +24,16 @@ export default async function AdminLayout({
     .single()
 
   if (profileError) {
-    logger.error('AdminLayout', 'Error fetching profile', profileError)
+    // Convertir error de Supabase a Error estándar
+    const errorMessage = profileError?.message || 'Error fetching profile'
+    const errorForLogging = profileError instanceof Error 
+      ? profileError 
+      : new Error(errorMessage)
+    logger.error('AdminLayout', 'Error fetching profile', errorForLogging, {
+      supabaseError: errorMessage,
+      supabaseCode: profileError?.code,
+      userId: user.id,
+    })
     redirect('/login')
   }
 
