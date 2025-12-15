@@ -31,7 +31,21 @@ yarn-error.log*
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
-.env*
+# Ignorar todos los archivos de entorno excepto los ejemplos
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+.env*.local
+
+# Permitir archivos de ejemplo para documentación
+!.env.example
+!.env.local.example
+!.env*.example
 
 # vercel
 .vercel
@@ -39,3 +53,11 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# IDE and editor files
+.idea/
+.cursor/
+*.swp
+*.swo
+*~
+.vscode/

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { logger } from '@/lib/utils/logger'
+import { useToast } from '@/lib/hooks'
 
 interface FinanceEntry {
   id: string
@@ -15,6 +17,7 @@ export default function AdminFinancePage() {
   const [financeData, setFinanceData] = useState<FinanceEntry[]>([])
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
+  const { error: toastError } = useToast()
 
   useEffect(() => {
     loadFinanceData()
@@ -30,14 +33,22 @@ export default function AdminFinancePage() {
         .limit(30)
 
       if (error) {
-        console.error('Error loading finance data:', error)
-        alert('Error al cargar los datos financieros')
+        // Convertir error de Supabase a Error estándar
+        const errorMessage = error?.message || 'Error loading finance data'
+        const errorForLogging = error instanceof Error 
+          ? error 
+          : new Error(errorMessage)
+        logger.error('AdminFinancePage', 'Error loading finance data', errorForLogging, {
+          supabaseError: errorMessage,
+          supabaseCode: error?.code,
+        })
+        toastError('Error al cargar los datos financieros')
       } else {
         setFinanceData(data || [])
       }
     } catch (err) {
-      console.error('Unexpected error:', err)
-      alert('Error inesperado al cargar los datos financieros')
+      logger.error('AdminFinancePage', 'Unexpected error', err as Error)
+      toastError('Error inesperado al cargar los datos financieros')
     } finally {
       setLoading(false)
     }
@@ -145,5 +156,3 @@ export default function AdminFinancePage() {
     </div>
   )
 }
-
-

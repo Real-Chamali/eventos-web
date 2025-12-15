@@ -1,52 +1,75 @@
 'use client'
 
 /**
- * Sentry Client Initialization Component
+ * Error Tracking Provider
  * 
- * This component initializes Sentry on the client side and sets up
- * user tracking after authentication.
+ * Inicializa error tracking (Sentry si está configurado, o logger interno)
+ * y configura tracking de usuario autenticado.
  * 
- * Should be placed near the root of your app to catch all client-side errors.
+ * Si NEXT_PUBLIC_SENTRY_DSN no está configurado, solo usa el logger interno.
  */
 
 import { useEffect } from 'react'
-import { initSentry, setSentryUser, clearSentryUser } from '@/sentry.config'
 import { createClient } from '@/utils/supabase/client'
+import { logger } from '@/lib/utils/logger'
 
 export function SentryProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    // Initialize Sentry on client startup
-    initSentry()
-
-    // Track authenticated user in Sentry
-    const supabase = createClient()
+    // Declarar subscription en el scope del useEffect para que esté disponible en el cleanup
+    let subscription: { unsubscribe: () => void } | null = null
     
-    const setupUserTracking = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        
-        if (user) {
-          setSentryUser(user.id, user.email, user.user_metadata?.name)
-        } else {
-          clearSentryUser()
+    // Solo inicializar Sentry si está configurado
+    if (process.env.NEXT_PUBLIC_SENTRY_DSN) {
+      const initializeSentry = async () => {
+        try {
+          // Dynamic import para evitar errores si Sentry no está disponible
+          const sentryModule = await import('@/sentry.config')
+          const { initSentry, setSentryUser, clearSentryUser } = sentryModule
+          
+          initSentry()
+
+          // Track authenticated user in Sentry
+          const supabase = createClient()
+          
+          const setupUserTracking = async () => {
+            try {
+              const { data: { user } } = await supabase.auth.getUser()
+              
+              if (user) {
+                setSentryUser(user.id, user.email, user.user_metadata?.name)
+              } else {
+                clearSentryUser()
+              }
+            } catch (error) {
+              logger.warn('SentryProvider', 'Failed to setup user tracking', { error })
+            }
+          }
+
+          await setupUserTracking()
+
+          // Subscribe to auth changes
+          const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+            if (event === 'SIGNED_IN' && session?.user) {
+              setSentryUser(session.user.id, session.user.email, session.user.user_metadata?.name)
+            } else if (event === 'SIGNED_OUT') {
+              clearSentryUser()
+            }
+          })
+          
+          subscription = authSubscription
+        } catch (error) {
+          // Si Sentry falla, usar solo logger interno
+          logger.warn('SentryProvider', 'Sentry no disponible, usando logger interno', { error })
         }
-      } catch (error) {
-        // Silently fail - Sentry will still work even if user tracking fails
-        console.debug('Failed to setup Sentry user tracking:', error)
       }
+      
+      void initializeSentry()
+    } else {
+      // Sin Sentry configurado - solo usar logger interno
+      logger.info('SentryProvider', 'Sentry no configurado, usando logger interno')
     }
-
-    setupUserTracking()
-
-    // Subscribe to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session?.user) {
-        setSentryUser(session.user.id, session.user.email, session.user.user_metadata?.name)
-      } else if (event === 'SIGNED_OUT') {
-        clearSentryUser()
-      }
-    })
-
+    
+    // Cleanup function siempre retornada, independientemente de si Sentry está configurado
     return () => {
       subscription?.unsubscribe()
     }
@@ -54,3 +77,4 @@ export function SentryProvider({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>
 }
+

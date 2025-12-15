@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { CreateQuoteSchema } from '@/lib/validations/schemas'
-import { useToast } from '@/lib/hooks'
+import { useToast, useDebounce } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 
 interface Client {
@@ -36,66 +36,107 @@ export default function NewQuotePage() {
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
   const { success: toastSuccess, error: toastError } = useToast()
+  const debouncedSearchClient = useDebounce(searchClient, 300)
 
   useEffect(() => {
-    loadServices()
+    let cancelled = false
+    
+    const loadServices = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('services')
+          .select('*')
+          .order('name')
+        
+        if (cancelled) return
+        
+        if (error) {
+          // Convertir error de Supabase a Error estándar
+          const errorMessage = error?.message || 'Error loading services'
+          const errorForLogging = error instanceof Error 
+            ? error 
+            : new Error(errorMessage)
+          logger.error('NewQuotePage', 'Error loading services', errorForLogging, {
+            supabaseError: errorMessage,
+            supabaseCode: error?.code,
+          })
+          toastError('Error al cargar los servicios')
+        } else if (data) {
+          setServices(data)
+        }
+      } catch (err) {
+        if (cancelled) return
+        logger.error('NewQuotePage', 'Unexpected error loading services', err as Error)
+        toastError('Error inesperado al cargar los servicios')
+      }
+    }
+    
+    void loadServices()
+    
+    return () => {
+      cancelled = true
+    }
+    // toastError no debe estar en las dependencias - solo se usa para notificaciones, no para lógica de datos
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [supabase])
 
   useEffect(() => {
-    if (searchClient.length > 0) {
-      searchClients()
-    } else {
-      setClients([])
+    let cancelled = false
+    
+    const searchClients = async (searchTerm: string) => {
+      if (!searchTerm.trim()) {
+        if (!cancelled) {
+          setClients([])
+        }
+        return
+      }
+
+      try {
+        const { data, error } = await supabase
+          .from('clients')
+          .select('*')
+          .ilike('name', `%${searchTerm}%`)
+          .limit(10)
+        
+        if (cancelled) return
+        
+        if (error) {
+          // Convertir error de Supabase a Error estándar
+          const errorMessage = error?.message || 'Error searching clients'
+          const errorForLogging = error instanceof Error 
+            ? error 
+            : new Error(errorMessage)
+          logger.error('NewQuotePage', 'Error searching clients', errorForLogging, {
+            supabaseError: errorMessage,
+            supabaseCode: error?.code,
+            searchTerm: searchTerm,
+          })
+          toastError('Error al buscar clientes')
+        } else {
+          setClients(data || [])
+        }
+      } catch (err) {
+        if (cancelled) return
+        logger.error('NewQuotePage', 'Unexpected error searching clients', err as Error)
+        toastError('Error inesperado al buscar clientes')
+      }
     }
+    
+    void searchClients(debouncedSearchClient)
+    
+    return () => {
+      cancelled = true
+    }
+    // toastError no debe estar en las dependencias - solo se usa para notificaciones, no para lógica de datos
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchClient])
+  }, [debouncedSearchClient, supabase])
 
-  const loadServices = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('services')
-        .select('*')
-        .order('name')
-      
-      if (error) {
-        logger.error('NewQuotePage', 'Error loading services', error)
-        toastError('Error al cargar los servicios')
-      } else if (data) {
-        setServices(data)
-      }
-    } catch (err) {
-      logger.error('NewQuotePage', 'Unexpected error loading services', err as Error)
-      toastError('Error inesperado al cargar los servicios')
-    }
-  }
-
-  const searchClients = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('clients')
-        .select('*')
-        .ilike('name', `%${searchClient}%`)
-        .limit(10)
-      
-      if (error) {
-        logger.error('NewQuotePage', 'Error searching clients', error)
-        toastError('Error al buscar clientes')
-      } else {
-        setClients(data || [])
-      }
-    } catch (err) {
-      logger.error('NewQuotePage', 'Unexpected error searching clients', err as Error)
-      toastError('Error inesperado al buscar clientes')
-    }
-  }
-
-  const addService = () => {
+  const addService = useCallback(() => {
     if (services.length > 0) {
-      setQuoteServices([
-        ...quoteServices,
+      setQuoteServices((prev) => [
+        ...prev,
         {
           service_id: services[0].id,
           quantity: 1,
@@ -103,31 +144,33 @@ export default function NewQuotePage() {
         },
       ])
     }
-  }
+  }, [services])
 
-  const updateService = (index: number, field: keyof QuoteService, value: number | string) => {
-    const updated = [...quoteServices]
-    
-    if (field === 'quantity') {
-      const v = Number(value) || 1
-      updated[index] = { ...updated[index], quantity: Math.max(1, v) }
-    } else if (field === 'final_price') {
-      const v = Number(value) || 0
-      updated[index] = { ...updated[index], final_price: Math.max(0, v) }
-    } else {
-      updated[index] = { ...updated[index], [field]: value }
-    }
-    
-    setQuoteServices(updated)
-  }
+  const updateService = useCallback((index: number, field: keyof QuoteService, value: number | string) => {
+    setQuoteServices((prev) => {
+      const updated = [...prev]
+      
+      if (field === 'quantity') {
+        const v = Number(value) || 1
+        updated[index] = { ...updated[index], quantity: Math.max(1, v) }
+      } else if (field === 'final_price') {
+        const v = Number(value) || 0
+        updated[index] = { ...updated[index], final_price: Math.max(0, v) }
+      } else {
+        updated[index] = { ...updated[index], [field]: value }
+      }
+      
+      return updated
+    })
+  }, [])
 
-  const removeService = (index: number) => {
-    setQuoteServices(quoteServices.filter((_, i) => i !== index))
-  }
+  const removeService = useCallback((index: number) => {
+    setQuoteServices((prev) => prev.filter((_, i) => i !== index))
+  }, [])
 
-  const getTotal = () => {
+  const total = useMemo(() => {
     return quoteServices.reduce((sum, qs) => sum + (qs.final_price * qs.quantity), 0)
-  }
+  }, [quoteServices])
 
   const saveDraft = async () => {
     // Limpiar errores previos
@@ -155,7 +198,7 @@ export default function NewQuotePage() {
         quantity: qs.quantity,
         final_price: qs.final_price,
       })),
-      total_price: getTotal(),
+      total_price: total,
     })
 
     if (!validationResult.success) {
@@ -188,14 +231,27 @@ export default function NewQuotePage() {
           client_id: selectedClient.id,
           vendor_id: user.id,
           status: 'draft',
-          total_price: getTotal(),
+          total_price: total,
         })
         .select()
         .single()
 
       if (error) {
-        toastError('Error al guardar: ' + error.message)
-        logger.error('NewQuotePage', 'Error saving quote', error)
+        const errorMessage = error?.message || 'Error saving quote'
+        toastError('Error al guardar: ' + errorMessage)
+        // Convertir error de Supabase a Error estándar
+        const errorForLogging = error instanceof Error 
+          ? error 
+          : new Error(errorMessage)
+        logger.error('NewQuotePage', 'Error saving quote', errorForLogging, {
+          supabaseError: errorMessage,
+          supabaseCode: error?.code,
+          quoteData: {
+            client_id: selectedClient?.id,
+            total_price: total,
+            services_count: quoteServices.length,
+          },
+        })
         setLoading(false)
         return
       }
@@ -231,9 +287,9 @@ export default function NewQuotePage() {
     }
   }
 
-  const selectedService = (serviceId: string) => {
+  const selectedService = useCallback((serviceId: string) => {
     return services.find((s) => s.id === serviceId)
-  }
+  }, [services])
 
   return (
     <div className="p-8 max-w-4xl mx-auto">
@@ -411,7 +467,7 @@ export default function NewQuotePage() {
             <div className="flex justify-between items-center">
               <span className="text-lg font-semibold text-gray-900 dark:text-white">Total:</span>
               <span className="text-2xl font-bold text-blue-600">
-                ${getTotal().toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                ${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
               </span>
             </div>
           </div>
@@ -439,5 +495,3 @@ export default function NewQuotePage() {
     </div>
   )
 }
-
-

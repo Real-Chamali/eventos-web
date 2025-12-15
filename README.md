@@ -33,7 +33,7 @@ Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 - Cálculo automático de márgenes
 - Auditoría completa
 
-### �� Interfaz Moderna
+### 🎨 Interfaz Moderna
 - Dark mode automático
 - Responsive design
 - Loading skeletons

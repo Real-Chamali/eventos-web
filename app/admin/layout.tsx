@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import AdminSidebar from '@/components/AdminSidebar'
+import { logger } from '@/lib/utils/logger'
 
 export default async function AdminLayout({
   children,
@@ -23,7 +24,16 @@ export default async function AdminLayout({
     .single()
 
   if (profileError) {
-    console.error('Error fetching profile:', profileError)
+    // Convertir error de Supabase a Error estándar
+    const errorMessage = profileError?.message || 'Error fetching profile'
+    const errorForLogging = profileError instanceof Error 
+      ? profileError 
+      : new Error(errorMessage)
+    logger.error('AdminLayout', 'Error fetching profile', errorForLogging, {
+      supabaseError: errorMessage,
+      supabaseCode: profileError?.code,
+      userId: user.id,
+    })
     redirect('/login')
   }
 
@@ -40,5 +50,3 @@ export default async function AdminLayout({
     </div>
   )
 }
-
-

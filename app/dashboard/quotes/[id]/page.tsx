@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import confetti from 'canvas-confetti'
+import { logger } from '@/lib/utils/logger'
+import { useToast } from '@/lib/hooks'
 
 interface Quote {
   id: string
@@ -31,6 +33,7 @@ export default function QuoteDetailPage() {
   const [loading, setLoading] = useState(true)
   const [closing, setClosing] = useState(false)
   const supabase = createClient()
+  const { error: toastError } = useToast()
 
   useEffect(() => {
     loadQuote()
@@ -39,7 +42,7 @@ export default function QuoteDetailPage() {
 
   const loadQuote = async () => {
     try {
-      await supabase
+      const { data, error } = await supabase
         .from('quotes')
         .select(`
           *,
@@ -52,17 +55,25 @@ export default function QuoteDetailPage() {
         `)
         .eq('id', quoteId)
         .single()
-        .then(res => {
-          if (res.error) {
-            console.error('Error loading quote:', res.error)
-            alert('Error al cargar la cotización')
-          } else {
-            setQuote(res.data)
-          }
+
+      if (error) {
+        // Convertir error de Supabase a Error estándar
+        const errorMessage = error?.message || 'Error loading quote'
+        const errorForLogging = error instanceof Error 
+          ? error 
+          : new Error(errorMessage)
+        logger.error('QuoteDetailPage', 'Error loading quote', errorForLogging, {
+          supabaseError: errorMessage,
+          supabaseCode: error?.code,
+          quoteId: quoteId,
         })
+        toastError('Error al cargar la cotización')
+      } else {
+        setQuote(data)
+      }
     } catch (err) {
-      console.error('Unexpected error:', err)
-      alert('Error inesperado al cargar la cotización')
+      logger.error('QuoteDetailPage', 'Unexpected error loading quote', err as Error)
+      toastError('Error inesperado al cargar la cotización')
     } finally {
       setLoading(false)
     }
@@ -78,7 +89,17 @@ export default function QuoteDetailPage() {
       })
 
       if (error) {
-        alert('Error al cerrar la venta: ' + error.message)
+        const errorMessage = error?.message || 'Error closing sale'
+        toastError('Error al cerrar la venta: ' + errorMessage)
+        // Convertir error de Supabase a Error estándar
+        const errorForLogging = error instanceof Error 
+          ? error 
+          : new Error(errorMessage)
+        logger.error('QuoteDetailPage', 'Error closing sale', errorForLogging, {
+          supabaseError: errorMessage,
+          supabaseCode: error?.code,
+          quoteId: quoteId,
+        })
         setClosing(false)
         return
       }
@@ -96,7 +117,8 @@ export default function QuoteDetailPage() {
       }, 1000)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      alert('Error: ' + message)
+      toastError('Error: ' + message)
+      logger.error('QuoteDetailPage', 'Unexpected error closing sale', err as Error)
       setClosing(false)
     }
   }
@@ -180,5 +202,3 @@ export default function QuoteDetailPage() {
     </div>
   )
 }
-
-

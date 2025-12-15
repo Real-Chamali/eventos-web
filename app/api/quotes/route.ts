@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     // Filter by user if not admin
     if (!isAdmin) {
-      query = query.eq('user_id', user.id)
+      query = query.eq('vendor_id', user.id)
     }
 
     const { data, error } = await query.limit(100)
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
     const { data, error } = await supabase
       .from('quotes')
       .insert({
-        user_id: user.id,
+        vendor_id: user.id,
         client_id: payload.client_id,
         status: 'draft',
         total_price: payload.total_price,
