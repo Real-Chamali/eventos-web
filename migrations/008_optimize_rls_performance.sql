@@ -12,6 +12,9 @@
 -- ============================================================================
 -- 1. OPTIMIZAR POLÍTICAS DE CLIENTS
 -- ============================================================================
+-- NOTA: Requiere que la columna created_by exista en clients
+-- Si no existe, aplicar primero la migración 009_add_created_by_to_clients.sql
+-- ============================================================================
 
 -- Eliminar políticas existentes de clients
 DROP POLICY IF EXISTS "clients_admin_all" ON public.clients;
@@ -30,31 +33,41 @@ CREATE POLICY "clients_admin_all" ON public.clients
   USING ((select public.is_admin()))
   WITH CHECK ((select public.is_admin()));
 
+-- Política para SELECT: Vendors ven sus propios clientes o clientes sin created_by (legacy)
 CREATE POLICY "clients_vendor_select" ON public.clients
   FOR SELECT
   USING (
-    (select auth.uid()) = created_by
-    OR (select public.is_admin())
+    (select public.is_admin())
+    OR (select auth.uid()) = created_by
+    OR (created_by IS NULL AND (select auth.uid()) IS NOT NULL) -- Legacy: clientes sin created_by visibles para todos autenticados
   );
 
+-- Política para INSERT: Vendors pueden crear clientes (se asigna created_by automáticamente)
 CREATE POLICY "clients_vendor_insert" ON public.clients
   FOR INSERT
   WITH CHECK (
-    (select auth.uid()) = created_by
-    OR (select public.is_admin())
+    (select public.is_admin())
+    OR (
+      (select auth.uid()) IS NOT NULL
+      AND (created_by IS NULL OR (select auth.uid()) = created_by)
+    )
   );
 
+-- Política para UPDATE: Vendors pueden actualizar sus propios clientes
 CREATE POLICY "clients_vendor_update" ON public.clients
   FOR UPDATE
   USING (
-    (select auth.uid()) = created_by
-    OR (select public.is_admin())
+    (select public.is_admin())
+    OR (select auth.uid()) = created_by
+    OR (created_by IS NULL AND (select auth.uid()) IS NOT NULL) -- Legacy
   )
   WITH CHECK (
-    (select auth.uid()) = created_by
-    OR (select public.is_admin())
+    (select public.is_admin())
+    OR (select auth.uid()) = created_by
+    OR (created_by IS NULL AND (select auth.uid()) IS NOT NULL) -- Legacy
   );
 
+-- Política para DELETE: Solo admin puede eliminar
 CREATE POLICY "clients_admin_delete" ON public.clients
   FOR DELETE
   USING ((select public.is_admin()));
