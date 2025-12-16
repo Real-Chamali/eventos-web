@@ -6,6 +6,10 @@ import { createClient } from '@/utils/supabase/client'
 import { LoginSchema } from '@/lib/validations/schemas'
 import { useToast } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
+import { Card, CardContent } from '@/components/ui/Card'
+import Input from '@/components/ui/Input'
+import Button from '@/components/ui/Button'
+import { FormGroup } from '@/components/ui/Form'
 
 // Forzar renderizado dinámico para evitar prerendering durante build
 export const dynamic = 'force-dynamic'
@@ -212,76 +216,62 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900">
-      <div className="w-full max-w-md space-y-8 rounded-lg bg-white p-8 shadow-lg dark:bg-gray-800">
-        <div>
-          <h2 className="text-center text-3xl font-bold text-gray-900 dark:text-white">
-            Iniciar Sesión
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
-            Ingresa tus credenciales para continuar
-          </p>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(handleLogin)}>
-          <div className="space-y-4">
-            {/* Email Field */}
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Email
-              </label>
-              <input
-                id="email"
-                type="email"
-                autoComplete="email"
-                {...register('email')}
-                className={`mt-1 block w-full rounded-md border px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${
-                  errors.email
-                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                    : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                }`}
-                placeholder="tu@email.com"
-              />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                  {errors.email.message || 'Email inválido'}
-                </p>
-              )}
-            </div>
-
-            {/* Password Field */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Contraseña
-              </label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                {...register('password')}
-                className={`mt-1 block w-full rounded-md border px-3 py-2 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 dark:bg-gray-700 dark:text-white dark:border-gray-600 ${
-                  errors.password
-                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                    : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500'
-                }`}
-                placeholder="••••••••"
-              />
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                  {errors.password.message || 'Contraseña inválida'}
-                </p>
-              )}
-            </div>
+    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+      <div className="w-full max-w-md space-y-8">
+        {/* Header */}
+        <div className="text-center space-y-2">
+          <div className="mx-auto h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+            <span className="text-white font-bold text-xl">E</span>
           </div>
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+              Bienvenido de vuelta
+            </h2>
+            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              Ingresa tus credenciales para continuar
+            </p>
+          </div>
+        </div>
 
-          {/* Submit Button */}
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="w-full rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed dark:hover:bg-blue-800 dark:focus:ring-offset-gray-900"
-          >
-            {isSubmitting ? 'Iniciando sesión...' : 'Iniciar Sesión'}
-          </button>
-        </form>
+        {/* Form */}
+        <Card>
+          <CardContent className="p-6">
+            <form className="space-y-5" onSubmit={handleSubmit(handleLogin)}>
+              <FormGroup>
+                <Input
+                  id="email"
+                  type="email"
+                  label="Email"
+                  autoComplete="email"
+                  placeholder="tu@email.com"
+                  error={errors.email?.message}
+                  {...register('email')}
+                />
+              </FormGroup>
+
+              <FormGroup>
+                <Input
+                  id="password"
+                  type="password"
+                  label="Contraseña"
+                  autoComplete="current-password"
+                  placeholder="••••••••"
+                  error={errors.password?.message}
+                  {...register('password')}
+                />
+              </FormGroup>
+
+              <Button
+                type="submit"
+                className="w-full"
+                isLoading={isSubmitting}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Iniciando sesión...' : 'Iniciar Sesión'}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

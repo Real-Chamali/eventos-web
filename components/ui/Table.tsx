@@ -81,10 +81,11 @@ TableHead.displayName = 'TableHead'
 
 const TableCell = forwardRef<
   HTMLTableCellElement,
-  HTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
+  HTMLAttributes<HTMLTableCellElement> & { colSpan?: number }
+>(({ className, colSpan, ...props }, ref) => (
   <td
     ref={ref}
+    colSpan={colSpan}
     className={cn('p-4 align-middle [&:has([role=checkbox])]:pr-0', className)}
     {...props}
   />

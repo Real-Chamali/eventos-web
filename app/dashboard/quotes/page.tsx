@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import SearchInput from '@/components/ui/SearchInput'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
-import { Plus, Search, Filter, FileText } from 'lucide-react'
+import DataTable, { Column } from '@/components/ui/DataTable'
+import { Plus, FileText } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -190,68 +191,81 @@ export default function QuotesPage() {
         </CardContent>
       </Card>
 
-      {/* Quotes List */}
+      {/* Quotes Table */}
       <Card>
         <CardHeader>
-          <CardTitle>
-            {filteredQuotes.length === 0
-              ? 'No hay cotizaciones'
-              : `${filteredQuotes.length} cotización${filteredQuotes.length !== 1 ? 'es' : ''}`}
-          </CardTitle>
+          <CardTitle>Cotizaciones</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
               Cargando cotizaciones...
             </div>
-          ) : filteredQuotes.length === 0 ? (
-            <div className="text-center py-12">
-              <FileText className="mx-auto h-12 w-12 text-gray-400" />
-              <p className="mt-4 text-gray-500 dark:text-gray-400">
-                {searchTerm || statusFilter !== 'all'
-                  ? 'No se encontraron cotizaciones con los filtros aplicados'
-                  : 'No hay cotizaciones aún'}
-              </p>
-              {!searchTerm && statusFilter === 'all' && (
-                <Link href="/dashboard/quotes/new">
-                  <Button className="mt-4">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Crear Primera Cotización
-                  </Button>
-                </Link>
-              )}
-            </div>
           ) : (
-            <div className="space-y-3">
-              {filteredQuotes.map((quote) => (
-                <Link
-                  key={quote.id}
-                  href={`/dashboard/quotes/${quote.id}`}
-                  className="block p-4 rounded-lg border border-gray-200 dark:border-gray-800 hover:border-blue-300 dark:hover:border-blue-700 hover:bg-blue-50 dark:hover:bg-gray-800 transition-all duration-200"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-3">
-                        <h3 className="font-semibold text-gray-900 dark:text-white">
-                          {quote.client_name || 'Cliente sin nombre'}
-                        </h3>
-                        {getStatusBadge(quote.status)}
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                        Creada el {format(new Date(quote.created_at), "d 'de' MMMM, yyyy", { locale: es })}
-                      </p>
-                    </div>
-                    <div className="text-right ml-4">
-                      <p className="text-lg font-bold text-gray-900 dark:text-white">
-                        ${(quote.total_price || 0).toLocaleString('es-MX', {
-                          minimumFractionDigits: 2,
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            <DataTable
+              data={filteredQuotes}
+              columns={[
+                {
+                  id: 'client_name',
+                  header: 'Cliente',
+                  accessorKey: 'client_name',
+                  sortable: true,
+                  cell: (row) => (
+                    <Link
+                      href={`/dashboard/quotes/${row.id}`}
+                      className="font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                    >
+                      {row.client_name || 'Cliente sin nombre'}
+                    </Link>
+                  ),
+                },
+                {
+                  id: 'status',
+                  header: 'Estado',
+                  accessorKey: 'status',
+                  sortable: true,
+                  cell: (row) => getStatusBadge(row.status),
+                },
+                {
+                  id: 'total_price',
+                  header: 'Total',
+                  accessorKey: 'total_price',
+                  sortable: true,
+                  cell: (row) => (
+                    <span className="font-semibold">
+                      ${(row.total_price || 0).toLocaleString('es-MX', {
+                        minimumFractionDigits: 2,
+                      })}
+                    </span>
+                  ),
+                },
+                {
+                  id: 'created_at',
+                  header: 'Fecha',
+                  accessorKey: 'created_at',
+                  sortable: true,
+                  cell: (row) =>
+                    format(new Date(row.created_at), "d 'de' MMMM, yyyy", { locale: es }),
+                },
+              ]}
+              searchKey="client_name"
+              searchPlaceholder="Buscar por nombre de cliente..."
+              emptyMessage={
+                searchTerm || statusFilter !== 'all'
+                  ? 'No se encontraron cotizaciones con los filtros aplicados'
+                  : 'No hay cotizaciones aún'
+              }
+              actions={
+                !searchTerm && statusFilter === 'all' && filteredQuotes.length === 0 ? (
+                  <Link href="/dashboard/quotes/new">
+                    <Button>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Crear Primera Cotización
+                    </Button>
+                  </Link>
+                ) : undefined
+              }
+            />
           )}
         </CardContent>
       </Card>

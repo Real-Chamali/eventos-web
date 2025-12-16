@@ -1,6 +1,7 @@
 import { createClient } from '@/utils/supabase/server'
 import StatsCard from '@/components/ui/StatsCard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import Chart from '@/components/ui/Chart'
 import { DollarSign, TrendingUp, FileText, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import Button from '@/components/ui/Button'
@@ -56,6 +57,19 @@ export default async function DashboardPage() {
     })
     .reduce((acc, sale) => acc + (sale.total_price || 0), 0)
 
+  // Datos para gráfico de ventas mensuales (últimos 6 meses)
+  const monthlyData = Array.from({ length: 6 }, (_, i) => {
+    const date = new Date(currentYear, currentMonth - i, 1)
+    const monthName = date.toLocaleDateString('es-MX', { month: 'short' })
+    const monthSales = sales
+      .filter(sale => {
+        const saleDate = new Date(sale.created_at)
+        return saleDate.getMonth() === date.getMonth() && saleDate.getFullYear() === date.getFullYear()
+      })
+      .reduce((acc, sale) => acc + (sale.total_price || 0), 0)
+    return { name: monthName, value: monthSales }
+  }).reverse()
+
   return (
     <div className="p-6 space-y-6">
       {/* Header */}
@@ -101,6 +115,16 @@ export default async function DashboardPage() {
           description={`${pendingQuotes} pendientes, ${confirmedQuotes} confirmadas`}
         />
       </div>
+
+      {/* Sales Chart */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Ventas Mensuales</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Chart data={monthlyData} type="bar" height={300} />
+        </CardContent>
+      </Card>
 
       {/* Recent Quotes */}
       <Card>
