@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils/cn'
 import Button from './ui/Button'
 import GlobalSearch from './layout/GlobalSearch'
 import QuickActions from './layout/QuickActions'
+import NotificationCenter from './notifications/NotificationCenter'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -84,10 +85,7 @@ export default function Navbar() {
           <QuickActions />
           
           {/* Notifications */}
-          <button className="relative rounded-lg p-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
-          </button>
+          <NotificationCenter />
 
           {/* User Menu */}
           <DropdownMenu>
