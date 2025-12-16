@@ -330,7 +330,7 @@ export default function EditQuotePage() {
         user_id: user.id,
         action: 'UPDATE',
         table_name: 'quotes',
-        old_values: quote,
+        old_values: quote as Record<string, unknown>,
         new_values: {
           id: quoteId,
           client_id: selectedClient.id,
