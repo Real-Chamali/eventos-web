@@ -46,6 +46,12 @@ Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 - CI/CD con GitHub Actions
 - Coverage reporting
 
+### 🔍 Error Tracking
+- Sentry integrado (configurable)
+- Error tracking automático
+- Performance monitoring
+- User context tracking
+
 ## 📦 Stack Tecnológico
 
 - **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS
@@ -57,11 +63,13 @@ Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 ## 📚 Documentación
 
 - [**SETUP.md**](SETUP.md) - Configuración inicial y base de datos
+- [**GUIA_RAPIDA_SENTRY.md**](GUIA_RAPIDA_SENTRY.md) - Configurar Sentry en 5 minutos
 - [**IMPROVEMENTS.md**](IMPROVEMENTS.md) - 50 mejoras implementadas
 - [**CORRECTIONS_REPORT.md**](CORRECTIONS_REPORT.md) - Errores corregidos
 - [**docs/ARCHITECTURE.md**](docs/ARCHITECTURE.md) - Decisiones arquitectónicas (10 ADRs)
 - [**docs/CONTRIBUTING.md**](docs/CONTRIBUTING.md) - Guía de contribución
 - [**docs/TROUBLESHOOTING.md**](docs/TROUBLESHOOTING.md) - Solución de problemas
+- [**docs/SENTRY_SETUP.md**](docs/SENTRY_SETUP.md) - Configuración completa de Sentry
 
 ## 🔧 Comandos
 
