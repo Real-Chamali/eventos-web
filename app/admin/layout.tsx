@@ -34,10 +34,23 @@ export default async function AdminLayout({
       supabaseCode: profileError?.code,
       userId: user.id,
     })
-    redirect('/login')
+    
+    // Si el error es de esquema o tabla no encontrada, redirigir a dashboard
+    // en lugar de login (evita bucles y permite acceso básico)
+    if (profileError.code === 'PGRST106' || profileError.message?.includes('schema')) {
+      logger.warn('AdminLayout', 'Profile table not accessible, redirecting to dashboard', {
+        userId: user.id,
+        error: errorMessage,
+      })
+      redirect('/dashboard')
+    } else {
+      // Para otros errores, redirigir a login
+      redirect('/login')
+    }
   }
 
-  if (profile?.role !== 'admin') {
+  // Si no hay perfil o no es admin, redirigir a dashboard
+  if (!profile || profile.role !== 'admin') {
     redirect('/dashboard')
   }
 

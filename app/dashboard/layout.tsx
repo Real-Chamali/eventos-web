@@ -34,10 +34,25 @@ export default async function DashboardLayout({
       supabaseCode: profileError?.code,
       userId: user.id,
     })
-    redirect('/login')
+    
+    // Si el error es de esquema o tabla no encontrada, usar rol por defecto
+    // en lugar de redirigir a login (evita bucles)
+    if (profileError.code === 'PGRST106' || profileError.message?.includes('schema')) {
+      logger.warn('DashboardLayout', 'Profile table not accessible, using default role', {
+        userId: user.id,
+        error: errorMessage,
+      })
+      // Continuar con rol por defecto (vendor)
+    } else {
+      // Para otros errores, redirigir a login
+      redirect('/login')
+    }
   }
 
-  if (profile?.role === 'admin') {
+  // Si no hay perfil o hay error de esquema, usar rol por defecto
+  const userRole = profile?.role || 'vendor'
+
+  if (userRole === 'admin') {
     redirect('/admin')
   }
 
