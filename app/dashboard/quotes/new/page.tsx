@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { CreateQuoteSchema } from '@/lib/validations/schemas'
 import { useToast, useDebounce } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
+import { createAuditLog } from '@/lib/utils/audit'
 
 interface Client {
   id: string
@@ -274,6 +275,19 @@ export default function NewQuotePage() {
         setLoading(false)
         return
       }
+
+      // Crear registro de auditoría
+      await createAuditLog({
+        user_id: user.id,
+        action: 'CREATE',
+        table_name: 'quotes',
+        old_values: null,
+        new_values: quote,
+        metadata: {
+          services_count: quoteServices.length,
+          total_price: total,
+        },
+      })
 
       toastSuccess('Cotización guardada como borrador exitosamente')
       logger.info('NewQuotePage', 'Quote created successfully', { quoteId: quote.id })

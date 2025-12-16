@@ -1,4 +1,4 @@
-import { renderHook, act, waitFor } from '@testing-library/react'
+import { renderHook, act } from '@testing-library/react'
 import { useAsync, useDebounce, useLocalStorage, useToast, useForm } from '@/lib/hooks'
 
 describe('Hooks', () => {
@@ -23,7 +23,7 @@ describe('Hooks', () => {
       await act(async () => {
         try {
           await result.current.execute()
-        } catch (error) {
+        } catch {
           // Expected error
         }
       })

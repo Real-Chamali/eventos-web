@@ -5,6 +5,7 @@ import { createClient } from '@/utils/supabase/client'
 import { z } from 'zod'
 import { useToast } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
+import { createAuditLog } from '@/lib/utils/audit'
 
 interface Service {
   id: string
@@ -64,6 +65,10 @@ export default function AdminServicesPage() {
 
     setSaving(id)
     try {
+      // Obtener el servicio actual para auditoría
+      const currentService = services.find((s) => s.id === id)
+      const oldValue = currentService ? { [field]: currentService[field] } : null
+
       const { error } = await supabase
         .from('services')
         .update({ [field]: value })
@@ -72,9 +77,24 @@ export default function AdminServicesPage() {
       if (error) {
         throw error
       } else {
+        const updatedService = { ...currentService, [field]: value } as Service
         setServices(
-          services.map((s) => (s.id === id ? { ...s, [field]: value } : s))
+          services.map((s) => (s.id === id ? updatedService : s))
         )
+
+        // Obtener usuario para auditoría
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          await createAuditLog({
+            user_id: user.id,
+            action: 'UPDATE',
+            table_name: 'services',
+            old_values: oldValue ? { id, ...oldValue } : null,
+            new_values: { id, [field]: value },
+            metadata: { field, service_name: currentService?.name },
+          })
+        }
+
         toastSuccess('Servicio actualizado correctamente')
         logger.info('AdminServicesPage', `Service ${field} updated`, { id, value })
       }
