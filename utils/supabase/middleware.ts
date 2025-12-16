@@ -90,26 +90,11 @@ export async function updateSession(request: NextRequest) {
   if (user && pathname === '/login') {
     const url = request.nextUrl.clone()
     url.pathname = userRole === 'admin' ? '/admin' : '/dashboard'
-    url.searchParams.delete('redirected')
     return NextResponse.redirect(url)
   }
 
-  // Proteger rutas según el rol
-  if (user && userRole) {
-    // Si intenta acceder a /admin y no es admin
-    if (pathname.startsWith('/admin') && userRole !== 'admin') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/dashboard'
-      return NextResponse.redirect(url)
-    }
-
-    // Si intenta acceder a /dashboard y es admin
-    if (pathname.startsWith('/dashboard') && userRole === 'admin') {
-      const url = request.nextUrl.clone()
-      url.pathname = '/admin'
-      return NextResponse.redirect(url)
-    }
-  }
+  // NOTA: Las redirecciones según rol se manejan en los layouts
+  // para evitar bucles de redirección entre middleware y layouts
 
   return supabaseResponse
 }
