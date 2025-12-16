@@ -205,7 +205,7 @@ export default function AdminServicesPage() {
           action: 'CREATE',
           table_name: 'services',
           old_values: null,
-          new_values: data as Record<string, unknown>,
+          new_values: data as unknown as Record<string, unknown>,
           metadata: { service_name: data.name },
         })
       }
@@ -262,7 +262,7 @@ export default function AdminServicesPage() {
           user_id: user.id,
           action: 'DELETE',
           table_name: 'services',
-          old_values: serviceToDelete as Record<string, unknown>,
+          old_values: serviceToDelete as unknown as Record<string, unknown>,
           new_values: null,
           metadata: { service_name: serviceToDelete.name },
         })
@@ -331,8 +331,8 @@ export default function AdminServicesPage() {
           user_id: user.id,
           action: 'UPDATE',
           table_name: 'services',
-          old_values: oldService as Record<string, unknown>,
-          new_values: editingService as Record<string, unknown>,
+          old_values: oldService as unknown as Record<string, unknown>,
+          new_values: editingService as unknown as Record<string, unknown>,
           metadata: { service_name: editingService.name },
         })
       }
