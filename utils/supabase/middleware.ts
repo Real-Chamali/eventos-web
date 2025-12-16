@@ -68,20 +68,36 @@ export async function updateSession(request: NextRequest) {
   let userRole: string | null = null
   if (user) {
     try {
+      // Intentar obtener el perfil con manejo de errores mejorado
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', user.id)
-        .single()
+        .maybeSingle() // Usar maybeSingle en lugar de single para evitar errores si no existe
       
       // Si hay error al obtener el perfil, usar rol por defecto
-      if (profileError || !profile) {
+      if (profileError) {
+        // Log del error solo si no es un error de "no encontrado"
+        if (profileError.code !== 'PGRST116' && profileError.code !== 'PGRST106') {
+          console.warn('Middleware: Error fetching profile', {
+            code: profileError.code,
+            message: profileError.message,
+            userId: user.id,
+          })
+        }
         userRole = 'vendor'
+      } else if (profile) {
+        // Convertir el enum a string si es necesario
+        userRole = typeof profile.role === 'string' ? profile.role : String(profile.role)
+        // Asegurar que sea 'admin' o 'vendor'
+        userRole = (userRole === 'admin' ? 'admin' : 'vendor')
       } else {
-        userRole = profile.role || 'vendor'
+        // No hay perfil, usar rol por defecto
+        userRole = 'vendor'
       }
-    } catch {
-      // En caso de error, usar rol por defecto
+    } catch (error) {
+      // En caso de error inesperado, usar rol por defecto
+      console.warn('Middleware: Unexpected error fetching profile', error)
       userRole = 'vendor'
     }
   }
