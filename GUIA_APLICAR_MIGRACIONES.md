@@ -2,9 +2,51 @@
 
 ## 🎯 Migraciones a Aplicar
 
-Se han creado 4 migraciones SQL que deben aplicarse en Supabase para habilitar todas las características premium:
+Se han creado **7 migraciones SQL** que deben aplicarse en Supabase. **IMPORTANTE**: Aplica en el orden indicado.
 
-### 1. Sistema de Notificaciones
+## ⚠️ ORDEN CRÍTICO DE APLICACIÓN
+
+**NO saltes ninguna migración**. El orden es importante porque:
+- La **001** crea la función `is_admin()` usada por las demás
+- La **003** corrige problemas de RLS que afectan a todas las tablas
+- Las **004-007** dependen de las anteriores
+
+### 1. Sistema de Auditoría (CRÍTICO - APLICAR PRIMERO)
+**Archivo**: `migrations/001_create_audit_logs_table.sql`
+
+**Qué hace:**
+- Crea tabla `audit_logs` para rastrear todos los cambios
+- **Crea la función `is_admin()`** que es usada por todas las demás migraciones
+- Configura RLS policies
+- Crea funciones helper para consultas de auditoría
+
+**Por qué es crítica**: Sin esta migración, las migraciones 004-007 fallarán porque no existe `is_admin()`.
+
+**Cómo aplicar:**
+1. Ve a Supabase Dashboard → SQL Editor
+2. Copia el contenido de `migrations/001_create_audit_logs_table.sql`
+3. Pega y ejecuta el SQL
+4. Verifica que la tabla y función se crearon correctamente
+
+### 2. Corrección de RLS (CRÍTICO - APLICAR SEGUNDO)
+**Archivo**: `migrations/003_fix_profiles_rls_recursion.sql`
+
+**Qué hace:**
+- Corrige problemas de recursión infinita en políticas RLS de `profiles`
+- Mejora la función `is_admin()` para evitar recursión
+- Crea políticas RLS simples y seguras
+
+**Por qué es crítica**: Sin esta migración, las políticas RLS de otras tablas pueden causar errores de recursión.
+
+**Cómo aplicar:**
+1. Ve a Supabase Dashboard → SQL Editor
+2. Copia el contenido de `migrations/003_fix_profiles_rls_recursion.sql`
+3. Pega y ejecuta el SQL
+4. Verifica que no hay errores
+
+**NOTA**: La migración 002 (quote_versions) es opcional. Puedes saltarla si no necesitas versionado de cotizaciones.
+
+### 3. Sistema de Notificaciones
 **Archivo**: `migrations/004_create_notifications_table.sql`
 
 **Qué hace:**
@@ -18,7 +60,7 @@ Se han creado 4 migraciones SQL que deben aplicarse en Supabase para habilitar t
 3. Pega y ejecuta el SQL
 4. Verifica que la tabla se creó correctamente
 
-### 2. Sistema de Comentarios
+### 4. Sistema de Comentarios
 **Archivo**: `migrations/005_create_comments_table.sql`
 
 **Qué hace:**
@@ -32,7 +74,7 @@ Se han creado 4 migraciones SQL que deben aplicarse en Supabase para habilitar t
 3. Pega y ejecuta el SQL
 4. Verifica que la tabla se creó correctamente
 
-### 3. Plantillas de Cotizaciones
+### 5. Plantillas de Cotizaciones
 **Archivo**: `migrations/006_create_quote_templates_table.sql`
 
 **Qué hace:**
@@ -46,7 +88,7 @@ Se han creado 4 migraciones SQL que deben aplicarse en Supabase para habilitar t
 3. Pega y ejecuta el SQL
 4. Verifica que la tabla se creó correctamente
 
-### 4. Preferencias de Usuario
+### 6. Preferencias de Usuario
 **Archivo**: `migrations/007_create_user_preferences_table.sql`
 
 **Qué hace:**
@@ -65,6 +107,13 @@ Se han creado 4 migraciones SQL que deben aplicarse en Supabase para habilitar t
 Después de aplicar cada migración, verifica:
 
 ```sql
+-- Verificar tabla de auditoría
+SELECT COUNT(*) FROM audit_logs;
+
+-- Verificar función is_admin()
+SELECT proname FROM pg_proc WHERE proname = 'is_admin';
+-- Debe retornar 1 fila
+
 -- Verificar tabla de notificaciones
 SELECT COUNT(*) FROM notifications;
 
@@ -106,13 +155,18 @@ ALTER PUBLICATION supabase_realtime ADD TABLE comments;
 ### Error: "function already exists"
 - La función ya existe, puedes omitirla o usar `CREATE OR REPLACE FUNCTION`
 
-## 📝 Orden Recomendado de Aplicación
+## 📝 Orden CRÍTICO de Aplicación
 
-1. ✅ `004_create_notifications_table.sql`
-2. ✅ `005_create_comments_table.sql`
-3. ✅ `006_create_quote_templates_table.sql`
-4. ✅ `007_create_user_preferences_table.sql`
-5. ✅ Habilitar Realtime (opcional)
+**IMPORTANTE**: Aplica en este orden exacto. NO saltes ninguna:
+
+1. ✅ **`001_create_audit_logs_table.sql`** (CRÍTICO - Crea is_admin())
+2. ✅ **`003_fix_profiles_rls_recursion.sql`** (CRÍTICO - Corrige RLS)
+3. ⚪ `002_create_quote_versions_table_final.sql` (OPCIONAL - Solo si necesitas versionado)
+4. ✅ `004_create_notifications_table.sql` (Requiere 001 y 003)
+5. ✅ `005_create_comments_table.sql` (Requiere 001 y 003)
+6. ✅ `006_create_quote_templates_table.sql` (Requiere 001 y 003)
+7. ✅ `007_create_user_preferences_table.sql` (Requiere 003)
+8. ✅ Habilitar Realtime (opcional pero recomendado)
 
 ## ✨ Después de Aplicar
 

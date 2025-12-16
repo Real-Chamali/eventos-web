@@ -31,10 +31,13 @@ npm run build
 ### 2. Verificar que todas las migraciones estén creadas
 
 Asegúrate de tener estos archivos en `migrations/`:
-- ✅ `004_create_notifications_table.sql`
-- ✅ `005_create_comments_table.sql`
-- ✅ `006_create_quote_templates_table.sql`
-- ✅ `007_create_user_preferences_table.sql`
+- ✅ `001_create_audit_logs_table.sql` - Sistema de auditoría (CRÍTICO: crea función is_admin())
+- ✅ `002_create_quote_versions_table_final.sql` - Versiones de cotizaciones (opcional)
+- ✅ `003_fix_profiles_rls_recursion.sql` - Corrección de RLS (CRÍTICO: debe aplicarse antes de 004-007)
+- ✅ `004_create_notifications_table.sql` - Notificaciones en tiempo real
+- ✅ `005_create_comments_table.sql` - Sistema de comentarios
+- ✅ `006_create_quote_templates_table.sql` - Plantillas de cotizaciones
+- ✅ `007_create_user_preferences_table.sql` - Preferencias de usuario
 
 ---
 
@@ -48,31 +51,73 @@ Asegúrate de tener estos archivos en `migrations/`:
 
 ### Paso 2: Aplicar cada migración en orden
 
-**IMPORTANTE**: Aplica las migraciones en este orden exacto:
+**IMPORTANTE**: Aplica las migraciones en este orden exacto. **NO saltes ninguna**:
 
-#### Migración 1: Notificaciones
+#### Migración 1: Sistema de Auditoría (CRÍTICO)
 
 ```sql
--- Copia y pega el contenido completo de:
+-- migrations/001_create_audit_logs_table.sql
+```
+
+**Por qué es crítica**: Crea la función `is_admin()` que es usada por todas las demás migraciones.
+
+1. Abre el archivo `migrations/001_create_audit_logs_table.sql`
+2. Copia TODO el contenido
+3. Pégalo en el SQL Editor de Supabase
+4. Haz clic en **RUN** o presiona `Ctrl+Enter`
+5. Verifica que aparezca "Success. No rows returned"
+
+#### Migración 2: Corrección de RLS (CRÍTICO)
+
+```sql
+-- migrations/003_fix_profiles_rls_recursion.sql
+```
+
+**Por qué es crítica**: Corrige problemas de recursión infinita en RLS que afectan a todas las demás tablas.
+
+1. Abre el archivo `migrations/003_fix_profiles_rls_recursion.sql`
+2. Copia TODO el contenido
+3. Pégalo en el SQL Editor de Supabase
+4. Haz clic en **RUN**
+5. Verifica que se ejecutó correctamente
+
+**NOTA**: La migración 002 (quote_versions) es opcional. Si no la necesitas, puedes saltarla.
+
+#### Migración 3: Notificaciones
+
+```sql
 -- migrations/004_create_notifications_table.sql
 ```
 
 1. Abre el archivo `migrations/004_create_notifications_table.sql`
 2. Copia TODO el contenido
 3. Pégalo en el SQL Editor de Supabase
-4. Haz clic en **RUN** o presiona `Ctrl+Enter`
+4. Haz clic en **RUN**
 5. Verifica que aparezca "Success. No rows returned"
 
-#### Migración 2: Comentarios
+#### Migración 4: Comentarios
 
 ```sql
--- Copia y pega el contenido completo de:
 -- migrations/005_create_comments_table.sql
 ```
 
-Repite el mismo proceso para:
-- `migrations/006_create_quote_templates_table.sql`
-- `migrations/007_create_user_preferences_table.sql`
+Repite el mismo proceso.
+
+#### Migración 5: Plantillas de Cotizaciones
+
+```sql
+-- migrations/006_create_quote_templates_table.sql
+```
+
+Repite el mismo proceso.
+
+#### Migración 6: Preferencias de Usuario
+
+```sql
+-- migrations/007_create_user_preferences_table.sql
+```
+
+Repite el mismo proceso.
 
 ### Paso 3: Habilitar Realtime (CRÍTICO)
 
@@ -95,9 +140,25 @@ Ejecuta este SQL para verificar:
 SELECT table_name 
 FROM information_schema.tables 
 WHERE table_schema = 'public' 
-AND table_name IN ('notifications', 'comments', 'quote_templates', 'user_preferences');
+AND table_name IN (
+  'audit_logs',           -- Migración 001
+  'notifications',        -- Migración 004
+  'comments',             -- Migración 005
+  'quote_templates',      -- Migración 006
+  'user_preferences'      -- Migración 007
+);
 
--- Debe retornar 4 filas
+-- Debe retornar 5 filas (o 6 si aplicaste quote_versions)
+```
+
+**Verificar función is_admin()**:
+```sql
+-- Verificar que la función is_admin() existe
+SELECT proname, prosrc 
+FROM pg_proc 
+WHERE proname = 'is_admin';
+
+-- Debe retornar 1 fila
 ```
 
 ---
