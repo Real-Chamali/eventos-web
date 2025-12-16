@@ -326,21 +326,29 @@ export default function EditQuotePage() {
         return
       }
 
-      await createAuditLog({
-        user_id: user.id,
-        action: 'UPDATE',
-        table_name: 'quotes',
-        old_values: quote as Record<string, unknown>,
-        new_values: {
-          id: quoteId,
-          client_id: selectedClient.id,
-          total_price: total,
-          services_count: quoteServices.length,
-        },
-        metadata: {
-          quote_id: quoteId,
-        },
-      })
+      if (quote) {
+        await createAuditLog({
+          user_id: user.id,
+          action: 'UPDATE',
+          table_name: 'quotes',
+          old_values: {
+            id: quote.id,
+            client_id: quote.client_id,
+            total_price: quote.total_price,
+            status: quote.status,
+          },
+          new_values: {
+            id: quoteId,
+            client_id: selectedClient.id,
+            total_price: total,
+            status: quote.status,
+          },
+          metadata: {
+            quote_id: quoteId,
+            services_count: quoteServices.length,
+          },
+        })
+      }
 
       toastSuccess('Cotización actualizada correctamente')
       router.push(`/dashboard/quotes/${quoteId}`)
