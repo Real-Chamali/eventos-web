@@ -41,6 +41,8 @@ export default function Sidebar() {
 
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: Home },
+    { href: '/dashboard/clients', label: 'Clientes', icon: User },
+    { href: '/dashboard/quotes', label: 'Cotizaciones', icon: FileText },
     { href: '/dashboard/quotes/new', label: 'Nueva Cotización', icon: Plus },
     { href: '/dashboard/calendar', label: 'Calendario', icon: Calendar },
   ]

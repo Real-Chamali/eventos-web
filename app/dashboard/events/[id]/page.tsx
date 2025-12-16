@@ -11,6 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Skeleton from '@/components/ui/Skeleton'
+import EventTimeline from '@/components/events/EventTimeline'
+import EventChecklist from '@/components/events/EventChecklist'
 import { CheckCircle2, Calendar, DollarSign, ArrowLeft, FileText, User } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -184,11 +186,46 @@ export default function EventPage() {
 
   const servicesCount = event.quote?.quote_services?.length || 0
 
+  // Timeline items basados en el evento
+  const timelineItems = [
+    {
+      id: '1',
+      title: 'Cotización Creada',
+      description: 'La cotización fue creada y enviada al cliente',
+      date: event.quote?.created_at || event.created_at,
+      status: 'completed' as const,
+    },
+    {
+      id: '2',
+      title: 'Venta Confirmada',
+      description: 'El cliente confirmó la cotización y se creó el evento',
+      date: event.created_at,
+      status: 'completed' as const,
+    },
+    {
+      id: '3',
+      title: 'Evento Programado',
+      description: 'El evento está programado y listo para ejecutarse',
+      date: event.created_at,
+      status: 'pending' as const,
+    },
+  ]
+
+  // Checklist items
+  const checklistItems = [
+    { id: '1', label: 'Cotización aprobada por el cliente', completed: true, required: true },
+    { id: '2', label: 'Pago recibido', completed: false, required: true },
+    { id: '3', label: 'Servicios confirmados', completed: true, required: true },
+    { id: '4', label: 'Fecha del evento confirmada', completed: false, required: true },
+    { id: '5', label: 'Equipo asignado', completed: false, required: false },
+    { id: '6', label: 'Materiales preparados', completed: false, required: false },
+  ]
+
   return (
     <div className="space-y-6">
       <PageHeader
-        title="¡Venta Cerrada Exitosamente!"
-        description="El evento ha sido creado y confirmado"
+        title={`Evento #${event.id.slice(0, 8)}`}
+        description="Vista operativa completa del evento"
         breadcrumbs={[
           { label: 'Dashboard', href: '/dashboard' },
           { label: 'Eventos', href: '/dashboard' },
@@ -196,7 +233,7 @@ export default function EventPage() {
         ]}
       />
 
-      {/* Success Banner */}
+      {/* Status Banner */}
       <Card className="border-l-4 border-l-green-600 dark:border-l-green-500">
         <CardContent className="p-6">
           <div className="flex items-start space-x-4">
@@ -208,16 +245,33 @@ export default function EventPage() {
                 Evento Confirmado
               </h2>
               <p className="text-gray-600 dark:text-gray-400">
-                El evento ha sido creado exitosamente y la venta ha sido registrada en el sistema.
+                El evento está activo y listo para ejecutarse. Revisa el checklist para asegurar que
+                todo esté listo.
               </p>
             </div>
+            <Badge variant="success">Activo</Badge>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Event Details */}
-        <Card>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Timeline */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Timeline del Evento</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <EventTimeline items={timelineItems} />
+            </CardContent>
+          </Card>
+
+          {/* Checklist */}
+          <EventChecklist items={checklistItems} />
+
+          {/* Event Details */}
+          <Card>
           <CardHeader>
             <CardTitle>Información del Evento</CardTitle>
           </CardHeader>
@@ -307,6 +361,57 @@ export default function EventPage() {
             </CardContent>
           </Card>
         )}
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Quote Summary */}
+          {event.quote && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Resumen de la Cotización</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {event.quote.client && (
+                  <div className="flex items-start space-x-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 dark:bg-gray-800">
+                      <User className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {event.quote.client.name}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {event.quote.client.email}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                <div className="flex items-start space-x-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50 dark:bg-green-900/20">
+                    <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      Monto Total
+                    </p>
+                    <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                      {formatCurrency(event.quote.total_price)}
+                    </p>
+                  </div>
+                </div>
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      Servicios incluidos:
+                    </span>
+                    <Badge variant="info">{servicesCount} servicios</Badge>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
       </div>
 
       {/* Actions */}

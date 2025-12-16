@@ -5,9 +5,11 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Menu, X, Bell, Search, User, LogOut, Settings } from 'lucide-react'
+import { Menu, X, Bell, User, LogOut, Settings } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import Button from './ui/Button'
+import GlobalSearch from './layout/GlobalSearch'
+import QuickActions from './layout/QuickActions'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -72,21 +74,17 @@ export default function Navbar() {
         </div>
 
         {/* Search Bar - Desktop */}
-        <div className="hidden flex-1 max-w-md mx-8 lg:block">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <input
-              type="search"
-              placeholder="Buscar..."
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 py-2 pl-10 pr-4 text-sm placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-gray-800 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-blue-500"
-            />
-          </div>
+        <div className="hidden flex-1 max-w-md mx-8 lg:flex items-center justify-center">
+          <GlobalSearch />
         </div>
 
         {/* Right Side Actions */}
         <div className="flex items-center space-x-2">
+          {/* Quick Actions */}
+          <QuickActions />
+          
           {/* Notifications */}
-          <button className="relative rounded-lg p-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
+          <button className="relative rounded-lg p-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors">
             <Bell className="h-5 w-5" />
             <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-red-500"></span>
           </button>

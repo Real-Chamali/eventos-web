@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { CreateQuoteSchema } from '@/lib/validations/schemas'
 import { useToast, useDebounce } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
@@ -28,6 +28,7 @@ interface QuoteService {
 }
 
 export default function NewQuotePage() {
+  const searchParams = useSearchParams()
   const [step, setStep] = useState(1)
   const [clients, setClients] = useState<Client[]>([])
   const [services, setServices] = useState<Service[]>([])
@@ -40,6 +41,25 @@ export default function NewQuotePage() {
   const supabase = useMemo(() => createClient(), [])
   const { success: toastSuccess, error: toastError } = useToast()
   const debouncedSearchClient = useDebounce(searchClient, 300)
+
+  // Cargar cliente si viene en query params
+  useEffect(() => {
+    const clientId = searchParams.get('client_id')
+    if (clientId && !selectedClient) {
+      const loadClient = async () => {
+        const { data } = await supabase
+          .from('clients')
+          .select('*')
+          .eq('id', clientId)
+          .single()
+        if (data) {
+          setSelectedClient(data)
+        }
+      }
+      loadClient()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   useEffect(() => {
     let cancelled = false
