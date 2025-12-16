@@ -598,3 +598,4 @@ Si completaste todos los pasos, tu aplicación está:
 **Última actualización:** 14 de Diciembre de 2025  
 **Versión de la Guía:** 1.0
 
+
