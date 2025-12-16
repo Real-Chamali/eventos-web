@@ -11,11 +11,11 @@ import PageHeader from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
-import Select from '@/components/ui/Select'
 import SearchInput from '@/components/ui/SearchInput'
 import Badge from '@/components/ui/Badge'
 import Skeleton from '@/components/ui/Skeleton'
 import {
+  Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
