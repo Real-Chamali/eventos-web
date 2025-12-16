@@ -6,7 +6,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
-import { Home, FileText, Plus, LogOut, User } from 'lucide-react'
+import { Home, FileText, Plus, LogOut, User, Calendar } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import Button from '@/components/ui/Button'
 import { useEffect, useState } from 'react'
@@ -42,6 +42,7 @@ export default function Sidebar() {
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: Home },
     { href: '/dashboard/quotes/new', label: 'Nueva Cotización', icon: Plus },
+    { href: '/dashboard/calendar', label: 'Calendario', icon: Calendar },
   ]
 
   return (

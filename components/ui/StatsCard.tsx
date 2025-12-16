@@ -33,23 +33,27 @@ export default function StatsCard({
             <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
               {typeof value === 'number' && value >= 0 ? '$' : ''}{formattedValue}
             </p>
-            {change !== undefined && (
+            {(change !== undefined || description) && (
               <div className="mt-2 flex items-center space-x-1">
-                {trend === 'up' ? (
-                  <TrendingUp className="h-4 w-4 text-green-600" />
-                ) : trend === 'down' ? (
-                  <TrendingDown className="h-4 w-4 text-red-600" />
-                ) : null}
-                <span
-                  className={cn(
-                    'text-sm font-medium',
-                    trend === 'up' && 'text-green-600',
-                    trend === 'down' && 'text-red-600',
-                    !trend && 'text-gray-600'
-                  )}
-                >
-                  {change > 0 ? '+' : ''}{change}%
-                </span>
+                {change !== undefined && (
+                  <>
+                    {trend === 'up' ? (
+                      <TrendingUp className="h-4 w-4 text-green-600" />
+                    ) : trend === 'down' ? (
+                      <TrendingDown className="h-4 w-4 text-red-600" />
+                    ) : null}
+                    <span
+                      className={cn(
+                        'text-sm font-medium',
+                        trend === 'up' && 'text-green-600',
+                        trend === 'down' && 'text-red-600',
+                        !trend && 'text-gray-600'
+                      )}
+                    >
+                      {change > 0 ? '+' : ''}{change}%
+                    </span>
+                  </>
+                )}
                 {description && (
                   <span className="text-sm text-gray-500 dark:text-gray-400 ml-1">
                     {description}

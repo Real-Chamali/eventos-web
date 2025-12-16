@@ -2,7 +2,8 @@ import { createClient } from '@/utils/supabase/server'
 import StatsCard from '@/components/ui/StatsCard'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import Chart from '@/components/ui/Chart'
-import { DollarSign, TrendingUp, FileText, Calendar } from 'lucide-react'
+import Calendar from '@/components/ui/Calendar'
+import { DollarSign, TrendingUp, FileText, Calendar as CalendarIcon } from 'lucide-react'
 import Link from 'next/link'
 import Button from '@/components/ui/Button'
 import { Plus } from 'lucide-react'
@@ -105,7 +106,7 @@ export default async function DashboardPage() {
         <StatsCard
           title="Ventas del Mes"
           value={monthlySales}
-          icon={<Calendar className="h-6 w-6 text-purple-600" />}
+          icon={<CalendarIcon className="h-6 w-6 text-purple-600" />}
           description="Mes actual"
         />
         <StatsCard
@@ -116,15 +117,21 @@ export default async function DashboardPage() {
         />
       </div>
 
-      {/* Sales Chart */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Ventas Mensuales</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Chart data={monthlyData} type="bar" height={300} />
-        </CardContent>
-      </Card>
+      {/* Calendar and Chart Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Calendar */}
+        <Calendar />
+
+        {/* Sales Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Ventas Mensuales</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Chart data={monthlyData} type="bar" height={300} />
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Recent Quotes */}
       <Card>
