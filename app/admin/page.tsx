@@ -94,7 +94,7 @@ export default async function AdminPage() {
     .reduce((sum, q) => sum + Number(q.total_price || 0), 0)
 
   // Datos para gráfico de ventas mensuales
-  const monthlyData = Array.from({ length: 6 }, (_, i) => {
+  const monthlyData: Array<{ month: string; ventas: number }> = Array.from({ length: 6 }, (_, i) => {
     const date = new Date(currentYear, currentMonth - 5 + i, 1)
     const monthSales = quotes
       .filter((q) => {
