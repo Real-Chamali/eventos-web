@@ -326,12 +326,19 @@ export default function EditQuotePage() {
         return
       }
 
-      await createAuditLog(user.id, 'UPDATE', 'quotes', quoteId, {
+      await createAuditLog({
+        user_id: user.id,
+        action: 'UPDATE',
+        table_name: 'quotes',
         old_values: quote,
         new_values: {
+          id: quoteId,
           client_id: selectedClient.id,
           total_price: total,
           services_count: quoteServices.length,
+        },
+        metadata: {
+          quote_id: quoteId,
         },
       })
 
