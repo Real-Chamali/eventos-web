@@ -494,10 +494,13 @@ CREATE POLICY "comments_insert" ON public.comments
         AND ((select auth.uid()) = q.vendor_id OR (select public.is_admin()))
       ))
       OR
-      (entity_type = 'client' AND EXISTS (
-        SELECT 1 FROM clients c
-        WHERE c.id = comments.entity_id
-        AND ((select auth.uid()) = c.created_by OR (select public.is_admin()))
+      (entity_type = 'client' AND (
+        EXISTS (
+          SELECT 1 FROM clients c
+          WHERE c.id = comments.entity_id
+          AND ((select auth.uid()) = c.created_by OR (select public.is_admin()))
+        )
+        OR (select auth.uid()) IS NOT NULL -- Legacy: clientes sin created_by visibles para todos autenticados
       ))
       OR
       (select public.is_admin())
