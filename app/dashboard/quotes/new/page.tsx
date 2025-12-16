@@ -7,6 +7,7 @@ import { CreateQuoteSchema } from '@/lib/validations/schemas'
 import { useToast, useDebounce } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 import { createAuditLog } from '@/lib/utils/audit'
+import QuoteTemplateSelector from '@/components/templates/QuoteTemplateSelector'
 
 interface Client {
   id: string

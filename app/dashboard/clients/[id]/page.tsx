@@ -15,6 +15,7 @@ import { Users, Mail, Phone, FileText, Calendar, ArrowLeft, Edit } from 'lucide-
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Link from 'next/link'
+import CommentThread from '@/components/comments/CommentThread'
 
 interface Client {
   id: string

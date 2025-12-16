@@ -109,6 +109,11 @@ export default async function DashboardPage() {
             </Button>
           </Link>
         </div>
+        <Link href="/dashboard/analytics">
+          <Button variant="outline">
+            Ver Analytics Avanzado
+          </Button>
+        </Link>
       </div>
 
       {/* Stats Grid - KPIs Reales */}

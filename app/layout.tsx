@@ -5,6 +5,7 @@ import ToastProvider from "@/components/ToastProvider";
 import ThemeProviderWrapper from "@/components/ThemeProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SentryProvider } from "@/components/SentryProvider";
+import OnboardingTour from "@/components/onboarding/OnboardingTour";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -33,6 +34,7 @@ export default function RootLayout({
             <ToastProvider>
               <SentryProvider>
                 {children}
+                <OnboardingTour />
               </SentryProvider>
             </ToastProvider>
           </ThemeProviderWrapper>

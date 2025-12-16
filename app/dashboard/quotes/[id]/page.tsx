@@ -11,6 +11,7 @@ import PageHeader from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
+import CommentThread from '@/components/comments/CommentThread'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,7 +52,7 @@ interface Quote {
     id: string
     quantity: number
     final_price: number
-    service: {
+    service?: {
       name: string
     }
   }>
@@ -79,7 +80,7 @@ export default function QuoteDetailPage() {
         .from('quotes')
         .select(`
           *,
-          client:clients(*),
+          client:clients(name, email),
           quote_services(
             id,
             quantity,
@@ -91,22 +92,13 @@ export default function QuoteDetailPage() {
         .single()
 
       if (error) {
-        const errorMessage = error?.message || 'Error loading quote'
-        const errorForLogging = error instanceof Error 
-          ? error 
-          : new Error(errorMessage)
-        logger.error('QuoteDetailPage', 'Error loading quote', errorForLogging, {
-          supabaseError: errorMessage,
-          supabaseCode: error?.code,
-          quoteId: quoteId,
-        })
-        toastError('Error al cargar la cotización')
-      } else {
-        setQuote(data)
+        throw error
       }
+
+      setQuote(data)
     } catch (err) {
-      logger.error('QuoteDetailPage', 'Unexpected error loading quote', err as Error)
-      toastError('Error inesperado al cargar la cotización')
+      logger.error('QuoteDetailPage', 'Error loading quote', err as Error)
+      toastError('Error al cargar la cotización')
     } finally {
       setLoading(false)
     }
@@ -115,67 +107,85 @@ export default function QuoteDetailPage() {
   const handleCloseSale = async () => {
     setClosing(true)
     try {
-      const { error } = await supabase.rpc('confirm_sale', {
-        id: quoteId,
-      })
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
 
-      if (error) {
-        const errorMessage = error?.message || 'Error closing sale'
-        toastError('Error al cerrar la venta: ' + errorMessage)
-        const errorForLogging = error instanceof Error 
-          ? error 
-          : new Error(errorMessage)
-        logger.error('QuoteDetailPage', 'Error closing sale', errorForLogging, {
-          supabaseError: errorMessage,
-          supabaseCode: error?.code,
-          quoteId: quoteId,
-        })
-        setClosing(false)
+      if (!user) {
+        toastError('Usuario no autenticado')
         return
       }
 
-      // Mostrar confeti
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
+      // Actualizar estado de cotización
+      const { error: updateError } = await supabase
+        .from('quotes')
+        .update({ status: 'confirmed' })
+        .eq('id', quoteId)
+
+      if (updateError) throw updateError
+
+      // Crear evento
+      const { data: event, error: eventError } = await supabase
+        .from('events')
+        .insert({
+          quote_id: quoteId,
+        })
+        .select()
+        .single()
+
+      if (eventError) throw eventError
+
+      // Registrar ingreso en finance_ledger
+      const { error: financeError } = await supabase.from('finance_ledger').insert({
+        event_id: event.id,
+        amount: quote?.total_price || 0,
+        type: 'income',
+        description: `Venta confirmada - Cotización #${quoteId.slice(0, 8)}`,
       })
 
+      if (financeError) {
+        logger.warn('QuoteDetailPage', 'Error creating finance entry', financeError)
+        // No fallar si hay error en finance_ledger
+      }
+
+      // Mostrar confeti
+      const duration = 3000
+      const animationEnd = Date.now() + duration
+      const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 0 }
+
+      function randomInRange(min: number, max: number) {
+        return Math.random() * (max - min) + min
+      }
+
+      const interval = setInterval(function () {
+        const timeLeft = animationEnd - Date.now()
+
+        if (timeLeft <= 0) {
+          clearInterval(interval)
+          return
+        }
+
+        const particleCount = 50 * (timeLeft / duration)
+        confetti({
+          ...defaults,
+          particleCount,
+          origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+        })
+        confetti({
+          ...defaults,
+          particleCount,
+          origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+        })
+      }, 250)
+
       toastSuccess('¡Venta cerrada exitosamente!')
-      
-      // Redirigir después de un breve delay
-      setTimeout(() => {
-        router.push(`/dashboard/events/${quoteId}`)
-        router.refresh()
-      }, 1000)
+      router.push(`/dashboard/events/${event.id}`)
+      router.refresh()
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
-      toastError('Error: ' + message)
-      logger.error('QuoteDetailPage', 'Unexpected error closing sale', err as Error)
+      logger.error('QuoteDetailPage', 'Error closing sale', err as Error)
+      toastError('Error al cerrar la venta')
+    } finally {
       setClosing(false)
-    }
-  }
-
-  const handleExportPDF = () => {
-    if (!quote) return
-    try {
-      exportQuoteToPDF(quote)
-      toastSuccess('PDF exportado correctamente')
-    } catch (error) {
-      toastError('Error al exportar PDF')
-      logger.error('QuoteDetailPage', 'Error exporting PDF', error as Error)
-    }
-  }
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return <Badge variant="success">Confirmada</Badge>
-      case 'cancelled':
-        return <Badge variant="error">Cancelada</Badge>
-      case 'draft':
-      default:
-        return <Badge variant="warning">Borrador</Badge>
     }
   }
 
@@ -188,11 +198,14 @@ export default function QuoteDetailPage() {
     }).format(amount)
   }
 
-  const formatDate = (dateString: string) => {
+  const handleExportPDF = async () => {
+    if (!quote) return
     try {
-      return format(new Date(dateString), "dd 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })
-    } catch {
-      return dateString
+      await exportQuoteToPDF(quote as any)
+      toastSuccess('PDF exportado correctamente')
+    } catch (error) {
+      logger.error('QuoteDetailPage', 'Error exporting PDF', error as Error)
+      toastError('Error al exportar PDF')
     }
   }
 
@@ -205,7 +218,7 @@ export default function QuoteDetailPage() {
             <Skeleton className="h-96" />
           </div>
           <div>
-            <Skeleton className="h-64" />
+            <Skeleton className="h-96" />
           </div>
         </div>
       </div>
@@ -234,7 +247,7 @@ export default function QuoteDetailPage() {
   }
 
   const subtotal = quote.quote_services?.reduce(
-    (sum, qs) => sum + qs.quantity * qs.final_price,
+    (sum, qs) => sum + qs.final_price * qs.quantity,
     0
   ) || 0
 
@@ -250,43 +263,57 @@ export default function QuoteDetailPage() {
         ]}
       />
 
-      {/* Actions Bar */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div className="flex items-center gap-4">
-          {getStatusBadge(quote.status)}
-          <span className="text-sm text-gray-500 dark:text-gray-400">
-            Creada: {formatDate(quote.created_at)}
-          </span>
-        </div>
-        <div className="flex gap-2">
-          {quote.status === 'draft' && (
-            <Link href={`/dashboard/quotes/${quoteId}/edit`}>
-              <Button variant="outline">
-                <Edit className="mr-2 h-4 w-4" />
-                Editar
-              </Button>
-            </Link>
-          )}
-          <Button variant="outline" onClick={handleExportPDF}>
-            <Download className="mr-2 h-4 w-4" />
-            Exportar PDF
-          </Button>
-          <Link href="/dashboard/quotes">
-            <Button variant="ghost">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Volver
-            </Button>
-          </Link>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Status Banner */}
+          <Card
+            className={
+              quote.status === 'confirmed'
+                ? 'border-l-4 border-l-green-600 dark:border-l-green-500'
+                : quote.status === 'cancelled'
+                ? 'border-l-4 border-l-red-600 dark:border-l-red-500'
+                : 'border-l-4 border-l-yellow-600 dark:border-l-yellow-500'
+            }
+          >
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                    Estado: {quote.status === 'confirmed' ? 'Confirmada' : quote.status === 'cancelled' ? 'Cancelada' : 'Borrador'}
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    {quote.status === 'confirmed'
+                      ? 'Esta cotización ha sido confirmada y convertida en evento.'
+                      : quote.status === 'cancelled'
+                      ? 'Esta cotización ha sido cancelada.'
+                      : 'Esta cotización está en borrador y puede ser editada.'}
+                  </p>
+                </div>
+                <Badge
+                  variant={
+                    quote.status === 'confirmed'
+                      ? 'success'
+                      : quote.status === 'cancelled'
+                      ? 'error'
+                      : 'warning'
+                  }
+                >
+                  {quote.status === 'confirmed' ? 'Confirmada' : quote.status === 'cancelled' ? 'Cancelada' : 'Borrador'}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Services Table */}
           <Card>
             <CardHeader>
-              <CardTitle>Servicios Incluidos</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Servicios Incluidos</CardTitle>
+                <Button variant="outline" size="sm" onClick={handleExportPDF}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Exportar PDF
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {quote.quote_services && quote.quote_services.length > 0 ? (
@@ -392,38 +419,49 @@ export default function QuoteDetailPage() {
                 <CardTitle>Acciones</CardTitle>
               </CardHeader>
               <CardContent>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button className="w-full" size="lg">
-                      <CheckCircle2 className="mr-2 h-5 w-5" />
-                      Cerrar Venta
+                <div className="space-y-2">
+                  <Link href={`/dashboard/quotes/${quoteId}/edit`} className="block">
+                    <Button variant="outline" className="w-full">
+                      <Edit className="mr-2 h-4 w-4" />
+                      Editar Cotización
                     </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>¿Confirmar cierre de venta?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Esta acción convertirá la cotización en un evento confirmado y registrará
-                        el ingreso en el sistema financiero. Esta acción no se puede deshacer.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={handleCloseSale}
-                        disabled={closing}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
-                        {closing ? 'Cerrando...' : 'Confirmar Cierre'}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
+                  </Link>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button className="w-full" size="lg">
+                        <CheckCircle2 className="mr-2 h-5 w-5" />
+                        Cerrar Venta
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>¿Confirmar cierre de venta?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta acción convertirá la cotización en un evento confirmado y registrará
+                          el ingreso en el sistema financiero. Esta acción no se puede deshacer.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleCloseSale}
+                          disabled={closing}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          {closing ? 'Cerrando...' : 'Confirmar Cierre'}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
               </CardContent>
             </Card>
           )}
         </div>
       </div>
+
+      {/* Comments Section */}
+      <CommentThread entityType="quote" entityId={quoteId} />
     </div>
   )
 }
