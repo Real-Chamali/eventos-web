@@ -326,10 +326,13 @@ export default function EditQuotePage() {
         return
       }
 
-      await createAuditLog(user.id, 'UPDATE', 'quotes', quoteId, quote, {
-        client_id: selectedClient.id,
-        total_price: total,
-        services_count: quoteServices.length,
+      await createAuditLog(user.id, 'UPDATE', 'quotes', quoteId, {
+        old_values: quote,
+        new_values: {
+          client_id: selectedClient.id,
+          total_price: total,
+          services_count: quoteServices.length,
+        },
       })
 
       toastSuccess('Cotización actualizada correctamente')
