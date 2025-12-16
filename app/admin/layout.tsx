@@ -17,40 +17,57 @@ export default async function AdminLayout({
     redirect('/login')
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
+  // Intentar obtener el perfil con manejo mejorado de errores
+  let profile: { role: string } | null = null
+  let userRole = 'vendor' // Rol por defecto
 
-  if (profileError) {
-    // Convertir error de Supabase a Error estándar
-    const errorMessage = profileError?.message || 'Error fetching profile'
-    const errorForLogging = profileError instanceof Error 
-      ? profileError 
-      : new Error(errorMessage)
-    logger.error('AdminLayout', 'Error fetching profile', errorForLogging, {
-      supabaseError: errorMessage,
-      supabaseCode: profileError?.code,
+  try {
+    const { data, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle() // Usar maybeSingle para evitar errores si no existe
+
+    if (profileError) {
+      // Si el error es de esquema (PGRST106), redirigir a dashboard
+      if (profileError.code === 'PGRST106' || profileError.message?.includes('schema')) {
+        logger.warn('AdminLayout', 'Profile table not accessible (schema error), redirecting to dashboard', {
+          userId: user.id,
+          error: profileError.message,
+          code: profileError.code,
+        })
+        redirect('/dashboard')
+      } else if (profileError.code === 'PGRST116') {
+        // No encontrado - redirigir a dashboard
+        logger.info('AdminLayout', 'Profile not found, redirecting to dashboard', {
+          userId: user.id,
+        })
+        redirect('/dashboard')
+      } else {
+        // Otros errores - loguear y redirigir a dashboard
+        logger.error('AdminLayout', 'Error fetching profile', new Error(profileError.message), {
+          supabaseError: profileError.message,
+          supabaseCode: profileError.code,
+          userId: user.id,
+        })
+        redirect('/dashboard')
+      }
+    } else if (data) {
+      profile = data
+      // Convertir el enum a string si es necesario
+      userRole = typeof data.role === 'string' ? data.role : String(data.role)
+      userRole = (userRole === 'admin' ? 'admin' : 'vendor')
+    }
+  } catch (error) {
+    // Error inesperado - redirigir a dashboard
+    logger.error('AdminLayout', 'Unexpected error fetching profile', error as Error, {
       userId: user.id,
     })
-    
-    // Si el error es de esquema o tabla no encontrada, redirigir a dashboard
-    // en lugar de login (evita bucles y permite acceso básico)
-    if (profileError.code === 'PGRST106' || profileError.message?.includes('schema')) {
-      logger.warn('AdminLayout', 'Profile table not accessible, redirecting to dashboard', {
-        userId: user.id,
-        error: errorMessage,
-      })
-      redirect('/dashboard')
-    } else {
-      // Para otros errores, redirigir a login
-      redirect('/login')
-    }
+    redirect('/dashboard')
   }
 
-  // Si no hay perfil o no es admin, redirigir a dashboard
-  if (!profile || profile.role !== 'admin') {
+  // Si no es admin, redirigir a dashboard
+  if (userRole !== 'admin') {
     redirect('/dashboard')
   }
 

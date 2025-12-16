@@ -17,40 +17,54 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
+  // Intentar obtener el perfil con manejo mejorado de errores
+  let profile: { role: string } | null = null
+  let userRole = 'vendor' // Rol por defecto
 
-  if (profileError) {
-    // Convertir error de Supabase a Error estándar
-    const errorMessage = profileError?.message || 'Error fetching profile'
-    const errorForLogging = profileError instanceof Error 
-      ? profileError 
-      : new Error(errorMessage)
-    logger.error('DashboardLayout', 'Error fetching profile', errorForLogging, {
-      supabaseError: errorMessage,
-      supabaseCode: profileError?.code,
+  try {
+    const { data, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle() // Usar maybeSingle para evitar errores si no existe
+
+    if (profileError) {
+      // Si el error es de esquema (PGRST106), usar rol por defecto
+      if (profileError.code === 'PGRST106' || profileError.message?.includes('schema')) {
+        logger.warn('DashboardLayout', 'Profile table not accessible (schema error), using default role', {
+          userId: user.id,
+          error: profileError.message,
+          code: profileError.code,
+        })
+        // Continuar con rol por defecto
+      } else if (profileError.code === 'PGRST116') {
+        // No encontrado - usar rol por defecto
+        logger.info('DashboardLayout', 'Profile not found, using default role', {
+          userId: user.id,
+        })
+        // Continuar con rol por defecto
+      } else {
+        // Otros errores - loguear pero continuar con rol por defecto
+        logger.error('DashboardLayout', 'Error fetching profile', new Error(profileError.message), {
+          supabaseError: profileError.message,
+          supabaseCode: profileError.code,
+          userId: user.id,
+        })
+        // Continuar con rol por defecto en lugar de redirigir (evita bucles)
+      }
+    } else if (data) {
+      profile = data
+      // Convertir el enum a string si es necesario
+      userRole = typeof data.role === 'string' ? data.role : String(data.role)
+      userRole = (userRole === 'admin' ? 'admin' : 'vendor')
+    }
+  } catch (error) {
+    // Error inesperado - usar rol por defecto
+    logger.error('DashboardLayout', 'Unexpected error fetching profile', error as Error, {
       userId: user.id,
     })
-    
-    // Si el error es de esquema o tabla no encontrada, usar rol por defecto
-    // en lugar de redirigir a login (evita bucles)
-    if (profileError.code === 'PGRST106' || profileError.message?.includes('schema')) {
-      logger.warn('DashboardLayout', 'Profile table not accessible, using default role', {
-        userId: user.id,
-        error: errorMessage,
-      })
-      // Continuar con rol por defecto (vendor)
-    } else {
-      // Para otros errores, redirigir a login
-      redirect('/login')
-    }
+    // Continuar con rol por defecto
   }
-
-  // Si no hay perfil o hay error de esquema, usar rol por defecto
-  const userRole = profile?.role || 'vendor'
 
   if (userRole === 'admin') {
     redirect('/admin')
