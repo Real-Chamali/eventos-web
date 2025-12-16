@@ -33,11 +33,13 @@ npm run build
 Asegúrate de tener estos archivos en `migrations/`:
 - ✅ `001_create_audit_logs_table.sql` - Sistema de auditoría (CRÍTICO: crea función is_admin())
 - ✅ `002_create_quote_versions_table_final.sql` - Versiones de cotizaciones (opcional)
-- ✅ `003_fix_profiles_rls_recursion.sql` - Corrección de RLS (CRÍTICO: debe aplicarse antes de 004-007)
+- ✅ `003_fix_profiles_rls_recursion_idempotent.sql` - Corrección de RLS (CRÍTICO: versión idempotente)
 - ✅ `004_create_notifications_table.sql` - Notificaciones en tiempo real
 - ✅ `005_create_comments_table.sql` - Sistema de comentarios
 - ✅ `006_create_quote_templates_table.sql` - Plantillas de cotizaciones
 - ✅ `007_create_user_preferences_table.sql` - Preferencias de usuario
+- ✅ `008_optimize_rls_performance.sql` - Optimización de políticas RLS
+- ✅ `009_add_created_by_to_clients.sql` - Agregar columna created_by a clients (CRÍTICO: aplicar antes de 008)
 
 ---
 
@@ -70,18 +72,32 @@ Asegúrate de tener estos archivos en `migrations/`:
 #### Migración 2: Corrección de RLS (CRÍTICO)
 
 ```sql
--- migrations/003_fix_profiles_rls_recursion.sql
+-- migrations/003_fix_profiles_rls_recursion_idempotent.sql
 ```
 
 **Por qué es crítica**: Corrige problemas de recursión infinita en RLS que afectan a todas las demás tablas.
 
-1. Abre el archivo `migrations/003_fix_profiles_rls_recursion.sql`
+1. Abre el archivo `migrations/003_fix_profiles_rls_recursion_idempotent.sql` (versión idempotente)
 2. Copia TODO el contenido
 3. Pégalo en el SQL Editor de Supabase
 4. Haz clic en **RUN**
 5. Verifica que se ejecutó correctamente
 
 **NOTA**: La migración 002 (quote_versions) es opcional. Si no la necesitas, puedes saltarla.
+
+#### Migración 2.5: Agregar created_by a clients (CRÍTICO - Antes de 008)
+
+```sql
+-- migrations/009_add_created_by_to_clients.sql
+```
+
+**Por qué es crítica**: La migración 008 necesita esta columna para las políticas RLS.
+
+1. Abre el archivo `migrations/009_add_created_by_to_clients.sql`
+2. Copia TODO el contenido
+3. Pégalo en el SQL Editor de Supabase
+4. Haz clic en **RUN**
+5. Verifica que se ejecutó correctamente
 
 #### Migración 3: Notificaciones
 
@@ -119,6 +135,34 @@ Repite el mismo proceso.
 
 Repite el mismo proceso.
 
+#### Migración 7: Agregar created_by a clients (CRÍTICO - Antes de 008)
+
+```sql
+-- migrations/009_add_created_by_to_clients.sql
+```
+
+**IMPORTANTE**: Esta migración debe aplicarse **ANTES** de la migración 008.
+
+1. Abre el archivo `migrations/009_add_created_by_to_clients.sql`
+2. Copia TODO el contenido
+3. Pégalo en el SQL Editor de Supabase
+4. Haz clic en **RUN**
+5. Verifica que se ejecutó correctamente
+
+#### Migración 8: Optimización de RLS
+
+```sql
+-- migrations/008_optimize_rls_performance.sql
+```
+
+**IMPORTANTE**: Requiere que la migración 009 ya esté aplicada.
+
+1. Abre el archivo `migrations/008_optimize_rls_performance.sql`
+2. Copia TODO el contenido
+3. Pégalo en el SQL Editor de Supabase
+4. Haz clic en **RUN**
+5. Verifica que se ejecutó correctamente
+
 ### Paso 3: Habilitar Realtime (CRÍTICO)
 
 Después de aplicar las migraciones, habilita Realtime para que las notificaciones y comentarios funcionen:
@@ -149,6 +193,15 @@ AND table_name IN (
 );
 
 -- Debe retornar 5 filas (o 6 si aplicaste quote_versions)
+
+-- Verificar columna created_by en clients (Migración 009)
+SELECT column_name 
+FROM information_schema.columns
+WHERE table_schema = 'public'
+AND table_name = 'clients'
+AND column_name = 'created_by';
+
+-- Debe retornar 1 fila
 ```
 
 **Verificar función is_admin()**:
