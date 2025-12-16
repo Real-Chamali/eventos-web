@@ -94,8 +94,13 @@ export default function Navbar() {
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center space-x-2 rounded-lg p-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800">
-                <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+              <button className="flex items-center space-x-2 rounded-lg p-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors">
+                <div className={cn(
+                  "h-8 w-8 rounded-full flex items-center justify-center shadow-sm",
+                  pathname?.startsWith('/admin')
+                    ? "bg-gradient-to-br from-purple-500 to-purple-600"
+                    : "bg-gradient-to-br from-blue-500 to-blue-600"
+                )}>
                   <User className="h-4 w-4 text-white" />
                 </div>
                 <span className="hidden text-sm font-medium sm:inline-block">
@@ -107,12 +112,14 @@ export default function Navbar() {
               <DropdownMenuLabel>
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium">{userEmail}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Mi cuenta</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {pathname?.startsWith('/admin') ? 'Administrador' : 'Vendedor'}
+                  </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link href="/dashboard" className="cursor-pointer">
+                <Link href={pathname?.startsWith('/admin') ? '/admin' : '/dashboard'} className="cursor-pointer">
                   <Settings className="mr-2 h-4 w-4" />
                   Configuración
                 </Link>

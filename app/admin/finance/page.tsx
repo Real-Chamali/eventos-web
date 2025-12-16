@@ -4,6 +4,11 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
+import PageHeader from '@/components/ui/PageHeader'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import StatsCard from '@/components/ui/StatsCard'
+import { DollarSign, TrendingUp, TrendingDown } from 'lucide-react'
+import Skeleton from '@/components/ui/Skeleton'
 
 interface FinanceEntry {
   id: string
@@ -64,95 +69,133 @@ export default function AdminFinancePage() {
 
   const maxAmount = Math.max(totalIncome, totalExpense, 1)
 
+  const netBalance = totalIncome - totalExpense
+  const balancePercentage = totalIncome > 0 ? (netBalance / totalIncome) * 100 : 0
+
   if (loading) {
     return (
-      <div className="p-8">
-        <div className="text-center">Cargando datos financieros...</div>
+      <div className="space-y-6">
+        <PageHeader
+          title="Finanzas"
+          description="Resumen financiero y análisis de ingresos y gastos"
+        />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="p-8">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Finanzas</h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Finanzas"
+        description="Resumen financiero y análisis de ingresos y gastos"
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Finanzas' },
+        ]}
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-700 mb-2">Ingresos</h2>
-          <p className="text-3xl font-bold text-green-600">
-            ${totalIncome.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-700 mb-2">Gastos</h2>
-          <p className="text-3xl font-bold text-red-600">
-            ${totalExpense.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-          </p>
-        </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatsCard
+          title="Ingresos Totales"
+          value={totalIncome}
+          icon={<TrendingUp className="h-6 w-6 text-green-600" />}
+          description="Todos los ingresos registrados"
+        />
+        <StatsCard
+          title="Gastos Totales"
+          value={totalExpense}
+          icon={<TrendingDown className="h-6 w-6 text-red-600" />}
+          description="Todos los gastos registrados"
+        />
+        <StatsCard
+          title="Balance Neto"
+          value={netBalance}
+          icon={<DollarSign className="h-6 w-6 text-blue-600" />}
+          description={balancePercentage >= 0 ? 'Positivo' : 'Negativo'}
+          trend={balancePercentage >= 0 ? 'up' : 'down'}
+        />
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6 border border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">Gráfico: Ingresos vs Gastos</h2>
-        
-        <div className="space-y-4">
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-700">Ingresos</span>
-              <span className="text-sm text-gray-600">
-                ${totalIncome.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-8">
-              <div
-                className="bg-green-600 h-8 rounded-full flex items-center justify-end pr-2"
-                style={{ width: `${(totalIncome / maxAmount) * 100}%` }}
-              >
-                {totalIncome > 0 && (
-                  <span className="text-white text-xs font-medium">
-                    {((totalIncome / maxAmount) * 100).toFixed(1)}%
-                  </span>
-                )}
+      {/* Chart Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Análisis: Ingresos vs Gastos</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Income Bar */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Ingresos</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                  ${totalIncome.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-10 overflow-hidden">
+                <div
+                  className="bg-green-600 h-10 rounded-full flex items-center justify-end pr-4 transition-all duration-500"
+                  style={{ width: `${(totalIncome / maxAmount) * 100}%` }}
+                >
+                  {totalIncome > 0 && (
+                    <span className="text-white text-sm font-medium">
+                      {((totalIncome / maxAmount) * 100).toFixed(1)}%
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
 
-          <div>
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-700">Gastos</span>
-              <span className="text-sm text-gray-600">
-                ${totalExpense.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-8">
-              <div
-                className="bg-red-600 h-8 rounded-full flex items-center justify-end pr-2"
-                style={{ width: `${(totalExpense / maxAmount) * 100}%` }}
-              >
-                {totalExpense > 0 && (
-                  <span className="text-white text-xs font-medium">
-                    {((totalExpense / maxAmount) * 100).toFixed(1)}%
-                  </span>
-                )}
+            {/* Expense Bar */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Gastos</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                  ${totalExpense.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-10 overflow-hidden">
+                <div
+                  className="bg-red-600 h-10 rounded-full flex items-center justify-end pr-4 transition-all duration-500"
+                  style={{ width: `${(totalExpense / maxAmount) * 100}%` }}
+                >
+                  {totalExpense > 0 && (
+                    <span className="text-white text-sm font-medium">
+                      {((totalExpense / maxAmount) * 100).toFixed(1)}%
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
 
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <div className="flex justify-between items-center">
-            <span className="text-lg font-semibold text-gray-900">Balance Neto:</span>
-            <span
-              className={`text-2xl font-bold ${
-                totalIncome - totalExpense >= 0 ? 'text-green-600' : 'text-red-600'
-              }`}
-            >
-              ${(totalIncome - totalExpense).toLocaleString('es-MX', {
-                minimumFractionDigits: 2,
-              })}
-            </span>
+            {/* Net Balance */}
+            <div className="pt-6 border-t border-gray-200 dark:border-gray-800">
+              <div className="flex justify-between items-center">
+                <span className="text-lg font-semibold text-gray-900 dark:text-white">Balance Neto:</span>
+                <span
+                  className={`text-2xl font-bold ${
+                    netBalance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                  }`}
+                >
+                  ${netBalance.toLocaleString('es-MX', {
+                    minimumFractionDigits: 2,
+                  })}
+                </span>
+              </div>
+              {totalIncome > 0 && (
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                  Margen: {balancePercentage.toFixed(1)}%
+                </p>
+              )}
+            </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

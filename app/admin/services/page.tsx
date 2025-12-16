@@ -6,6 +6,13 @@ import { z } from 'zod'
 import { useToast } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 import { createAuditLog } from '@/lib/utils/audit'
+import PageHeader from '@/components/ui/PageHeader'
+import { Card, CardContent } from '@/components/ui/Card'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
+import Input from '@/components/ui/Input'
+import Skeleton from '@/components/ui/Skeleton'
+import { Settings, DollarSign, TrendingUp } from 'lucide-react'
+import { cn } from '@/lib/utils/cn'
 
 interface Service {
   id: string
@@ -109,89 +116,119 @@ export default function AdminServicesPage() {
 
   if (loading) {
     return (
-      <div className="p-8 bg-white dark:bg-gray-900 min-h-screen">
-        <div className="text-center text-gray-900 dark:text-white">Cargando servicios...</div>
+      <div className="space-y-6">
+        <PageHeader
+          title="Gestión de Servicios"
+          description="Administra los precios y costos de los servicios"
+        />
+        <Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-16 w-full" />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
   return (
-    <div className="p-8 bg-white dark:bg-gray-900 min-h-screen">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Gestión de Servicios</h1>
+    <div className="space-y-6">
+      <PageHeader
+        title="Gestión de Servicios"
+        description="Administra los precios y costos de los servicios disponibles"
+        breadcrumbs={[
+          { label: 'Admin', href: '/admin' },
+          { label: 'Servicios' },
+        ]}
+      />
 
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-            <thead className="bg-gray-50 dark:bg-gray-700">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Servicio
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Costo
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Precio Base
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  Margen
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-              {services.map((service) => {
-                const margin = service.cost_price > 0
-                  ? ((service.base_price - service.cost_price) / service.cost_price) * 100
-                  : 0
-                return (
-                  <tr key={service.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">{service.name}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        defaultValue={service.cost_price}
-                        onBlur={(e) => {
-                          const newValue = parseFloat(e.target.value) || 0
-                          if (newValue !== service.cost_price) {
-                            updateService(service.id, 'cost_price', newValue)
-                          }
-                        }}
-                        className="w-32 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        disabled={saving === service.id}
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        defaultValue={service.base_price}
-                        onBlur={(e) => {
-                          const newValue = parseFloat(e.target.value) || 0
-                          if (newValue !== service.base_price) {
-                            updateService(service.id, 'base_price', newValue)
-                          }
-                        }}
-                        className="w-32 px-3 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        disabled={saving === service.id}
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900 dark:text-gray-300">
-                        {margin.toFixed(1)}%
+      <Card>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Servicio</TableHead>
+                  <TableHead>Costo</TableHead>
+                  <TableHead>Precio Base</TableHead>
+                  <TableHead>Margen</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {services.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-12">
+                      <div className="flex flex-col items-center justify-center">
+                        <Settings className="h-12 w-12 text-gray-400 mb-4" />
+                        <p className="text-gray-500 dark:text-gray-400">No hay servicios disponibles</p>
                       </div>
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  services.map((service) => {
+                    const margin = service.cost_price > 0
+                      ? ((service.base_price - service.cost_price) / service.cost_price) * 100
+                      : 0
+                    return (
+                      <TableRow key={service.id}>
+                        <TableCell>
+                          <div className="font-medium text-gray-900 dark:text-white">{service.name}</div>
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            defaultValue={service.cost_price}
+                            onBlur={(e) => {
+                              const newValue = parseFloat(e.target.value) || 0
+                              if (newValue !== service.cost_price) {
+                                updateService(service.id, 'cost_price', newValue)
+                              }
+                            }}
+                            className="w-32"
+                            disabled={saving === service.id}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            defaultValue={service.base_price}
+                            onBlur={(e) => {
+                              const newValue = parseFloat(e.target.value) || 0
+                              if (newValue !== service.base_price) {
+                                updateService(service.id, 'base_price', newValue)
+                              }
+                            }}
+                            className="w-32"
+                            disabled={saving === service.id}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center space-x-2">
+                            <TrendingUp className={cn(
+                              "h-4 w-4",
+                              margin > 50 ? "text-green-600" : margin > 20 ? "text-blue-600" : "text-gray-400"
+                            )} />
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">
+                              {margin.toFixed(1)}%
+                            </span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
