@@ -6,6 +6,7 @@ import { Bell, X, Check, CheckCheck } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils/cn'
+import { logger } from '@/lib/utils/logger'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -70,7 +71,10 @@ export default function NotificationCenter() {
         data: { user },
       } = await supabase.auth.getUser()
 
-      if (!user) return
+      if (!user) {
+        logger.debug('NotificationCenter', 'No user found, skipping notifications load')
+        return
+      }
 
       const { data, error } = await supabase
         .from('notifications')
@@ -79,12 +83,50 @@ export default function NotificationCenter() {
         .order('created_at', { ascending: false })
         .limit(20)
 
-      if (error) throw error
+      if (error) {
+        // Manejar errores específicos de Supabase
+        if (error.code === 'PGRST106' || error.message?.includes('schema')) {
+          // Tabla no existe o no es accesible - no es un error crítico
+          logger.warn('NotificationCenter', 'Notifications table not accessible (schema error)', {
+            errorCode: error.code,
+            errorMessage: error.message,
+            userId: user.id,
+          })
+          setNotifications([])
+          setUnreadCount(0)
+          return
+        }
+        
+        // Otros errores
+        throw error
+      }
 
       setNotifications(data || [])
       setUnreadCount(data?.filter((n) => !n.read).length || 0)
+      
+      logger.debug('NotificationCenter', 'Notifications loaded successfully', {
+        count: data?.length || 0,
+        unreadCount: data?.filter((n) => !n.read).length || 0,
+      })
     } catch (error) {
-      console.error('Error loading notifications:', error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorCode = (error as any)?.code || 'UNKNOWN'
+      
+      logger.error('NotificationCenter', 'Error loading notifications', error instanceof Error ? error : new Error(errorMessage), {
+        errorCode,
+        errorMessage,
+      })
+      
+      // No mostrar error al usuario si es un problema de esquema (tabla no existe)
+      // Solo loguear para debugging
+      if (errorCode !== 'PGRST106' && !errorMessage.includes('schema')) {
+        // Si es otro tipo de error, podríamos mostrar un toast, pero por ahora solo logueamos
+        logger.warn('NotificationCenter', 'Failed to load notifications, will retry silently')
+      }
+      
+      // Asegurar que el estado esté limpio
+      setNotifications([])
+      setUnreadCount(0)
     }
   }
 
@@ -95,14 +137,31 @@ export default function NotificationCenter() {
         .update({ read: true })
         .eq('id', id)
 
-      if (error) throw error
+      if (error) {
+        // Si es error de esquema, solo loguear y actualizar UI localmente
+        if (error.code === 'PGRST106' || error.message?.includes('schema')) {
+          logger.warn('NotificationCenter', 'Cannot mark notification as read (schema error)', {
+            notificationId: id,
+            errorCode: error.code,
+          })
+          // Actualizar UI localmente aunque falle en el servidor
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+          )
+          setUnreadCount((prev) => Math.max(0, prev - 1))
+          return
+        }
+        throw error
+      }
 
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, read: true } : n))
       )
       setUnreadCount((prev) => Math.max(0, prev - 1))
     } catch (error) {
-      console.error('Error marking notification as read:', error)
+      logger.error('NotificationCenter', 'Error marking notification as read', error instanceof Error ? error : new Error(String(error)), {
+        notificationId: id,
+      })
     }
   }
 
@@ -120,12 +179,25 @@ export default function NotificationCenter() {
         .eq('user_id', user.id)
         .eq('read', false)
 
-      if (error) throw error
+      if (error) {
+        // Si es error de esquema, solo loguear y actualizar UI localmente
+        if (error.code === 'PGRST106' || error.message?.includes('schema')) {
+          logger.warn('NotificationCenter', 'Cannot mark all as read (schema error)', {
+            userId: user.id,
+            errorCode: error.code,
+          })
+          // Actualizar UI localmente aunque falle en el servidor
+          setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
+          setUnreadCount(0)
+          return
+        }
+        throw error
+      }
 
       setNotifications((prev) => prev.map((n) => ({ ...n, read: true })))
       setUnreadCount(0)
     } catch (error) {
-      console.error('Error marking all as read:', error)
+      logger.error('NotificationCenter', 'Error marking all as read', error instanceof Error ? error : new Error(String(error)))
     }
   }
 
