@@ -47,12 +47,22 @@ export default function NewClientPage() {
   const onSubmit = async (data: ClientFormData) => {
     setIsSubmitting(true)
     try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+
+      if (!user) {
+        toastError('Usuario no autenticado')
+        return
+      }
+
       const { data: client, error } = await supabase
         .from('clients')
         .insert({
           name: data.name,
           email: data.email || null,
           phone: data.phone || null,
+          created_by: user.id,
         })
         .select()
         .single()
