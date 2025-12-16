@@ -79,21 +79,69 @@ export default function LoginPage() {
         return
       }
 
-      // Obtener el rol del usuario
+      // Obtener el rol del usuario con manejo mejorado de errores
+      let role = 'vendor' // Rol por defecto
+      
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
         .select('role')
         .eq('id', authData.user.id)
-        .single()
+        .maybeSingle() // Usar maybeSingle para evitar errores si no existe
 
       if (profileError) {
-        logger.warn('LoginPage', 'Profile not found, using default role', {
-          userId: authData.user.id,
-          error: profileError.message,
-        })
+        // Si el error es de esquema (PGRST106), intentar obtener el rol desde el servidor
+        if (profileError.code === 'PGRST106' || profileError.message?.includes('schema')) {
+          logger.warn('LoginPage', 'Profile table not accessible (schema error), trying server-side fetch', {
+            userId: authData.user.id,
+            error: profileError.message,
+            code: profileError.code,
+          })
+          
+          // Intentar obtener el rol desde el servidor como alternativa
+          try {
+            const response = await fetch('/api/user/role', {
+              method: 'GET',
+              credentials: 'include',
+            })
+            
+            if (response.ok) {
+              const { role: serverRole } = await response.json()
+              role = serverRole === 'admin' ? 'admin' : 'vendor'
+              logger.info('LoginPage', 'Role obtained from server API', {
+                userId: authData.user.id,
+                role,
+              })
+            } else {
+              logger.warn('LoginPage', 'Failed to get role from server API, using default', {
+                userId: authData.user.id,
+                status: response.status,
+              })
+            }
+          } catch (apiError) {
+            logger.error('LoginPage', 'Error fetching role from API', apiError as Error, {
+              userId: authData.user.id,
+            })
+            // Continuar con rol por defecto
+          }
+        } else if (profileError.code === 'PGRST116') {
+          // No encontrado - perfil no existe, usar rol por defecto
+          logger.info('LoginPage', 'Profile not found, using default role', {
+            userId: authData.user.id,
+          })
+        } else {
+          // Otros errores
+          logger.error('LoginPage', 'Error fetching profile', new Error(profileError.message), {
+            supabaseError: profileError.message,
+            supabaseCode: profileError.code,
+            userId: authData.user.id,
+          })
+        }
+      } else if (profile) {
+        // Convertir el enum a string si es necesario
+        role = typeof profile.role === 'string' ? profile.role : String(profile.role)
+        // Asegurar que sea 'admin' o 'vendor'
+        role = (role === 'admin' ? 'admin' : 'vendor')
       }
-
-      const role = profile?.role || 'vendor'
       
       toastSuccess(`¡Bienvenido de vuelta, ${authData.user.email}!`)
       logger.info('LoginPage', 'User logged in successfully', { 

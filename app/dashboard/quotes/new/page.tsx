@@ -54,18 +54,31 @@ export default function NewQuotePage() {
         if (cancelled) return
         
         if (error) {
-          // Convertir error de Supabase a Error estándar
-          const errorMessage = error?.message || 'Error loading services'
-          const errorForLogging = error instanceof Error 
-            ? error 
-            : new Error(errorMessage)
-          logger.error('NewQuotePage', 'Error loading services', errorForLogging, {
-            supabaseError: errorMessage,
-            supabaseCode: error?.code,
-          })
-          toastError('Error al cargar los servicios')
+          // Si el error es de esquema (PGRST106), solo loguear warning
+          if (error.code === 'PGRST106' || error.message?.includes('schema')) {
+            logger.warn('NewQuotePage', 'Services table not accessible (schema error)', {
+              supabaseError: error.message,
+              supabaseCode: error.code,
+            })
+            // No mostrar toast de error para errores de esquema (problema de configuración)
+            // El usuario verá una lista vacía de servicios
+          } else {
+            // Para otros errores, mostrar notificación
+            const errorMessage = error?.message || 'Error loading services'
+            const errorForLogging = error instanceof Error 
+              ? error 
+              : new Error(errorMessage)
+            logger.error('NewQuotePage', 'Error loading services', errorForLogging, {
+              supabaseError: errorMessage,
+              supabaseCode: error?.code,
+            })
+            toastError('Error al cargar los servicios')
+          }
         } else if (data) {
           setServices(data)
+        } else {
+          // No hay datos pero tampoco hay error
+          setServices([])
         }
       } catch (err) {
         if (cancelled) return
@@ -104,17 +117,28 @@ export default function NewQuotePage() {
         if (cancelled) return
         
         if (error) {
-          // Convertir error de Supabase a Error estándar
-          const errorMessage = error?.message || 'Error searching clients'
-          const errorForLogging = error instanceof Error 
-            ? error 
-            : new Error(errorMessage)
-          logger.error('NewQuotePage', 'Error searching clients', errorForLogging, {
-            supabaseError: errorMessage,
-            supabaseCode: error?.code,
-            searchTerm: searchTerm,
-          })
-          toastError('Error al buscar clientes')
+          // Si el error es de esquema (PGRST106), solo loguear warning
+          if (error.code === 'PGRST106' || error.message?.includes('schema')) {
+            logger.warn('NewQuotePage', 'Clients table not accessible (schema error)', {
+              supabaseError: error.message,
+              supabaseCode: error.code,
+              searchTerm: searchTerm,
+            })
+            // No mostrar toast de error para errores de esquema
+            setClients([])
+          } else {
+            // Para otros errores, mostrar notificación
+            const errorMessage = error?.message || 'Error searching clients'
+            const errorForLogging = error instanceof Error 
+              ? error 
+              : new Error(errorMessage)
+            logger.error('NewQuotePage', 'Error searching clients', errorForLogging, {
+              supabaseError: errorMessage,
+              supabaseCode: error?.code,
+              searchTerm: searchTerm,
+            })
+            toastError('Error al buscar clientes')
+          }
         } else {
           setClients(data || [])
         }
