@@ -102,12 +102,14 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // Si el usuario está autenticado y está en /login, redirigir según su rol
-  if (user && pathname === '/login') {
-    const url = request.nextUrl.clone()
-    url.pathname = userRole === 'admin' ? '/admin' : '/dashboard'
-    return NextResponse.redirect(url)
-  }
+  // Si el usuario está autenticado y está en /login, permitir acceso
+  // La página de login mostrará un mensaje si ya está autenticado
+  // Esto permite cambiar de cuenta si es necesario
+  // if (user && pathname === '/login') {
+  //   const url = request.nextUrl.clone()
+  //   url.pathname = userRole === 'admin' ? '/admin' : '/dashboard'
+  //   return NextResponse.redirect(url)
+  // }
 
   // NOTA: Las redirecciones según rol se manejan en los layouts
   // para evitar bucles de redirección entre middleware y layouts

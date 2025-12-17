@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createClient } from '@/utils/supabase/client'
@@ -10,6 +11,8 @@ import { Card, CardContent } from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import { FormGroup } from '@/components/ui/Form'
+import { useRouter } from 'next/navigation'
+import { CheckCircle2, LogOut } from 'lucide-react'
 
 // Forzar renderizado dinámico para evitar prerendering durante build
 export const dynamic = 'force-dynamic'
@@ -21,7 +24,12 @@ type LoginFormData = {
 
 export default function LoginPage() {
   const supabase = createClient()
+  const router = useRouter()
   const { success: toastSuccess, error: toastError } = useToast()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [checking, setChecking] = useState(true)
   
   const {
     register,
@@ -30,6 +38,127 @@ export default function LoginPage() {
   } = useForm<LoginFormData>({
     resolver: zodResolver(LoginSchema),
   })
+
+  // Verificar si el usuario ya está autenticado
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          setIsAuthenticated(true)
+          setUserEmail(user.email || null)
+          
+          // Verificar si es admin
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle()
+          
+          setIsAdmin(profile?.role === 'admin')
+        }
+      } catch (error) {
+        logger.error('LoginPage', 'Error checking auth', error as Error)
+      } finally {
+        setChecking(false)
+      }
+    }
+    
+    checkAuth()
+  }, [supabase])
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut()
+      setIsAuthenticated(false)
+      setUserEmail(null)
+      setIsAdmin(false)
+      toastSuccess('Sesión cerrada correctamente')
+      router.refresh()
+    } catch (error) {
+      logger.error('LoginPage', 'Error signing out', error as Error)
+      toastError('Error al cerrar sesión')
+    }
+  }
+
+  const handleGoToDashboard = () => {
+    router.push(isAdmin ? '/admin' : '/dashboard')
+  }
+
+  // Si está verificando, mostrar loading
+  if (checking) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 via-indigo-50/30 to-violet-50/30 dark:from-gray-900 dark:via-indigo-950/20 dark:to-violet-950/20 px-4 py-12">
+        <div className="text-center">
+          <div className="mx-auto h-16 w-16 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-500 flex items-center justify-center shadow-xl mb-4 animate-pulse">
+            <span className="text-white font-bold text-2xl">E</span>
+          </div>
+          <p className="text-gray-600 dark:text-gray-400">Verificando sesión...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Si ya está autenticado, mostrar mensaje y opciones
+  if (isAuthenticated) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 via-indigo-50/30 to-violet-50/30 dark:from-gray-900 dark:via-indigo-950/20 dark:to-violet-950/20 px-4 py-12">
+        <div className="w-full max-w-md space-y-8">
+          {/* Premium Header */}
+          <div className="text-center space-y-4">
+            <div className="mx-auto h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-500 via-green-500 to-teal-500 flex items-center justify-center shadow-xl">
+              <CheckCircle2 className="h-8 w-8 text-white" />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
+                Ya estás autenticado
+              </h1>
+              <p className="text-lg text-gray-600 dark:text-gray-400">
+                {userEmail && `Sesión activa como: ${userEmail}`}
+              </p>
+              {isAdmin && (
+                <p className="text-sm text-indigo-600 dark:text-indigo-400 font-medium">
+                  Rol: Administrador
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Premium Actions Card */}
+          <Card variant="elevated" className="overflow-hidden shadow-2xl">
+            <CardContent className="p-8">
+              <div className="space-y-4">
+                <div className="text-center space-y-2">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    ¿Qué deseas hacer?
+                  </p>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Button
+                    variant="premium"
+                    size="lg"
+                    onClick={handleGoToDashboard}
+                    className="w-full shadow-lg hover:shadow-xl"
+                  >
+                    Ir al {isAdmin ? 'Panel de Admin' : 'Dashboard'}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={handleLogout}
+                    className="w-full gap-2"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Cerrar Sesión
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    )
+  }
 
   const handleLogin = async (data: LoginFormData) => {
     try {
