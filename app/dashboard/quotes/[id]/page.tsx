@@ -32,9 +32,7 @@ import {
   TableRow,
 } from '@/components/ui/Table'
 import Skeleton from '@/components/ui/Skeleton'
-import { Download, Edit, ArrowLeft, CheckCircle2, Calendar, Mail, User } from 'lucide-react'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
+import { Download, Edit, ArrowLeft, CheckCircle2, Mail, User } from 'lucide-react'
 import Link from 'next/link'
 
 interface Quote {
@@ -204,7 +202,7 @@ export default function QuoteDetailPage() {
   const handleExportPDF = async () => {
     if (!quote) return
     try {
-      await exportQuoteToPDF(quote as any)
+      await exportQuoteToPDF(quote)
       toastSuccess('PDF exportado correctamente')
     } catch (error) {
       logger.error('QuoteDetailPage', 'Error exporting PDF', error as Error)

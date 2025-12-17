@@ -7,7 +7,7 @@ import { useToast } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 import { createAuditLog } from '@/lib/utils/audit'
 import PageHeader from '@/components/ui/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Card, CardContent } from '@/components/ui/Card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
@@ -32,7 +32,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/AlertDialog'
-import { Settings, DollarSign, TrendingUp, Plus, Edit2, Trash2 } from 'lucide-react'
+import { Settings, TrendingUp, Plus, Edit2, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
 interface Service {
@@ -619,7 +619,7 @@ export default function AdminServicesPage() {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>¿Eliminar servicio?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Esta acción no se puede deshacer. El servicio "{service.name}" será eliminado permanentemente.
+                                    Esta acción no se puede deshacer. El servicio &quot;{service.name}&quot; será eliminado permanentemente.
                                     {service.id && (
                                       <span className="block mt-2 text-sm text-gray-500">
                                         Nota: No se puede eliminar si está siendo usado en cotizaciones.

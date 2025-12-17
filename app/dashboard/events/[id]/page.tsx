@@ -13,8 +13,6 @@ import Badge from '@/components/ui/Badge'
 import Skeleton from '@/components/ui/Skeleton'
 import EventTimeline from '@/components/events/EventTimeline'
 import EventChecklist from '@/components/events/EventChecklist'
-import CommentThread from '@/components/comments/CommentThread'
-import CalendarIntegration from '@/components/integrations/CalendarIntegration'
 import { CheckCircle2, Calendar, DollarSign, ArrowLeft, FileText, User } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -45,7 +43,6 @@ interface Event {
 
 export default function EventPage() {
   const params = useParams()
-  const router = useRouter()
   const eventId = params.id as string
   const [event, setEvent] = useState<Event | null>(null)
   const [loading, setLoading] = useState(true)

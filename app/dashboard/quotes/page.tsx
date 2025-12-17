@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import SearchInput from '@/components/ui/SearchInput'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
-import DataTable, { Column } from '@/components/ui/DataTable'
+import DataTable from '@/components/ui/DataTable'
 import { Plus, FileText } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -30,6 +30,7 @@ export default function QuotesPage() {
 
   useEffect(() => {
     loadQuotes()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadQuotes = async () => {

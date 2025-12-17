@@ -54,7 +54,6 @@ export default async function DashboardLayout({
         // Continuar con rol por defecto en lugar de redirigir (evita bucles)
       }
     } else if (data) {
-      profile = data
       // Convertir el enum a string si es necesario
       userRole = typeof data.role === 'string' ? data.role : String(data.role)
       userRole = (userRole === 'admin' ? 'admin' : 'vendor')

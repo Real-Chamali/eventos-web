@@ -64,7 +64,7 @@ export default function GlobalSearch() {
           .limit(5)
 
         if (quotes) {
-          quotes.forEach((quote: any) => {
+          quotes.forEach((quote: { id: string; client?: { name?: string } }) => {
             searchResults.push({
               type: 'quote',
               id: quote.id,
@@ -83,7 +83,7 @@ export default function GlobalSearch() {
           .limit(5)
 
         if (clients) {
-          clients.forEach((client: any) => {
+          clients.forEach((client: { id: string; name: string; email?: string }) => {
             searchResults.push({
               type: 'client',
               id: client.id,
@@ -102,7 +102,7 @@ export default function GlobalSearch() {
           .limit(5)
 
         if (events) {
-          events.forEach((event: any) => {
+          events.forEach((event: { id: string; quote?: { client?: { name?: string } } }) => {
             searchResults.push({
               type: 'event',
               id: event.id,

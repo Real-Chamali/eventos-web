@@ -16,17 +16,6 @@ export default function Sidebar() {
   const router = useRouter()
   const supabase = createClient()
   const { error: toastError } = useToast()
-  const [userEmail, setUserEmail] = useState<string>('')
-
-  useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        setUserEmail(user.email || '')
-      }
-    }
-    getUser()
-  }, [supabase])
 
   const handleLogout = async () => {
     try {

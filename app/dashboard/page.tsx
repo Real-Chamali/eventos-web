@@ -52,7 +52,6 @@ export default async function DashboardPage() {
 
   const pendingQuotes = quotes.filter((q) => q.status === 'draft').length
   const confirmedQuotes = quotes.filter((q) => q.status === 'confirmed').length
-  const cancelledQuotes = quotes.filter((q) => q.status === 'cancelled').length
 
   // Calcular ventas del mes actual
   const currentMonth = new Date().getMonth()

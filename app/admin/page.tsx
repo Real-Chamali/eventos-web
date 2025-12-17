@@ -9,7 +9,6 @@ import Button from '@/components/ui/Button'
 import {
   DollarSign,
   TrendingUp,
-  Users,
   FileText,
   Calendar,
   Settings,
@@ -67,7 +66,6 @@ export default async function AdminPage() {
   const recentQuotes = recentQuotesResult.data || []
 
   // Calcular métricas
-  const totalQuotes = quotes.length
   const confirmedQuotes = quotes.filter((q) => q.status === 'confirmed').length
   const totalEvents = events.length
   const totalServices = services.length
@@ -85,13 +83,6 @@ export default async function AdminPage() {
   // Ventas del mes actual
   const currentMonth = new Date().getMonth()
   const currentYear = new Date().getFullYear()
-  const monthlySales = quotes
-    .filter((q) => {
-      if (q.status !== 'confirmed') return false
-      const date = new Date(q.created_at)
-      return date.getMonth() === currentMonth && date.getFullYear() === currentYear
-    })
-    .reduce((sum, q) => sum + Number(q.total_price || 0), 0)
 
   // Datos para gráfico de ventas mensuales
   const monthlyData = Array.from({ length: 6 }, (_, i) => {

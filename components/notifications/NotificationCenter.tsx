@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { Bell, X, Check, CheckCheck } from 'lucide-react'
+import { Bell, Check, CheckCheck } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils/cn'
@@ -10,13 +10,10 @@ import { logger } from '@/lib/utils/logger'
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/DropdownMenu'
 import Button from '@/components/ui/Button'
-import Badge from '@/components/ui/Badge'
 
 interface Notification {
   id: string
@@ -110,7 +107,7 @@ export default function NotificationCenter() {
       })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
-      const errorCode = (error as any)?.code || 'UNKNOWN'
+      const errorCode = (error as { code?: string })?.code || 'UNKNOWN'
       
       logger.error('NotificationCenter', 'Error loading notifications', error instanceof Error ? error : new Error(errorMessage), {
         errorCode,

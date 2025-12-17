@@ -6,7 +6,7 @@ import DataTable, { type Column } from '@/components/ui/DataTable'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Link from 'next/link'
-import { Plus, Users, Mail, Phone } from 'lucide-react'
+import { Plus, Users } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -42,12 +42,23 @@ export default async function ClientsPage() {
     console.error('Error loading clients:', error)
   }
 
-  const clientsData: Client[] = (clients || []).map((client: any) => ({
-    ...client,
-    _quotes_count: Array.isArray(client._quotes_count) 
-      ? client._quotes_count.length 
-      : client._quotes_count?.[0]?.count || 0,
-  }))
+  const clientsData: Client[] = (clients || []).map((client: Client & { _quotes_count?: Array<{ count: number }> | number }) => {
+    let quotesCount = 0
+    const quotesCountValue = client._quotes_count
+    if (Array.isArray(quotesCountValue)) {
+      if (quotesCountValue.length > 0 && 'count' in quotesCountValue[0]) {
+        quotesCount = quotesCountValue[0].count
+      } else {
+        quotesCount = quotesCountValue.length
+      }
+    } else if (typeof quotesCountValue === 'number') {
+      quotesCount = quotesCountValue
+    }
+    return {
+      ...client,
+      _quotes_count: quotesCount,
+    }
+  })
 
   const columns: Column<Client>[] = [
     {

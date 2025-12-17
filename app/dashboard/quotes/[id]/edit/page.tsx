@@ -135,7 +135,7 @@ export default function EditQuotePage() {
       setQuote(data)
       setSelectedClient(data.client as Client)
       setQuoteServices(
-        (data.quote_services || []).map((qs: any) => ({
+        (data.quote_services || []).map((qs: { id: string; service_id: string; quantity: number; final_price: number; service?: { name: string } }) => ({
           id: qs.id,
           service_id: qs.service_id,
           quantity: qs.quantity,
@@ -210,7 +210,7 @@ export default function EditQuotePage() {
     setQuoteServices(quoteServices.filter((_, i) => i !== index))
   }
 
-  const updateService = (index: number, field: keyof QuoteService, value: any) => {
+  const updateService = (index: number, field: keyof QuoteService, value: string | number) => {
     const updated = [...quoteServices]
     updated[index] = { ...updated[index], [field]: value }
 

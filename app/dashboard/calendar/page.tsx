@@ -1,6 +1,6 @@
 import Calendar from '@/components/ui/Calendar'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Calendar as CalendarIcon, Info } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/Card'
+import { Info } from 'lucide-react'
 
 export default function CalendarPage() {
   return (

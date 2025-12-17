@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import Chart from '@/components/ui/Chart'
-import { TrendingUp, TrendingDown, DollarSign, Users, FileText, Target } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, Users, Target } from 'lucide-react'
 import { format, subMonths, startOfMonth, endOfMonth } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -117,7 +117,7 @@ export default function AdvancedAnalytics() {
         )
 
       const serviceMap = new Map<string, { revenue: number; count: number }>()
-      quoteServices?.forEach((qs: any) => {
+      quoteServices?.forEach((qs: { service?: { name?: string }; final_price?: number }) => {
         const serviceName = qs.service?.name || 'Desconocido'
         const existing = serviceMap.get(serviceName) || { revenue: 0, count: 0 }
         serviceMap.set(serviceName, {
@@ -311,7 +311,7 @@ export default function AdvancedAnalytics() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {data.conversionFunnel.map((stage, index) => (
+              {data.conversionFunnel.map((stage) => (
                 <div key={stage.stage}>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-gray-900 dark:text-white">
