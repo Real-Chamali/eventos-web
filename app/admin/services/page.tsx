@@ -109,12 +109,6 @@ export default function AdminServicesPage() {
         toastError(errorMessage)
         return
       }
-      const validationResult = PriceUpdateSchema.safeParse({ price: value as number, field: field as 'base_price' | 'cost_price' })
-      if (!validationResult.success) {
-        const errorMessage = validationResult.error.issues[0]?.message || 'Datos inválidos'
-        toastError(errorMessage)
-        return
-      }
     } else {
       // Validar nombre
       if (typeof value !== 'string' || value.trim().length === 0) {
@@ -141,33 +135,6 @@ export default function AdminServicesPage() {
 
       if (error) {
         throw error
-      } else {
-        const updatedService = { ...currentService, [field]: value } as Service
-        setServices(
-          services.map((s) => (s.id === id ? updatedService : s))
-        )
-
-        // Obtener usuario para auditoría
-        const { data: { user } } = await supabase.auth.getUser()
-        if (user) {
-          await createAuditLog({
-            user_id: user.id,
-            action: 'UPDATE',
-            table_name: 'services',
-            old_values: oldValue ? { id, ...oldValue } : null,
-            new_values: { id, [field]: value },
-            metadata: { field, service_name: currentService?.name },
-          })
-        }
-
-        toastSuccess('Servicio actualizado correctamente')
-        logger.info('AdminServicesPage', `Service ${field} updated`, { id, value })
-        
-        // Cerrar diálogo de edición si estaba abierto
-        if (field === 'name' && isEditDialogOpen === id) {
-          setIsEditDialogOpen(null)
-          setEditingService(null)
-        }
       }
 
       // Obtener usuario para auditoría
