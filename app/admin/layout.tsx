@@ -18,19 +18,16 @@ export default async function AdminLayout({
     redirect('/login')
   }
 
-  // Intentar obtener el perfil con manejo mejorado de errores
-  let profile: { role: string } | null = null
-  let userRole = 'vendor' // Rol por defecto
+  let userRole = 'vendor'
 
   try {
     const { data, error: profileError } = await supabase
       .from('profiles')
       .select('role')
       .eq('id', user.id)
-      .maybeSingle() // Usar maybeSingle para evitar errores si no existe
+      .maybeSingle()
 
     if (profileError) {
-      // Si el error es de esquema (PGRST106), redirigir a dashboard
       if (profileError.code === 'PGRST106' || profileError.message?.includes('schema')) {
         logger.warn('AdminLayout', 'Profile table not accessible (schema error), redirecting to dashboard', {
           userId: user.id,
@@ -39,13 +36,11 @@ export default async function AdminLayout({
         })
         redirect('/dashboard')
       } else if (profileError.code === 'PGRST116') {
-        // No encontrado - redirigir a dashboard
         logger.info('AdminLayout', 'Profile not found, redirecting to dashboard', {
           userId: user.id,
         })
         redirect('/dashboard')
       } else {
-        // Otros errores - loguear y redirigir a dashboard
         logger.error('AdminLayout', 'Error fetching profile', new Error(profileError.message), {
           supabaseError: profileError.message,
           supabaseCode: profileError.code,
@@ -54,31 +49,27 @@ export default async function AdminLayout({
         redirect('/dashboard')
       }
     } else if (data) {
-      profile = data
-      // Convertir el enum a string si es necesario
       userRole = typeof data.role === 'string' ? data.role : String(data.role)
       userRole = (userRole === 'admin' ? 'admin' : 'vendor')
     }
   } catch (error) {
-    // Error inesperado - redirigir a dashboard
     logger.error('AdminLayout', 'Unexpected error fetching profile', error as Error, {
       userId: user.id,
     })
     redirect('/dashboard')
   }
 
-  // Si no es admin, redirigir a dashboard
   if (userRole !== 'admin') {
     redirect('/dashboard')
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="flex h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       <AdminSidebar />
-      <div className="flex flex-col flex-1 lg:pl-64">
+      <div className="flex flex-col flex-1 lg:pl-72">
         <Navbar />
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mx-auto w-full">
             {children}
           </div>
         </main>

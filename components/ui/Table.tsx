@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils/cn'
 
 const Table = forwardRef<HTMLTableElement, HTMLAttributes<HTMLTableElement>>(
   ({ className, ...props }, ref) => (
-    <div className="relative w-full overflow-auto">
+    <div className="relative w-full overflow-auto rounded-xl border border-gray-200/60 dark:border-gray-800/60">
       <table
         ref={ref}
         className={cn('w-full caption-bottom text-sm', className)}
@@ -18,7 +18,7 @@ const TableHeader = forwardRef<
   HTMLTableSectionElement,
   HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn('[&_tr]:border-b', className)} {...props} />
+  <thead ref={ref} className={cn('[&_tr]:border-b border-gray-200/60 dark:border-gray-800/60 bg-gray-50/50 dark:bg-gray-900/50', className)} {...props} />
 ))
 TableHeader.displayName = 'TableHeader'
 
@@ -41,7 +41,7 @@ const TableFooter = forwardRef<
   <tfoot
     ref={ref}
     className={cn(
-      'border-t bg-gray-50 font-medium dark:bg-gray-900',
+      'border-t border-gray-200/60 dark:border-gray-800/60 bg-gray-50/50 dark:bg-gray-900/50 font-medium',
       className
     )}
     {...props}
@@ -56,7 +56,7 @@ const TableRow = forwardRef<
   <tr
     ref={ref}
     className={cn(
-      'border-b transition-colors hover:bg-gray-50 data-[state=selected]:bg-gray-50 dark:hover:bg-gray-800 dark:data-[state=selected]:bg-gray-800',
+      'border-b border-gray-200/60 dark:border-gray-800/60 transition-all duration-200 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 data-[state=selected]:bg-indigo-50/50 dark:data-[state=selected]:bg-indigo-950/20',
       className
     )}
     {...props}
@@ -71,7 +71,7 @@ const TableHead = forwardRef<
   <th
     ref={ref}
     className={cn(
-      'h-12 px-4 text-left align-middle font-medium text-gray-500 dark:text-gray-400 [&:has([role=checkbox])]:pr-0',
+      'h-14 px-6 text-left align-middle font-semibold text-gray-700 dark:text-gray-300 uppercase text-xs tracking-wider [&:has([role=checkbox])]:pr-0',
       className
     )}
     {...props}
@@ -86,7 +86,7 @@ const TableCell = forwardRef<
   <td
     ref={ref}
     colSpan={colSpan}
-    className={cn('p-4 align-middle [&:has([role=checkbox])]:pr-0', className)}
+    className={cn('p-6 align-middle text-gray-900 dark:text-gray-100 [&:has([role=checkbox])]:pr-0', className)}
     {...props}
   />
 ))
@@ -114,4 +114,3 @@ export {
   TableCell,
   TableCaption,
 }
-

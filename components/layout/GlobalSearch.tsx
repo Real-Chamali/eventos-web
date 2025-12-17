@@ -65,11 +65,12 @@ export default function GlobalSearch() {
 
         if (quotes) {
           quotes.forEach((quote: any) => {
+            const client = Array.isArray(quote.client) ? quote.client[0] : quote.client
             searchResults.push({
               type: 'quote',
               id: quote.id,
               title: `Cotización #${quote.id.slice(0, 8)}`,
-              subtitle: quote.client?.name || 'Sin cliente',
+              subtitle: (client as { name?: string })?.name || 'Sin cliente',
               href: `/dashboard/quotes/${quote.id}`,
             })
           })
@@ -83,7 +84,7 @@ export default function GlobalSearch() {
           .limit(5)
 
         if (clients) {
-          clients.forEach((client: any) => {
+          clients.forEach((client: { id: string; name: string; email?: string }) => {
             searchResults.push({
               type: 'client',
               id: client.id,
@@ -103,11 +104,13 @@ export default function GlobalSearch() {
 
         if (events) {
           events.forEach((event: any) => {
+            const quote = Array.isArray(event.quote) ? event.quote[0] : event.quote
+            const client = quote && (Array.isArray(quote.client) ? quote.client[0] : quote.client)
             searchResults.push({
               type: 'event',
               id: event.id,
               title: `Evento #${event.id.slice(0, 8)}`,
-              subtitle: event.quote?.client?.name || 'Sin cliente',
+              subtitle: (client as { name?: string })?.name || 'Sin cliente',
               href: `/dashboard/events/${event.id}`,
             })
           })

@@ -20,7 +20,7 @@ import {
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
-import { ArrowUpDown, Filter, X, Download } from 'lucide-react'
+import { ArrowUpDown, X, Download } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'

@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import PageHeader from '@/components/ui/PageHeader'
 import SecuritySettings from '@/components/security/SecuritySettings'
 import UserPreferences from '@/components/settings/UserPreferences'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Card, CardContent } from '@/components/ui/Card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { Shield, Settings as SettingsIcon } from 'lucide-react'
 

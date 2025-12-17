@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Textarea from '@/components/ui/Textarea'
 import Badge from '@/components/ui/Badge'
-import { cn } from '@/lib/utils/cn'
 
 interface Comment {
   id: string

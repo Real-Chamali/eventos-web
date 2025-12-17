@@ -22,7 +22,6 @@ interface CalendarIntegrationProps {
 }
 
 export default function CalendarIntegration({ event }: CalendarIntegrationProps) {
-  const [copied, setCopied] = useState(false)
 
   const handleGoogleCalendar = () => {
     const link = generateGoogleCalendarLink(event)

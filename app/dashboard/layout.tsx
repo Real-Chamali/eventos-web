@@ -19,7 +19,6 @@ export default async function DashboardLayout({
   }
 
   // Intentar obtener el perfil con manejo mejorado de errores
-  let profile: { role: string } | null = null
   let userRole = 'vendor' // Rol por defecto
 
   try {
@@ -54,7 +53,6 @@ export default async function DashboardLayout({
         // Continuar con rol por defecto en lugar de redirigir (evita bucles)
       }
     } else if (data) {
-      profile = data
       // Convertir el enum a string si es necesario
       userRole = typeof data.role === 'string' ? data.role : String(data.role)
       userRole = (userRole === 'admin' ? 'admin' : 'vendor')
@@ -72,12 +70,12 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 dark:bg-gray-950">
+    <div className="flex h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
       <Sidebar />
-      <div className="flex flex-col flex-1 lg:pl-64">
+      <div className="flex flex-col flex-1 lg:pl-72">
         <Navbar />
         <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+          <div className="mx-auto w-full">
             {children}
           </div>
         </main>
