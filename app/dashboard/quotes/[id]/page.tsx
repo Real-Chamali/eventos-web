@@ -144,7 +144,10 @@ export default function QuoteDetailPage() {
       })
 
       if (financeError) {
-        logger.warn('QuoteDetailPage', 'Error creating finance entry', financeError)
+        logger.warn('QuoteDetailPage', 'Error creating finance entry', {
+          supabaseError: financeError.message,
+          supabaseCode: financeError.code,
+        })
         // No fallar si hay error en finance_ledger
       }
 
