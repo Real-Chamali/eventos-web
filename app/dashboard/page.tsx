@@ -3,7 +3,7 @@ import StatsCard from '@/components/ui/StatsCard'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import Chart from '@/components/ui/Chart'
 import Calendar from '@/components/ui/Calendar'
-import { DollarSign, TrendingUp, FileText, Calendar as CalendarIcon, Target, Zap, Plus, ArrowRight, Sparkles } from 'lucide-react'
+import { DollarSign, TrendingUp, FileText, Calendar as CalendarIcon, Target, Zap, Plus, ArrowRight, Sparkles, User } from 'lucide-react'
 import Link from 'next/link'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
@@ -241,6 +241,72 @@ export default async function DashboardPage() {
         </Card>
       </div>
 
+      {/* Quick Actions Section - Premium */}
+      <Card variant="elevated" className="overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl flex items-center gap-2">
+                <Zap className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                Acciones Rápidas
+              </CardTitle>
+              <CardDescription className="mt-1">Accede rápidamente a las funciones más usadas</CardDescription>
+            </div>
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg">
+              <Sparkles className="h-5 w-5 text-white" />
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link href="/dashboard/quotes/new">
+              <Button variant="premium" size="lg" className="w-full h-auto flex-col gap-3 p-6 shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-[1.02]">
+                <div className="h-12 w-12 rounded-xl bg-white/20 flex items-center justify-center">
+                  <Plus className="h-6 w-6 text-white" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-white">Nueva Cotización</p>
+                  <p className="text-xs text-white/80 mt-1">Crear cotización</p>
+                </div>
+              </Button>
+            </Link>
+            <Link href="/dashboard/clients/new">
+              <Button variant="outline" size="lg" className="w-full h-auto flex-col gap-3 p-6 border-2 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all duration-200 hover:scale-[1.02]">
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 flex items-center justify-center">
+                  <User className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-gray-900 dark:text-white">Nuevo Cliente</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Agregar cliente</p>
+                </div>
+              </Button>
+            </Link>
+            <Link href="/dashboard/quotes">
+              <Button variant="outline" size="lg" className="w-full h-auto flex-col gap-3 p-6 border-2 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all duration-200 hover:scale-[1.02]">
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 flex items-center justify-center">
+                  <FileText className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-gray-900 dark:text-white">Ver Cotizaciones</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Todas las cotizaciones</p>
+                </div>
+              </Button>
+            </Link>
+            <Link href="/dashboard/events">
+              <Button variant="outline" size="lg" className="w-full h-auto flex-col gap-3 p-6 border-2 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all duration-200 hover:scale-[1.02]">
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30 flex items-center justify-center">
+                  <CalendarIcon className="h-6 w-6 text-violet-600 dark:text-violet-400" />
+                </div>
+                <div className="text-center">
+                  <p className="font-semibold text-gray-900 dark:text-white">Ver Eventos</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Todos los eventos</p>
+                </div>
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Recent Quotes - Premium Table Card */}
       <Card variant="elevated" className="overflow-hidden">
         <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-900/50 dark:to-gray-800/30 border-b border-gray-200/60 dark:border-gray-800/60">
@@ -249,12 +315,20 @@ export default async function DashboardPage() {
               <CardTitle className="text-xl">Cotizaciones Recientes</CardTitle>
               <CardDescription className="mt-1">Últimas 5 cotizaciones</CardDescription>
             </div>
-            <Link href="/dashboard/quotes">
-              <Button variant="ghost" size="sm" className="gap-2">
-                Ver todas
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <Link href="/dashboard/quotes/new">
+                <Button variant="premium" size="sm" className="gap-2 shadow-lg hover:shadow-xl">
+                  <Plus className="h-4 w-4" />
+                  Nueva
+                </Button>
+              </Link>
+              <Link href="/dashboard/quotes">
+                <Button variant="ghost" size="sm" className="gap-2">
+                  Ver todas
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-6">
