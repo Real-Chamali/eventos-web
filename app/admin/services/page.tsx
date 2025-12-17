@@ -99,7 +99,6 @@ export default function AdminServicesPage() {
   const updateService = async (id: string, field: 'base_price' | 'cost_price' | 'name', value: number | string) => {
     // Validate with Zod para precios
     if (field !== 'name') {
-<<<<<<< HEAD
       const validationResult = PriceUpdateSchema.safeParse({
         price: value as number,
         field: field as 'base_price' | 'cost_price',
@@ -110,7 +109,6 @@ export default function AdminServicesPage() {
         toastError(errorMessage)
         return
       }
-=======
       const validationResult = PriceUpdateSchema.safeParse({ price: value as number, field: field as 'base_price' | 'cost_price' })
       if (!validationResult.success) {
         const errorMessage = validationResult.error.issues[0]?.message || 'Datos inválidos'
@@ -127,7 +125,6 @@ export default function AdminServicesPage() {
         toastError('El nombre es demasiado largo (máximo 100 caracteres)')
         return
       }
->>>>>>> origin/main
     }
 
     setSaving(id)
@@ -144,8 +141,6 @@ export default function AdminServicesPage() {
 
       if (error) {
         throw error
-<<<<<<< HEAD
-=======
       } else {
         const updatedService = { ...currentService, [field]: value } as Service
         setServices(
@@ -173,7 +168,6 @@ export default function AdminServicesPage() {
           setIsEditDialogOpen(null)
           setEditingService(null)
         }
->>>>>>> origin/main
       }
 
       // Obtener usuario para auditoría
@@ -599,7 +593,6 @@ export default function AdminServicesPage() {
   }
 
   return (
-<<<<<<< HEAD
     <div className="space-y-8 p-6 lg:p-8">
       {/* Premium Header */}
       <div className="flex items-center justify-between">
@@ -615,7 +608,6 @@ export default function AdminServicesPage() {
           <DialogTrigger asChild>
             <Button variant="premium" size="lg" className="shadow-lg hover:shadow-xl gap-2">
               <Plus className="h-5 w-5" />
-=======
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <PageHeader
@@ -628,9 +620,8 @@ export default function AdminServicesPage() {
         />
         <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
->>>>>>> origin/main
+            <Button variant="premium" size="lg" className="shadow-lg hover:shadow-xl gap-2">
+              <Plus className="h-5 w-5" />
               Nuevo Servicio
             </Button>
           </DialogTrigger>
@@ -641,7 +632,6 @@ export default function AdminServicesPage() {
                 Agrega un nuevo servicio que estará disponible para usar en cotizaciones.
               </DialogDescription>
             </DialogHeader>
-<<<<<<< HEAD
             <div className="space-y-5 py-4">
               <Input
                 label="Nombre del Servicio"
@@ -678,7 +668,6 @@ export default function AdminServicesPage() {
                 Cancelar
               </Button>
               <Button onClick={handleCreateService} isLoading={saving === 'create'} variant="premium">
-=======
             <div className="space-y-4 py-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -725,7 +714,6 @@ export default function AdminServicesPage() {
                 Cancelar
               </Button>
               <Button onClick={handleCreateService} isLoading={saving === 'create'}>
->>>>>>> origin/main
                 Crear Servicio
               </Button>
             </DialogFooter>
@@ -771,7 +759,6 @@ export default function AdminServicesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-<<<<<<< HEAD
                 {services.map((service) => {
                   const margin = service.cost_price > 0
                     ? ((service.base_price - service.cost_price) / service.cost_price) * 100
@@ -927,7 +914,6 @@ export default function AdminServicesPage() {
                     </TableRow>
                   )
                 })}
-=======
                 {services.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-12">
@@ -1108,7 +1094,6 @@ export default function AdminServicesPage() {
                     )
                   })
                 )}
->>>>>>> origin/main
               </TableBody>
             </Table>
           )}
