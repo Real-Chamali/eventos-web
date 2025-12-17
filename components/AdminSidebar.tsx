@@ -6,7 +6,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
-import { Settings, DollarSign, LogOut, Shield, Sparkles, BarChart3 } from 'lucide-react'
+import { Settings, DollarSign, LogOut, Shield, BarChart3 } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import Button from './ui/Button'
 

@@ -7,7 +7,6 @@ import { CreateQuoteSchema } from '@/lib/validations/schemas'
 import { useToast, useDebounce } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 import { createAuditLog } from '@/lib/utils/audit'
-import QuoteTemplateSelector from '@/components/templates/QuoteTemplateSelector'
 import PageHeader from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
@@ -23,7 +22,6 @@ import {
 import { Plus, X, ArrowLeft, User, ShoppingCart, DollarSign, CheckCircle2, Sparkles } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
-import Badge from '@/components/ui/Badge'
 
 interface Client {
   id: string

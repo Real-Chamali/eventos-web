@@ -1,7 +1,7 @@
 'use client'
 
 import StatsCard from '@/components/ui/StatsCard'
-import { TrendingUp, TrendingDown, DollarSign, Sparkles } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign } from 'lucide-react'
 import Skeleton from '@/components/ui/Skeleton'
 
 interface FinanceSummaryCardsProps {

@@ -9,9 +9,8 @@ import FinanceSummaryCards from '@/components/finance/FinanceSummaryCards'
 import FinanceLedgerTable, { type FinanceEntry } from '@/components/finance/FinanceLedgerTable'
 import AddFinanceEntryDialog from '@/components/finance/AddFinanceEntryDialog'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
-import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
-import { Plus, TrendingUp, TrendingDown, DollarSign, BarChart3 } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, BarChart3 } from 'lucide-react'
 
 export default function AdminFinancePage() {
   const [financeData, setFinanceData] = useState<FinanceEntry[]>([])

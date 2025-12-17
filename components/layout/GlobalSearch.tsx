@@ -64,7 +64,7 @@ export default function GlobalSearch() {
           .limit(5)
 
         if (quotes) {
-          quotes.forEach((quote: any) => {
+          quotes.forEach((quote: { id: string; client?: { name?: string } | { name?: string }[] }) => {
             const client = Array.isArray(quote.client) ? quote.client[0] : quote.client
             searchResults.push({
               type: 'quote',
@@ -103,7 +103,7 @@ export default function GlobalSearch() {
           .limit(5)
 
         if (events) {
-          events.forEach((event: any) => {
+          events.forEach((event: { id: string; quote?: { client?: { name?: string } | { name?: string }[] } | Array<{ client?: { name?: string } | { name?: string }[] }> }) => {
             const quote = Array.isArray(event.quote) ? event.quote[0] : event.quote
             const client = quote && (Array.isArray(quote.client) ? quote.client[0] : quote.client)
             searchResults.push({
