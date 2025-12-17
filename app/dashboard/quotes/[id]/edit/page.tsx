@@ -7,8 +7,7 @@ import { CreateQuoteSchema } from '@/lib/validations/schemas'
 import { useToast, useDebounce } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 import { createAuditLog } from '@/lib/utils/audit'
-import PageHeader from '@/components/ui/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import SearchInput from '@/components/ui/SearchInput'
@@ -29,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/Table'
-import { ArrowLeft, Plus, Trash2, Save } from 'lucide-react'
+import { ArrowLeft, Plus, Trash2, Save, User, ShoppingCart, DollarSign, X } from 'lucide-react'
 import Link from 'next/link'
 
 interface Client {
@@ -371,24 +370,46 @@ export default function EditQuotePage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <PageHeader title="Editar Cotización" />
-        <Skeleton className="h-96" />
+      <div className="space-y-8 p-6 lg:p-8">
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-6 w-96" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <Skeleton className="h-64" />
+            <Skeleton className="h-96" />
+          </div>
+          <div className="space-y-6">
+            <Skeleton className="h-48" />
+            <Skeleton className="h-32" />
+          </div>
+        </div>
       </div>
     )
   }
 
   if (!quote) {
     return (
-      <div className="space-y-6">
-        <PageHeader title="Cotización no encontrada" />
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-red-600 dark:text-red-400 mb-4">
+      <div className="space-y-8 p-6 lg:p-8">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
+            Cotización no encontrada
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">
+            La cotización solicitada no existe o no se puede editar
+          </p>
+        </div>
+        <Card variant="elevated">
+          <CardContent className="p-12 text-center">
+            <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-red-100 to-pink-100 dark:from-red-900/30 dark:to-pink-900/30 flex items-center justify-center mx-auto mb-4">
+              <X className="h-8 w-8 text-red-600 dark:text-red-400" />
+            </div>
+            <p className="text-red-600 dark:text-red-400 mb-6 font-medium">
               La cotización solicitada no existe o no se puede editar.
             </p>
             <Link href="/dashboard/quotes">
-              <Button variant="outline">
+              <Button variant="premium" className="shadow-lg hover:shadow-xl">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Volver a Cotizaciones
               </Button>
@@ -400,27 +421,42 @@ export default function EditQuotePage() {
   }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Editar Cotización"
-        description="Modifica los detalles de la cotización"
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Cotizaciones', href: '/dashboard/quotes' },
-          { label: 'Detalle', href: `/dashboard/quotes/${quoteId}` },
-          { label: 'Editar' },
-        ]}
-      />
+    <div className="space-y-8 p-6 lg:p-8">
+      {/* Premium Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
+            Editar Cotización
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">
+            Modifica los detalles de la cotización
+          </p>
+        </div>
+        <Link href={`/dashboard/quotes/${quoteId}`}>
+          <Button variant="outline" size="lg">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Volver
+          </Button>
+        </Link>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Form */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Client Selection */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Cliente</CardTitle>
+          {/* Client Selection - Premium Card */}
+          <Card variant="elevated" className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl">Cliente</CardTitle>
+                  <CardDescription className="mt-1">Selecciona el cliente para esta cotización</CardDescription>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg">
+                  <User className="h-5 w-5 text-white" />
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-6 space-y-4">
               <div>
                 <SearchInput
                   placeholder="Buscar cliente..."
@@ -454,47 +490,64 @@ export default function EditQuotePage() {
                 )}
               </div>
               {selectedClient && (
-                <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <p className="font-medium text-gray-900 dark:text-white">
-                    {selectedClient.name}
-                  </p>
-                  {selectedClient.email && (
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {selectedClient.email}
-                    </p>
-                  )}
+                <div className="p-4 bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 rounded-xl border border-indigo-200/50 dark:border-indigo-800/50">
+                  <div className="flex items-center space-x-3">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-900/30 dark:to-violet-900/30 flex items-center justify-center">
+                      <User className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-gray-900 dark:text-white">
+                        {selectedClient.name}
+                      </p>
+                      {selectedClient.email && (
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          {selectedClient.email}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Services */}
-          <Card>
-            <CardHeader>
+          {/* Services - Premium Card */}
+          <Card variant="elevated" className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
               <div className="flex items-center justify-between">
-                <CardTitle>Servicios</CardTitle>
-                <Button variant="outline" size="sm" onClick={addService}>
+                <div>
+                  <CardTitle className="text-xl">Servicios</CardTitle>
+                  <CardDescription className="mt-1">Agrega y configura los servicios de la cotización</CardDescription>
+                </div>
+                <Button variant="premium" size="sm" onClick={addService} className="shadow-lg hover:shadow-xl">
                   <Plus className="mr-2 h-4 w-4" />
                   Agregar Servicio
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
               {errors.services && (
                 <p className="mb-4 text-sm text-red-600 dark:text-red-400">{errors.services}</p>
               )}
               {quoteServices.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-gray-500 dark:text-gray-400 mb-4">
+                <div className="text-center py-12">
+                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-100 to-green-100 dark:from-emerald-900/30 dark:to-green-900/30 flex items-center justify-center mx-auto mb-4">
+                    <ShoppingCart className="h-8 w-8 text-emerald-600 dark:text-emerald-400" />
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400 mb-2 font-medium">
                     No hay servicios agregados
                   </p>
-                  <Button variant="outline" onClick={addService}>
+                  <p className="text-sm text-gray-500 dark:text-gray-500 mb-6">
+                    Comienza agregando el primer servicio a la cotización
+                  </p>
+                  <Button variant="premium" onClick={addService} className="shadow-lg hover:shadow-xl">
                     <Plus className="mr-2 h-4 w-4" />
                     Agregar Primer Servicio
                   </Button>
                 </div>
               ) : (
-                <Table>
+                <div className="rounded-xl border border-gray-200/60 dark:border-gray-800/60 overflow-hidden">
+                  <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Servicio</TableHead>
@@ -561,31 +614,40 @@ export default function EditQuotePage() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Sidebar */}
+        {/* Sidebar - Premium */}
         <div className="space-y-6">
-          {/* Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Resumen</CardTitle>
+          {/* Summary - Premium Card */}
+          <Card variant="elevated" className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl">Resumen</CardTitle>
+                  <CardDescription className="mt-1">Total de la cotización</CardDescription>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-500 flex items-center justify-center shadow-lg">
+                  <DollarSign className="h-5 w-5 text-white" />
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="p-6 space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Subtotal:</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Subtotal:</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
                   {formatCurrency(total)}
                 </span>
               </div>
               <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">
                     Total:
                   </span>
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  <span className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 dark:from-violet-400 dark:to-purple-400 bg-clip-text text-transparent">
                     {formatCurrency(total)}
                   </span>
                 </div>
@@ -593,26 +655,35 @@ export default function EditQuotePage() {
             </CardContent>
           </Card>
 
-          {/* Status */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Estado</CardTitle>
+          {/* Status - Premium Card */}
+          <Card variant="elevated" className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl">Estado</CardTitle>
+                <Badge variant="warning" size="lg">Borrador</Badge>
+              </div>
             </CardHeader>
-            <CardContent>
-              <Badge variant="warning">Borrador</Badge>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                Esta cotización está en estado borrador y puede ser editada.
+            <CardContent className="p-6">
+              <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                Esta cotización está en estado borrador y puede ser editada libremente.
               </p>
             </CardContent>
           </Card>
 
-          {/* Actions */}
-          <div className="flex flex-col gap-2">
-            <Button onClick={handleSave} disabled={saving} size="lg">
+          {/* Actions - Premium */}
+          <div className="flex flex-col gap-3">
+            <Button 
+              onClick={handleSave} 
+              disabled={saving} 
+              variant="premium"
+              size="lg" 
+              className="w-full shadow-lg hover:shadow-xl"
+              isLoading={saving}
+            >
               <Save className="mr-2 h-4 w-4" />
               {saving ? 'Guardando...' : 'Guardar Cambios'}
             </Button>
-            <Link href={`/dashboard/quotes/${quoteId}`}>
+            <Link href={`/dashboard/quotes/${quoteId}`} className="w-full">
               <Button variant="outline" className="w-full">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Cancelar

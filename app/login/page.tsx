@@ -216,27 +216,36 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 dark:bg-gray-900 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 via-indigo-50/30 to-violet-50/30 dark:from-gray-900 dark:via-indigo-950/20 dark:to-violet-950/20 px-4 py-12">
       <div className="w-full max-w-md space-y-8">
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="mx-auto h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
-            <span className="text-white font-bold text-xl">E</span>
+        {/* Premium Header */}
+        <div className="text-center space-y-4">
+          <div className="mx-auto h-16 w-16 rounded-2xl bg-gradient-to-br from-indigo-500 via-violet-500 to-purple-500 flex items-center justify-center shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-110">
+            <span className="text-white font-bold text-2xl">E</span>
           </div>
-          <div>
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+          <div className="space-y-2">
+            <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
               Bienvenido de vuelta
-            </h2>
-            <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+            </h1>
+            <p className="text-lg text-gray-600 dark:text-gray-400">
               Ingresa tus credenciales para continuar
             </p>
           </div>
         </div>
 
-        {/* Form */}
-        <Card>
-          <CardContent className="p-6">
-            <form className="space-y-5" onSubmit={handleSubmit(handleLogin)}>
+        {/* Premium Form Card */}
+        <Card variant="elevated" className="overflow-hidden shadow-2xl">
+          <CardContent className="p-8">
+            <form className="space-y-6" onSubmit={handleSubmit(handleLogin)}>
+              <div className="space-y-1">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                  Iniciar Sesión
+                </h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Accede a tu cuenta para gestionar tus eventos
+                </p>
+              </div>
+
               <FormGroup>
                 <Input
                   id="email"
@@ -263,7 +272,9 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full"
+                variant="premium"
+                size="lg"
+                className="w-full shadow-lg hover:shadow-xl"
                 isLoading={isSubmitting}
                 disabled={isSubmitting}
               >
@@ -272,6 +283,13 @@ export default function LoginPage() {
             </form>
           </CardContent>
         </Card>
+
+        {/* Footer Info */}
+        <div className="text-center">
+          <p className="text-sm text-gray-500 dark:text-gray-500">
+            Sistema de gestión de eventos premium
+          </p>
+        </div>
       </div>
     </div>
   )

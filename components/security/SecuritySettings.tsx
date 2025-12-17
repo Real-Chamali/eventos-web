@@ -7,13 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Badge from '@/components/ui/Badge'
-import { Shield, Key, Smartphone, CheckCircle2 } from 'lucide-react'
+import { Shield, Smartphone, CheckCircle2 } from 'lucide-react'
+import { logger } from '@/lib/utils/logger'
 
 export default function SecuritySettings() {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [sessions, setSessions] = useState<any[]>([])
-  const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
 
   useEffect(() => {
@@ -23,14 +21,11 @@ export default function SecuritySettings() {
 
   const loadSecuritySettings = async () => {
     try {
-      setLoading(true)
       // TODO: Implementar verificación de 2FA
       // Por ahora, solo mostramos la UI
       setTwoFactorEnabled(false)
     } catch (error) {
-      console.error('Error loading security settings:', error)
-    } finally {
-      setLoading(false)
+      logger.error('SecuritySettings', 'Error loading security settings', error as Error)
     }
   }
 
@@ -41,7 +36,7 @@ export default function SecuritySettings() {
       toastSuccess('2FA habilitado (simulado)')
       setTwoFactorEnabled(true)
     } catch (error) {
-      console.error('Error enabling 2FA:', error)
+      logger.error('SecuritySettings', 'Error enabling 2FA', error as Error)
       toastError('Error al habilitar 2FA')
     }
   }
@@ -52,7 +47,7 @@ export default function SecuritySettings() {
       toastSuccess('2FA deshabilitado')
       setTwoFactorEnabled(false)
     } catch (error) {
-      console.error('Error disabling 2FA:', error)
+      logger.error('SecuritySettings', 'Error disabling 2FA', error as Error)
       toastError('Error al deshabilitar 2FA')
     }
   }

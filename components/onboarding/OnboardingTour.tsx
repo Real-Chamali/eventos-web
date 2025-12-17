@@ -64,7 +64,10 @@ export default function OnboardingTour({ steps = DEFAULT_TOUR_STEPS, onComplete 
     // Verificar si el usuario ya completó el tour
     const tourCompleted = localStorage.getItem('onboarding-tour-completed')
     if (!tourCompleted) {
-      setIsVisible(true)
+      // Usar setTimeout para evitar setState síncrono en efecto
+      setTimeout(() => {
+        setIsVisible(true)
+      }, 0)
     }
   }, [])
 

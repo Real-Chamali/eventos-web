@@ -6,7 +6,7 @@ import { useToast } from '@/lib/hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
-import { Settings, Moon, Sun, Globe } from 'lucide-react'
+import { Settings, Moon, Globe } from 'lucide-react'
 
 interface UserPreferences {
   theme: 'light' | 'dark' | 'auto'

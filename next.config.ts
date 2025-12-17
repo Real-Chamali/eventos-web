@@ -2,8 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  // El warning de turbopack.root es informativo y no afecta la funcionalidad
-  // Next.js infiere automáticamente el root del workspace
+  // Nota: El warning sobre múltiples lockfiles es inofensivo.
+  // Next.js detecta package-lock.json en /home/voldemort/ pero usa correctamente
+  // el del proyecto. Si quieres eliminar el warning, puedes eliminar o renombrar
+  // /home/voldemort/package-lock.json (es un archivo vacío que no se necesita).
 };
 
 // Solo usar Sentry si está configurado

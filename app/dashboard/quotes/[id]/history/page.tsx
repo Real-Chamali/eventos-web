@@ -3,6 +3,16 @@
 import { useState, useEffect } from 'react'
 import { useToast } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
+import PageHeader from '@/components/ui/PageHeader'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
+import Button from '@/components/ui/Button'
+import Badge from '@/components/ui/Badge'
+import Skeleton from '@/components/ui/Skeleton'
+import EmptyState from '@/components/ui/EmptyState'
+import { ChevronDown, ChevronUp, BarChart3, Clock, User, DollarSign, GitBranch, ArrowLeft } from 'lucide-react'
+import Link from 'next/link'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
 
 // Utility function to format relative time
 function formatRelativeTime(date: string): string {
@@ -10,29 +20,35 @@ function formatRelativeTime(date: string): string {
   const past = new Date(date)
   const seconds = Math.floor((now.getTime() - past.getTime()) / 1000)
 
-  if (seconds < 60) return 'just now'
+  if (seconds < 60) return 'hace un momento'
   const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
+  if (minutes < 60) return `hace ${minutes}m`
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return `hace ${hours}h`
   const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}d ago`
+  if (days < 7) return `hace ${days}d`
   const weeks = Math.floor(days / 7)
-  if (weeks < 4) return `${weeks}w ago`
+  if (weeks < 4) return `hace ${weeks} sem`
   const months = Math.floor(days / 30)
-  return `${months}mo ago`
+  return `hace ${months} meses`
 }
 
-// Icon components
-const ChevronDown = ({ className }: { className?: string }) => (
-  <span className={className || 'text-slate-400'}>▼</span>
-)
-const ChevronUp = ({ className }: { className?: string }) => (
-  <span className={className || 'text-slate-400'}>▲</span>
-)
-const BarChart3 = ({ className }: { className?: string }) => (
-  <span className={className || ''}>📊</span>
-)
+function formatDate(dateString: string): string {
+  try {
+    return format(new Date(dateString), "dd 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })
+  } catch {
+    return dateString
+  }
+}
+
+function formatCurrency(amount: number): string {
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(amount)
+}
 
 interface QuoteVersion {
   version_number: number
@@ -103,12 +119,12 @@ export default function QuoteHistoryPage({ params }: { params: Promise<{ id: str
         }
 
         setHistory(data.data)
-        success('History loaded')
+        success('Historial cargado correctamente')
       } catch (error) {
         logger.error('dashboard/quotes/history', 'Error fetching quote history', error instanceof Error ? error : new Error(String(error)), {
           quoteId: paramId,
         })
-        showError('Failed to load history')
+        showError('Error al cargar el historial')
       } finally {
         setLoading(false)
       }
@@ -120,7 +136,7 @@ export default function QuoteHistoryPage({ params }: { params: Promise<{ id: str
   // Compare versions
   const handleCompare = async (v1: number, v2: number) => {
     if (v1 === v2) {
-      showError('Select different versions')
+      showError('Selecciona versiones diferentes')
       return
     }
 
@@ -145,262 +161,360 @@ export default function QuoteHistoryPage({ params }: { params: Promise<{ id: str
 
       setComparison(data.data)
       setSelectedVersions([Math.min(v1, v2), Math.max(v1, v2)])
-      success('Comparison loaded')
+      success('Comparación cargada correctamente')
     } catch (error) {
       logger.error('dashboard/quotes/history', 'Error comparing versions', error instanceof Error ? error : new Error(String(error)), {
         quoteId: paramId,
       })
-      showError('Failed to compare versions')
+      showError('Error al comparar versiones')
     } finally {
       setComparing(false)
     }
   }
 
+  const getStatusBadge = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'accepted':
+      case 'confirmed':
+        return <Badge variant="success" size="sm">Aceptada</Badge>
+      case 'rejected':
+      case 'cancelled':
+        return <Badge variant="error" size="sm">Rechazada</Badge>
+      case 'pending':
+        return <Badge variant="warning" size="sm">Pendiente</Badge>
+      default:
+        return <Badge size="sm">{status}</Badge>
+    }
+  }
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-white dark:bg-slate-950 p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="animate-pulse space-y-4">
-            <div className="h-8 bg-gray-200 dark:bg-slate-800 rounded w-1/3"></div>
-            <div className="h-64 bg-gray-200 dark:bg-slate-800 rounded"></div>
-          </div>
+      <div className="space-y-8 p-6 lg:p-8">
+        <div className="space-y-2">
+          <Skeleton className="h-10 w-64" />
+          <Skeleton className="h-6 w-96" />
         </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
+        <Skeleton className="h-96" />
       </div>
     )
   }
 
   if (!history) {
     return (
-      <div className="min-h-screen bg-white dark:bg-slate-950 p-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-amber-50 dark:bg-slate-900 border border-amber-200 dark:border-slate-700 rounded-lg p-6">
-            <h2 className="text-xl font-semibold text-amber-900 dark:text-amber-200">
-              Quote not found
-            </h2>
-            <p className="text-amber-700 dark:text-amber-300 mt-2">
-              The quote history could not be loaded.
-            </p>
-          </div>
-        </div>
+      <div className="space-y-8 p-6 lg:p-8">
+        <PageHeader
+          title="Historial no encontrado"
+          description="No se pudo cargar el historial de la cotización"
+        />
+        <Card variant="elevated">
+          <CardContent className="p-12">
+            <EmptyState
+              icon={<GitBranch className="h-10 w-10" />}
+              title="Historial no disponible"
+              description="No se pudo cargar el historial de versiones de esta cotización"
+            />
+          </CardContent>
+        </Card>
       </div>
     )
   }
 
-  const sortedVersions = [...history.versions].sort((a, b) => a.version_number - b.version_number)
+  const sortedVersions = [...history.versions].sort((a, b) => b.version_number - a.version_number)
 
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950 p-6">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-            Quote History
+    <div className="space-y-8 p-6 lg:p-8">
+      {/* Premium Header */}
+      <div className="flex items-center justify-between">
+        <div className="space-y-1">
+          <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
+            Historial de Versiones
           </h1>
-          <p className="text-slate-600 dark:text-slate-400">
-            Quote ID: <code className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded text-sm">{paramId}</code>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">
+            Cotización #{paramId.slice(0, 8)}...
           </p>
         </div>
+        <Link href={`/dashboard/quotes/${paramId}`}>
+          <Button variant="outline" size="lg">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Volver
+          </Button>
+        </Link>
+      </div>
 
-        {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-slate-100 dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
-            <div className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Versions</div>
-            <div className="text-3xl font-bold text-slate-900 dark:text-white">
-              {history.total_versions}
+      {/* Premium Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card variant="elevated" className="group hover:scale-[1.02] transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total Versiones</p>
+                <p className="text-3xl font-bold text-gray-900 dark:text-white">
+                  {history.total_versions}
+                </p>
+              </div>
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                <GitBranch className="h-7 w-7 text-indigo-600 dark:text-indigo-400" />
+              </div>
             </div>
-          </div>
-          <div className="bg-slate-100 dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
-            <div className="text-sm font-medium text-slate-600 dark:text-slate-400">Created</div>
-            <div className="text-lg font-semibold text-slate-900 dark:text-white">
-              {formatRelativeTime(history.created_at)}
+          </CardContent>
+        </Card>
+        <Card variant="elevated" className="group hover:scale-[1.02] transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Creada</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {formatRelativeTime(history.created_at)}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatDate(history.created_at)}
+                </p>
+              </div>
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-50 to-green-50 dark:from-emerald-950/30 dark:to-green-950/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                <Clock className="h-7 w-7 text-emerald-600 dark:text-emerald-400" />
+              </div>
             </div>
-          </div>
-          <div className="bg-slate-100 dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-800">
-            <div className="text-sm font-medium text-slate-600 dark:text-slate-400">Last Modified</div>
-            <div className="text-lg font-semibold text-slate-900 dark:text-white">
-              {formatRelativeTime(history.last_modified_at)}
+          </CardContent>
+        </Card>
+        <Card variant="elevated" className="group hover:scale-[1.02] transition-all duration-200">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Última Modificación</p>
+                <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                  {formatRelativeTime(history.last_modified_at)}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatDate(history.last_modified_at)}
+                </p>
+              </div>
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                <Clock className="h-7 w-7 text-amber-600 dark:text-amber-400" />
+              </div>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+      </div>
 
-        {/* Compare Mode Toggle */}
-        <div className="mb-6 flex gap-2">
-          <button
-            onClick={() => {
-              setCompareMode(!compareMode)
-              setSelectedVersions(null)
-              setComparison([])
-            }}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-              compareMode
-                ? 'bg-blue-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white hover:bg-slate-300 dark:hover:bg-slate-700'
-            }`}
-          >
-            <BarChart3 className="w-4 h-4" />
-            {compareMode ? 'Exit Compare' : 'Compare Versions'}
-          </button>
-        </div>
-
-        {/* Versions List */}
-        <div className="space-y-4">
-          {sortedVersions.map((version) => (
-            <div
-              key={version.version_number}
-              className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden bg-slate-50 dark:bg-slate-900"
+      {/* Compare Mode Toggle - Premium */}
+      <Card variant="elevated" className="overflow-hidden">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-1">
+                Modo Comparación
+              </h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Selecciona dos versiones para comparar cambios
+              </p>
+            </div>
+            <Button
+              variant={compareMode ? 'premium' : 'outline'}
+              onClick={() => {
+                setCompareMode(!compareMode)
+                setSelectedVersions(null)
+                setComparison([])
+              }}
+              className={compareMode ? 'shadow-lg hover:shadow-xl' : ''}
             >
-              {/* Version Header */}
-              <button
-                onClick={() => {
-                  if (compareMode && selectedVersions && selectedVersions.length === 2) {
-                    // In compare mode, selecting both versions triggers comparison
-                    if (selectedVersions[0] === version.version_number ||
-                        selectedVersions[1] === version.version_number) {
-                      setSelectedVersions(null)
-                    }
-                  } else {
-                    setExpandedVersion(expandedVersion === version.version_number ? null : version.version_number)
-                  }
-                }}
-                className="w-full px-6 py-4 flex items-center justify-between hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left"
-              >
-                <div className="flex items-center gap-4 flex-1">
-                  {compareMode && (
-                    <input
-                      type="checkbox"
-                      checked={selectedVersions?.includes(version.version_number) || false}
-                      onChange={(e) => {
-                        e.stopPropagation()
-                        if (e.target.checked) {
-                          if (!selectedVersions) {
-                            setSelectedVersions([version.version_number, version.version_number])
-                          } else if (selectedVersions[0] === selectedVersions[1]) {
-                            setSelectedVersions([
-                              Math.min(selectedVersions[0], version.version_number),
-                              Math.max(selectedVersions[0], version.version_number),
-                            ])
-                          }
-                        } else {
-                          setSelectedVersions(null)
-                        }
-                      }}
-                      className="w-5 h-5 rounded cursor-pointer"
-                    />
-                  )}
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-bold bg-blue-100 dark:bg-blue-900 text-blue-900 dark:text-blue-200 px-3 py-1 rounded-full">
-                        v{version.version_number}
-                      </span>
-                      <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        version.status === 'accepted'
-                          ? 'bg-green-100 dark:bg-green-900 text-green-900 dark:text-green-200'
-                          : version.status === 'rejected'
-                            ? 'bg-red-100 dark:bg-red-900 text-red-900 dark:text-red-200'
-                            : 'bg-amber-100 dark:bg-amber-900 text-amber-900 dark:text-amber-200'
-                      }`}>
-                        {version.status}
-                      </span>
-                      <span className="text-sm text-slate-600 dark:text-slate-400">
-                        ${version.total_price.toFixed(2)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-500 mt-2">
-                      by {version.created_by_name || 'System'} •{' '}
-                      {formatRelativeTime(version.created_at)}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  {!compareMode && (
-                    <>
-                      {expandedVersion === version.version_number ? (
-                        <ChevronUp className="w-5 h-5 text-slate-400" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5 text-slate-400" />
-                      )}
-                    </>
-                  )}
-                </div>
-              </button>
+              <BarChart3 className="mr-2 h-4 w-4" />
+              {compareMode ? 'Salir de Comparación' : 'Comparar Versiones'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
-              {/* Version Details */}
-              {!compareMode && expandedVersion === version.version_number && (
-                <div className="px-6 py-4 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-semibold text-slate-900 dark:text-white mb-3">Services</h4>
-                      <div className="space-y-2">
-                        {version.services.map((service, idx) => (
-                          <div
-                            key={idx}
-                            className="flex justify-between items-center p-2 bg-slate-100 dark:bg-slate-800 rounded"
-                          >
-                            <span className="text-sm text-slate-700 dark:text-slate-300">
-                              Service {service.service_id.slice(0, 8)}... x{service.quantity}
-                            </span>
-                            <span className="font-medium text-slate-900 dark:text-white">
-                              ${service.final_price.toFixed(2)}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
+      {/* Versions List - Premium */}
+      <div className="space-y-4">
+        {sortedVersions.map((version) => (
+          <Card
+            key={version.version_number}
+            variant="elevated"
+            className="overflow-hidden group hover:shadow-lg transition-all duration-200"
+          >
+            {/* Version Header */}
+            <button
+              onClick={() => {
+                if (compareMode && selectedVersions && selectedVersions.length === 2) {
+                  // In compare mode, selecting both versions triggers comparison
+                  if (selectedVersions[0] === version.version_number ||
+                      selectedVersions[1] === version.version_number) {
+                    setSelectedVersions(null)
+                  }
+                } else {
+                  setExpandedVersion(expandedVersion === version.version_number ? null : version.version_number)
+                }
+              }}
+              className="w-full px-6 py-5 flex items-center justify-between hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors text-left"
+            >
+              <div className="flex items-center gap-4 flex-1">
+                {compareMode && (
+                  <input
+                    type="checkbox"
+                    checked={selectedVersions?.includes(version.version_number) || false}
+                    onChange={(e) => {
+                      e.stopPropagation()
+                      if (e.target.checked) {
+                        if (!selectedVersions) {
+                          setSelectedVersions([version.version_number, version.version_number])
+                        } else if (selectedVersions[0] === selectedVersions[1]) {
+                          setSelectedVersions([
+                            Math.min(selectedVersions[0], version.version_number),
+                            Math.max(selectedVersions[0], version.version_number),
+                          ])
+                        }
+                      } else {
+                        setSelectedVersions(null)
+                      }
+                    }}
+                    className="w-5 h-5 rounded cursor-pointer text-indigo-600 focus:ring-indigo-500"
+                  />
+                )}
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Badge variant="info" size="lg" className="font-bold">
+                      v{version.version_number}
+                    </Badge>
+                    {getStatusBadge(version.status)}
+                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                      <DollarSign className="h-4 w-4" />
+                      <span className="font-semibold">{formatCurrency(version.total_price)}</span>
                     </div>
                   </div>
+                  <div className="flex items-center gap-4 text-xs text-gray-500 dark:text-gray-500">
+                    <div className="flex items-center gap-1">
+                      <User className="h-3 w-3" />
+                      <span>{version.created_by_name || 'Sistema'}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Clock className="h-3 w-3" />
+                      <span>{formatRelativeTime(version.created_at)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {!compareMode && (
+                  <>
+                    {expandedVersion === version.version_number ? (
+                      <ChevronUp className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+                    )}
+                  </>
+                )}
+              </div>
+            </button>
+
+            {/* Version Details */}
+            {!compareMode && expandedVersion === version.version_number && (
+              <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/30">
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                      Servicios
+                    </h4>
+                    <div className="space-y-2">
+                      {version.services.map((service, idx) => (
+                        <div
+                          key={idx}
+                          className="flex justify-between items-center p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-800"
+                        >
+                          <span className="text-sm text-gray-700 dark:text-gray-300">
+                            Servicio {service.service_id.slice(0, 8)}... × {service.quantity}
+                          </span>
+                          <span className="font-semibold text-gray-900 dark:text-white">
+                            {formatCurrency(service.final_price)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Compare Button for Selected Versions */}
+            {compareMode &&
+              selectedVersions &&
+              selectedVersions[0] !== selectedVersions[1] &&
+              (version.version_number === selectedVersions[0] ||
+                version.version_number === selectedVersions[1]) && (
+                <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-800 bg-indigo-50/50 dark:bg-indigo-950/30">
+                  {version.version_number === selectedVersions[1] && (
+                    <Button
+                      onClick={() => handleCompare(selectedVersions[0], selectedVersions[1])}
+                      disabled={comparing}
+                      variant="premium"
+                      className="w-full shadow-lg hover:shadow-xl"
+                      isLoading={comparing}
+                    >
+                      <BarChart3 className="mr-2 h-4 w-4" />
+                      {comparing ? 'Comparando...' : 'Comparar Versiones'}
+                    </Button>
+                  )}
                 </div>
               )}
+          </Card>
+        ))}
+      </div>
 
-              {/* Compare Button for Selected Versions */}
-              {compareMode &&
-                selectedVersions &&
-                selectedVersions[0] !== selectedVersions[1] &&
-                (version.version_number === selectedVersions[0] ||
-                  version.version_number === selectedVersions[1]) && (
-                  <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-800 bg-blue-50 dark:bg-blue-950">
-                    {version.version_number === selectedVersions[1] && (
-                      <button
-                        onClick={() => handleCompare(selectedVersions[0], selectedVersions[1])}
-                        disabled={comparing}
-                        className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-                      >
-                        {comparing ? 'Comparing...' : 'Compare Versions'}
-                      </button>
-                    )}
-                  </div>
-                )}
+      {/* Comparison Result - Premium */}
+      {selectedVersions && comparison.length > 0 && (
+        <Card variant="elevated" className="overflow-hidden border-2 border-indigo-200 dark:border-indigo-800">
+          <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl">Comparación de Versiones</CardTitle>
+                <CardDescription className="mt-1">
+                  Versión {selectedVersions[0]} → Versión {selectedVersions[1]}
+                </CardDescription>
+              </div>
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg">
+                <BarChart3 className="h-5 w-5 text-white" />
+              </div>
             </div>
-          ))}
-        </div>
-
-        {/* Comparison Result */}
-        {selectedVersions && comparison.length > 0 && (
-          <div className="mt-8 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-6">
-            <h2 className="text-lg font-bold text-blue-900 dark:text-blue-200 mb-4">
-              Comparison: Version {selectedVersions[0]} → Version {selectedVersions[1]}
-            </h2>
+          </CardHeader>
+          <CardContent className="p-6">
             <div className="space-y-3">
               {comparison.map((change, idx) => (
                 <div
                   key={idx}
-                  className={`p-3 rounded-lg ${
+                  className={`p-4 rounded-xl border ${
                     change.changed
-                      ? 'bg-blue-100 dark:bg-blue-900 border border-blue-300 dark:border-blue-700'
-                      : 'bg-blue-50 dark:bg-slate-900 border border-blue-200 dark:border-slate-700 opacity-50'
+                      ? 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800'
+                      : 'bg-gray-50 dark:bg-gray-900/30 border-gray-200 dark:border-gray-800 opacity-60'
                   }`}
                 >
-                  <div className="font-medium text-blue-900 dark:text-blue-200 capitalize">
-                    {change.field_name}
+                  <div className="font-semibold text-gray-900 dark:text-white capitalize mb-2">
+                    {change.field_name.replace(/_/g, ' ')}
                   </div>
-                  <div className="text-sm text-blue-700 dark:text-blue-300 mt-1 space-y-1">
-                    <div>From: <code className="bg-blue-200 dark:bg-blue-800 px-2 py-1 rounded">{change.version1_value || 'N/A'}</code></div>
-                    <div>To: <code className="bg-blue-200 dark:bg-blue-800 px-2 py-1 rounded">{change.version2_value || 'N/A'}</code></div>
+                  <div className="text-sm text-gray-700 dark:text-gray-300 space-y-1">
+                    <div>
+                      <span className="font-medium">Desde:</span>{' '}
+                      <code className="bg-white dark:bg-gray-800 px-2 py-1 rounded text-xs">
+                        {change.version1_value || 'N/A'}
+                      </code>
+                    </div>
+                    <div>
+                      <span className="font-medium">Hacia:</span>{' '}
+                      <code className="bg-white dark:bg-gray-800 px-2 py-1 rounded text-xs">
+                        {change.version2_value || 'N/A'}
+                      </code>
+                    </div>
                   </div>
                 </div>
               ))}
             </div>
-          </div>
-        )}
-      </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

@@ -6,7 +6,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
-import { Home, FileText, Plus, LogOut, User, Calendar, BarChart3, Settings, Sparkles } from 'lucide-react'
+import { Home, FileText, Plus, LogOut, User, Calendar, BarChart3, Settings, Sparkles, PartyPopper } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import Button from '@/components/ui/Button'
 
@@ -33,6 +33,7 @@ export default function Sidebar() {
     { href: '/dashboard/clients', label: 'Clientes', icon: User },
     { href: '/dashboard/quotes', label: 'Cotizaciones', icon: FileText },
     { href: '/dashboard/quotes/new', label: 'Nueva Cotización', icon: Plus },
+    { href: '/dashboard/events', label: 'Eventos', icon: PartyPopper },
     { href: '/dashboard/calendar', label: 'Calendario', icon: Calendar },
     { href: '/dashboard/settings', label: 'Configuración', icon: Settings },
   ]
