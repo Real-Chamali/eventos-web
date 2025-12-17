@@ -6,7 +6,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
-import { Settings, DollarSign, LogOut, Shield, BarChart3 } from 'lucide-react'
+import { Settings, DollarSign, LogOut, Shield, BarChart3, Calendar, Users } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import Button from './ui/Button'
 
@@ -31,6 +31,8 @@ export default function AdminSidebar() {
     { href: '/admin', label: 'Dashboard', icon: BarChart3 },
     { href: '/admin/services', label: 'Servicios', icon: Settings },
     { href: '/admin/finance', label: 'Finanzas', icon: DollarSign },
+    { href: '/admin/events', label: 'Eventos', icon: Calendar },
+    { href: '/admin/vendors', label: 'Administrar Vendedores', icon: Users },
   ]
 
   return (

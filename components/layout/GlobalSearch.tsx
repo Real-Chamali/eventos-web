@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
+import { logger } from '@/lib/utils/logger'
 import { Search, X, FileText, Users, Calendar, DollarSign } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import { Dialog, DialogContent } from '@/components/ui/Dialog'
@@ -118,7 +119,7 @@ export default function GlobalSearch() {
 
         setResults(searchResults)
       } catch (error) {
-        console.error('Search error:', error)
+        logger.error('GlobalSearch', 'Search error', error instanceof Error ? error : new Error(String(error)))
       } finally {
         setLoading(false)
       }

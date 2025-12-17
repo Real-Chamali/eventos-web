@@ -39,7 +39,7 @@ export default function LoginPage() {
     resolver: zodResolver(LoginSchema),
   })
 
-  // Verificar si el usuario ya está autenticado
+  // Verificar si el usuario ya está autenticado (solo para mostrar info, no redirigir)
   useEffect(() => {
     const checkAuth = async () => {
       try {

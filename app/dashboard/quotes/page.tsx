@@ -1,60 +1,23 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
-import { createClient } from '@/utils/supabase/client'
+import { useState, useMemo } from 'react'
+import { useQuotes } from '@/lib/hooks/useQuotes'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import SearchInput from '@/components/ui/SearchInput'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import { Plus, FileText, Sparkles, Filter, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
-import { format } from 'date-fns'
-import { es } from 'date-fns/locale'
-import EmptyState from '@/components/ui/EmptyState'
-import Skeleton from '@/components/ui/Skeleton'
+import { QuotesList } from '@/components/quotes/QuotesList'
 
-interface Quote {
-  id: string
-  client_name: string
-  total_price: number
-  status: 'pending' | 'confirmed' | 'cancelled' | 'draft'
-  created_at: string
-  updated_at: string
-}
-
+/**
+ * Página de cotizaciones con paginación infinita
+ * Usa hooks optimizados con SWR para mejor rendimiento
+ */
 export default function QuotesPage() {
-  const [quotes, setQuotes] = useState<Quote[]>([])
-  const [loading, setLoading] = useState(true)
+  const { quotes, loading } = useQuotes()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'confirmed' | 'cancelled' | 'draft'>('all')
-  const supabase = createClient()
-
-  useEffect(() => {
-    loadQuotes()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const loadQuotes = async () => {
-    try {
-      setLoading(true)
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
-
-      const { data, error } = await supabase
-        .from('quotes')
-        .select('id, client_name, total_price, status, created_at, updated_at')
-        .eq('vendor_id', user.id)
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-      setQuotes(data || [])
-    } catch (error) {
-      console.error('Error loading quotes:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const filteredQuotes = useMemo(() => {
     return quotes.filter((quote) => {
@@ -220,92 +183,8 @@ export default function QuotesPage() {
         </CardContent>
       </Card>
 
-      {/* Premium Quotes Table */}
-      <Card variant="elevated" className="overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl">Lista de Cotizaciones</CardTitle>
-              <CardDescription className="mt-1">
-                {filteredQuotes.length} {filteredQuotes.length === 1 ? 'cotización' : 'cotizaciones'} encontrada{filteredQuotes.length !== 1 ? 's' : ''}
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="p-12 space-y-4">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-16 w-full rounded-xl" />
-              ))}
-            </div>
-          ) : filteredQuotes.length === 0 ? (
-            <EmptyState
-              icon={<FileText className="h-10 w-10" />}
-              title={searchTerm || statusFilter !== 'all' ? 'No se encontraron cotizaciones' : 'No hay cotizaciones aún'}
-              description={
-                searchTerm || statusFilter !== 'all'
-                  ? 'Intenta ajustar los filtros de búsqueda'
-                  : 'Crea tu primera cotización para comenzar'
-              }
-              action={
-                !searchTerm && statusFilter === 'all'
-                  ? {
-                      label: 'Crear Primera Cotización',
-                      onClick: () => window.location.href = '/dashboard/quotes/new',
-                    }
-                  : undefined
-              }
-            />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead>Fecha</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredQuotes.map((quote) => (
-                  <TableRow key={quote.id} className="group">
-                    <TableCell>
-                      <Link
-                        href={`/dashboard/quotes/${quote.id}`}
-                        className="font-semibold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200"
-                      >
-                        {quote.client_name || 'Cliente sin nombre'}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{getStatusBadge(quote.status)}</TableCell>
-                    <TableCell className="text-right">
-                      <span className="font-bold text-gray-900 dark:text-white">
-                        {new Intl.NumberFormat('es-MX', {
-                          style: 'currency',
-                          currency: 'MXN',
-                          minimumFractionDigits: 2,
-                        }).format(quote.total_price || 0)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-gray-600 dark:text-gray-400">
-                      {format(new Date(quote.created_at), "d 'de' MMMM, yyyy", { locale: es })}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Link href={`/dashboard/quotes/${quote.id}`}>
-                        <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                          Ver detalles
-                        </Button>
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      {/* Quotes List con paginación infinita */}
+      <QuotesList searchTerm={searchTerm} statusFilter={statusFilter} />
     </div>
   )
 }

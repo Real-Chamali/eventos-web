@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { logger } from '@/lib/utils/logger'
 import {
   Dialog,
   DialogContent,
@@ -73,7 +74,7 @@ export default function AddFinanceEntryDialog({
       setOpen(false)
       onSuccess?.()
     } catch (error) {
-      console.error('Error al crear movimiento:', error)
+      logger.error('AddFinanceEntryDialog', 'Error al crear movimiento', error instanceof Error ? error : new Error(String(error)))
     } finally {
       setIsSubmitting(false)
     }

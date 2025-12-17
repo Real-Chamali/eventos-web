@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/lib/hooks'
+import { logger } from '@/lib/utils/logger'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import { FileText, Plus, Star } from 'lucide-react'
@@ -55,7 +56,7 @@ export default function QuoteTemplateSelector({ onSelectTemplate }: QuoteTemplat
       if (error) throw error
       setTemplates(data || [])
     } catch (error) {
-      console.error('Error loading templates:', error)
+      logger.error('QuoteTemplateSelector', 'Error loading templates', error instanceof Error ? error : new Error(String(error)))
       toastError('Error al cargar plantillas')
     } finally {
       setLoading(false)
@@ -90,7 +91,7 @@ export default function QuoteTemplateSelector({ onSelectTemplate }: QuoteTemplat
       setNewTemplate({ name: '', description: '', event_type: '', default_notes: '' })
       loadTemplates()
     } catch (error) {
-      console.error('Error creating template:', error)
+      logger.error('QuoteTemplateSelector', 'Error creating template', error instanceof Error ? error : new Error(String(error)))
       toastError('Error al crear plantilla')
     }
   }

@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/lib/hooks'
+import { logger } from '@/lib/utils/logger'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Send, AtSign, User } from 'lucide-react'
@@ -74,7 +75,7 @@ export default function CommentThread({ entityType, entityId }: CommentThreadPro
       if (error) throw error
       setComments(data || [])
     } catch (error) {
-      console.error('Error loading comments:', error)
+      logger.error('CommentThread', 'Error loading comments', error instanceof Error ? error : new Error(String(error)))
       toastError('Error al cargar comentarios')
     } finally {
       setLoading(false)
@@ -118,7 +119,7 @@ export default function CommentThread({ entityType, entityId }: CommentThreadPro
       toastSuccess('Comentario agregado')
       loadComments()
     } catch (error) {
-      console.error('Error submitting comment:', error)
+      logger.error('CommentThread', 'Error submitting comment', error instanceof Error ? error : new Error(String(error)))
       toastError('Error al agregar comentario')
     } finally {
       setSubmitting(false)

@@ -2,6 +2,7 @@ import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import Navbar from '@/components/Navbar'
+import { SkipLinks } from '@/components/accessibility/SkipLinks'
 import { logger } from '@/lib/utils/logger'
 
 export default async function DashboardLayout({
@@ -70,16 +71,21 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
-      <Sidebar />
-      <div className="flex flex-col flex-1 lg:pl-72">
-        <Navbar />
-        <main className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full">
-            {children}
-          </div>
-        </main>
+    <>
+      <SkipLinks />
+      <div className="flex h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+        <nav id="navigation" aria-label="Navegación principal">
+          <Sidebar />
+        </nav>
+        <div className="flex flex-col flex-1 lg:pl-72">
+          <Navbar />
+          <main id="main-content" className="flex-1 overflow-y-auto" role="main">
+            <div className="mx-auto w-full">
+              {children}
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </>
   )
 }

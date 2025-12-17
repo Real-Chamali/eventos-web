@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
+import { logger } from '@/lib/utils/logger'
 import { Menu, X, User, LogOut, Settings, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import GlobalSearch from './layout/GlobalSearch'
@@ -42,7 +43,7 @@ export default function Navbar() {
       router.push('/login')
       router.refresh()
     } catch (error) {
-      console.error('Error signing out:', error)
+      logger.error('Navbar', 'Error signing out', error instanceof Error ? error : new Error(String(error)))
     }
   }
 

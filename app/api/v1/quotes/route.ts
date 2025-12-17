@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * API Pública REST - Endpoint de Cotizaciones
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Error in API route:', error)
+    logger.error('API /v1/quotes', 'Error in GET route', error instanceof Error ? error : new Error(String(error)))
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ data: quote }, { status: 201 })
   } catch (error) {
-    console.error('Error in API route:', error)
+    logger.error('API /v1/quotes', 'Error in POST route', error instanceof Error ? error : new Error(String(error)))
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

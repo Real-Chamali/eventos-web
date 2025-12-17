@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { logger } from '@/lib/utils/logger'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import Chart from '@/components/ui/Chart'
 import { TrendingUp, TrendingDown, DollarSign, Users, Target } from 'lucide-react'
@@ -172,7 +173,7 @@ export default function AdvancedAnalytics() {
         topServices,
       })
     } catch (error) {
-      console.error('Error loading analytics:', error)
+      logger.error('AdvancedAnalytics', 'Error loading analytics', error instanceof Error ? error : new Error(String(error)))
     } finally {
       setLoading(false)
     }

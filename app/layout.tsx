@@ -5,6 +5,8 @@ import ToastProvider from "@/components/ToastProvider";
 import ThemeProviderWrapper from "@/components/ThemeProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { SentryProvider } from "@/components/SentryProvider";
+import { SWRProvider } from "@/components/providers/SWRProvider";
+import { AppProvider } from "@/contexts/AppContext";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
 
 const inter = Inter({
@@ -31,12 +33,16 @@ export default function RootLayout({
       >
         <ErrorBoundary>
           <ThemeProviderWrapper>
-            <ToastProvider>
-              <SentryProvider>
-                {children}
-                <OnboardingTour />
-              </SentryProvider>
-            </ToastProvider>
+            <AppProvider>
+              <SWRProvider>
+                <ToastProvider>
+                  <SentryProvider>
+                    {children}
+                    <OnboardingTour />
+                  </SentryProvider>
+                </ToastProvider>
+              </SWRProvider>
+            </AppProvider>
           </ThemeProviderWrapper>
         </ErrorBoundary>
       </body>

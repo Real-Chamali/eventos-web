@@ -42,15 +42,34 @@ export function validateCSRFToken(token: string, sessionToken: string): boolean 
 }
 
 /**
- * Generate a secure key from a password using PBKDF2
+ * Genera una clave segura a partir de una contraseña usando PBKDF2
+ * 
+ * @param password - Contraseña base para derivar la clave
+ * @param salt - Salt aleatorio para evitar rainbow tables
+ * @returns Buffer con la clave derivada de 32 bytes (256 bits)
+ * 
+ * @example
+ * ```ts
+ * const salt = crypto.randomBytes(16)
+ * const key = deriveKey('myPassword', salt)
+ * ```
  */
 function deriveKey(password: string, salt: Buffer): Buffer {
   return crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256')
 }
 
 /**
- * Encriptar string usando AES-256-GCM (más seguro que createCipher)
- * Requiere ENCRYPTION_KEY en env para producción
+ * Encripta un string usando AES-256-GCM (más seguro que createCipher)
+ * 
+ * @param data - Datos a encriptar
+ * @param key - Clave de encriptación (default: ENCRYPTION_KEY env var)
+ * @returns String encriptado en formato: salt:iv:authTag:encrypted
+ * 
+ * @example
+ * ```ts
+ * const encrypted = encryptData('datos sensibles', 'mi-clave-secreta')
+ * // Resultado: "abc123...:def456...:789xyz...:encrypted_data..."
+ * ```
  */
 export function encryptData(data: string, key: string = process.env.ENCRYPTION_KEY || 'default'): string {
   try {
@@ -74,29 +93,55 @@ export function encryptData(data: string, key: string = process.env.ENCRYPTION_K
 }
 
 /**
- * Desencriptar string usando AES-256-GCM
+ * Desencriptar string usando AES-256-GCM (formato nuevo) o AES-256-CBC (formato antiguo para compatibilidad)
+ * Soporta dos formatos:
+ * - Nuevo: salt:iv:authTag:encrypted (AES-256-GCM)
+ * - Antiguo: encrypted (AES-256-CBC, formato hexadecimal simple)
  */
 export function decryptData(encrypted: string, key: string = process.env.ENCRYPTION_KEY || 'default'): string {
   try {
     const parts = encrypted.split(':')
-    if (parts.length !== 4) {
-      throw new Error('Invalid encrypted data format')
+    
+    // Formato nuevo: salt:iv:authTag:encrypted (AES-256-GCM)
+    if (parts.length === 4) {
+      const [saltHex, ivHex, authTagHex, encryptedData] = parts
+      const salt = Buffer.from(saltHex, 'hex')
+      const iv = Buffer.from(ivHex, 'hex')
+      const authTag = Buffer.from(authTagHex, 'hex')
+      const derivedKey = deriveKey(key, salt)
+      
+      const algorithm = 'aes-256-gcm'
+      const decipher = crypto.createDecipheriv(algorithm, derivedKey, iv)
+      decipher.setAuthTag(authTag)
+      
+      let decrypted = decipher.update(encryptedData, 'hex', 'utf8')
+      decrypted += decipher.final('utf8')
+      
+      return decrypted
     }
     
-    const [saltHex, ivHex, authTagHex, encryptedData] = parts
-    const salt = Buffer.from(saltHex, 'hex')
-    const iv = Buffer.from(ivHex, 'hex')
-    const authTag = Buffer.from(authTagHex, 'hex')
-    const derivedKey = deriveKey(key, salt)
+    // Formato antiguo: simple string hexadecimal (AES-256-CBC)
+    // Compatibilidad hacia atrás para datos encriptados con createCipher
+    // NOTA: createDecipher está deprecado pero necesario para desencriptar datos antiguos
+    if (parts.length === 1 && /^[0-9a-f]+$/i.test(encrypted)) {
+      try {
+        // @ts-ignore - createDecipher está deprecado pero necesario para compatibilidad
+        const decipher = crypto.createDecipher('aes-256-cbc', key)
+        let decrypted = decipher.update(encrypted, 'hex', 'utf8')
+        decrypted += decipher.final('utf8')
+        return decrypted
+      } catch (legacyError) {
+        // Si falla el formato antiguo, registrar el error y lanzarlo
+        logger.warn('Security', 'Legacy decryption failed', {
+          error: legacyError instanceof Error ? legacyError.message : String(legacyError),
+          encryptedLength: encrypted.length,
+        })
+        throw legacyError
+      }
+    }
     
-    const algorithm = 'aes-256-gcm'
-    const decipher = crypto.createDecipheriv(algorithm, derivedKey, iv)
-    decipher.setAuthTag(authTag)
-    
-    let decrypted = decipher.update(encryptedData, 'hex', 'utf8')
-    decrypted += decipher.final('utf8')
-    
-    return decrypted
+    // Formato no reconocido
+    throw new Error(`Invalid encrypted data format: expected 4 colon-separated parts (new format) or hex string (legacy format), got ${parts.length} parts`)
   } catch (error) {
     logger.error('Security', 'Decryption error', error instanceof Error ? error : new Error(String(error)))
     return ''

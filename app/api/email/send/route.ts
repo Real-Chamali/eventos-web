@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * API Route para envío de emails
@@ -21,11 +22,11 @@ export async function POST(request: NextRequest) {
 
     // TODO: Integrar con servicio de email real
     // Por ahora, solo logueamos
-    console.log('Email would be sent:', {
+    logger.info('API /email/send', 'Email would be sent (simulated)', {
       to,
       subject,
-      html: html.substring(0, 100) + '...',
-      attachments: attachments?.length || 0,
+      htmlLength: html?.length || 0,
+      attachmentsCount: attachments?.length || 0,
     })
 
     // En producción, usar:
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, message: 'Email sent (simulated)' })
   } catch (error) {
-    console.error('Error in email send route:', error)
+    logger.error('API /email/send', 'Error in email send route', error instanceof Error ? error : new Error(String(error)))
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

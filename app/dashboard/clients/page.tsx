@@ -1,5 +1,6 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import { logger } from '@/lib/utils/logger'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import Button from '@/components/ui/Button'
@@ -39,7 +40,7 @@ export default async function ClientsPage() {
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.error('Error loading clients:', error)
+    logger.error('ClientsPage', 'Error loading clients', error instanceof Error ? error : new Error(String(error)))
   }
 
   const clientsData: Client[] = (clients || []).map((client: Client & { _quotes_count?: Array<{ count: number }> | number }) => {

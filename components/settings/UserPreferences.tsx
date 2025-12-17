@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/lib/hooks'
+import { logger } from '@/lib/utils/logger'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
@@ -54,7 +55,7 @@ export default function UserPreferences() {
         setPreferences(data as UserPreferences)
       }
     } catch (error) {
-      console.error('Error loading preferences:', error)
+      logger.error('UserPreferences', 'Error loading preferences', error instanceof Error ? error : new Error(String(error)))
     } finally {
       setLoading(false)
     }
@@ -82,7 +83,7 @@ export default function UserPreferences() {
 
       toastSuccess('Preferencias guardadas correctamente')
     } catch (error) {
-      console.error('Error saving preferences:', error)
+      logger.error('UserPreferences', 'Error saving preferences', error instanceof Error ? error : new Error(String(error)))
       toastError('Error al guardar preferencias')
     } finally {
       setSaving(false)

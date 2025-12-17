@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
+import { logger } from '@/lib/utils/logger'
 import { Card, CardContent, CardHeader, CardTitle } from './Card'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths } from 'date-fns'
@@ -52,9 +53,9 @@ export default function Calendar() {
           end_date,
           status,
           quote_id,
-          quotes!inner (
+          quote:quotes (
             client_id,
-            clients!inner (
+            client:clients (
               name
             )
           )
@@ -69,15 +70,17 @@ export default function Calendar() {
           event_date,
           status,
           client_id,
-          clients!inner (
+          client:clients (
             name
           )
         `)
-        .eq('status', 'APPROVED')
+        .eq('status', 'confirmed')
         .not('event_date', 'is', null)
 
       if (eventsError && quotesError) {
-        console.error('Error loading events:', eventsError, quotesError)
+        logger.error('Calendar', 'Error loading events', eventsError instanceof Error ? eventsError : new Error(String(eventsError)), {
+          quotesError: quotesError instanceof Error ? quotesError.message : String(quotesError)
+        })
         return
       }
 
@@ -108,7 +111,7 @@ export default function Calendar() {
             eventDate.count++
             eventDate.events.push({
               id: event.id,
-              client_name: event.quotes?.clients?.name || 'Sin cliente',
+              client_name: event.quote?.client?.name || 'Sin cliente',
               status: event.status
             })
           })
@@ -130,7 +133,7 @@ export default function Calendar() {
           eventDate.count++
           eventDate.events.push({
             id: quote.id,
-            client_name: quote.clients?.name || 'Sin cliente',
+            client_name: quote.client?.name || 'Sin cliente',
             status: quote.status
           })
         })
@@ -138,7 +141,7 @@ export default function Calendar() {
 
       setEvents(Array.from(eventMap.values()))
     } catch (error) {
-      console.error('Error loading events:', error)
+      logger.error('Calendar', 'Error loading events', error instanceof Error ? error : new Error(String(error)))
     } finally {
       setLoading(false)
     }
