@@ -169,6 +169,11 @@ body {
   outline-offset: 2px;
 }
 
+/* Next.js Portal - Corregir posicionamiento */
 nextjs-portal {
-  left: -1px;
+  position: relative;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
 }
