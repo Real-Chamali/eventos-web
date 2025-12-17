@@ -608,20 +608,6 @@ export default function AdminServicesPage() {
           <DialogTrigger asChild>
             <Button variant="premium" size="lg" className="shadow-lg hover:shadow-xl gap-2">
               <Plus className="h-5 w-5" />
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <PageHeader
-          title="Gestión de Servicios"
-          description="Administra los servicios disponibles para cotizaciones"
-          breadcrumbs={[
-            { label: 'Admin', href: '/admin' },
-            { label: 'Servicios' },
-          ]}
-        />
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button variant="premium" size="lg" className="shadow-lg hover:shadow-xl gap-2">
-              <Plus className="h-5 w-5" />
               Nuevo Servicio
             </Button>
           </DialogTrigger>
@@ -668,52 +654,6 @@ export default function AdminServicesPage() {
                 Cancelar
               </Button>
               <Button onClick={handleCreateService} isLoading={saving === 'create'} variant="premium">
-            <div className="space-y-4 py-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Nombre del Servicio *
-                </label>
-                <Input
-                  value={newService.name}
-                  onChange={(e) => setNewService({ ...newService, name: e.target.value })}
-                  placeholder="Ej: Mesa Redonda"
-                  error={errors.name}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Precio Base (MXN) *
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={newService.base_price || ''}
-                  onChange={(e) => setNewService({ ...newService, base_price: parseFloat(e.target.value) || 0 })}
-                  placeholder="0.00"
-                  error={errors.base_price}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Costo (MXN)
-                </label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={newService.cost_price || ''}
-                  onChange={(e) => setNewService({ ...newService, cost_price: parseFloat(e.target.value) || 0 })}
-                  placeholder="0.00"
-                  error={errors.cost_price}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleCreateService} isLoading={saving === 'create'}>
                 Crear Servicio
               </Button>
             </DialogFooter>
