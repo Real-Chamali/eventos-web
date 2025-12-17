@@ -16,7 +16,7 @@ export default function Breadcrumbs({ items }: BreadcrumbsProps) {
     <nav className="flex items-center space-x-2 text-sm" aria-label="Breadcrumb">
       <Link
         href="/dashboard"
-        className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
+        className="flex items-center justify-center h-8 w-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 transition-all duration-200"
       >
         <Home className="h-4 w-4" />
       </Link>
@@ -24,13 +24,13 @@ export default function Breadcrumbs({ items }: BreadcrumbsProps) {
         const isLast = index === items.length - 1
         return (
           <div key={index} className="flex items-center space-x-2">
-            <ChevronRight className="h-4 w-4 text-gray-400" />
+            <ChevronRight className="h-4 w-4 text-gray-400 dark:text-gray-600" />
             {isLast || !item.href ? (
               <span
                 className={cn(
-                  'font-medium',
+                  'px-2 py-1 rounded-md font-medium transition-colors',
                   isLast
-                    ? 'text-gray-900 dark:text-white'
+                    ? 'text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-800'
                     : 'text-gray-500 dark:text-gray-400'
                 )}
               >
@@ -39,7 +39,7 @@ export default function Breadcrumbs({ items }: BreadcrumbsProps) {
             ) : (
               <Link
                 href={item.href}
-                className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
+                className="px-2 py-1 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:bg-gray-800 transition-all duration-200"
               >
                 {item.label}
               </Link>
@@ -50,4 +50,3 @@ export default function Breadcrumbs({ items }: BreadcrumbsProps) {
     </nav>
   )
 }
-

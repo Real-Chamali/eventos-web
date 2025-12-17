@@ -8,6 +8,22 @@ import { useToast, useDebounce } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 import { createAuditLog } from '@/lib/utils/audit'
 import QuoteTemplateSelector from '@/components/templates/QuoteTemplateSelector'
+import PageHeader from '@/components/ui/PageHeader'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
+import Input from '@/components/ui/Input'
+import Button from '@/components/ui/Button'
+import SearchInput from '@/components/ui/SearchInput'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/Select'
+import { Plus, X, ArrowLeft, User, ShoppingCart, DollarSign, CheckCircle2, Sparkles } from 'lucide-react'
+import Link from 'next/link'
+import { cn } from '@/lib/utils/cn'
+import Badge from '@/components/ui/Badge'
 
 interface Client {
   id: string
@@ -75,16 +91,12 @@ export default function NewQuotePage() {
         if (cancelled) return
         
         if (error) {
-          // Si el error es de esquema (PGRST106), solo loguear warning
           if (error.code === 'PGRST106' || error.message?.includes('schema')) {
             logger.warn('NewQuotePage', 'Services table not accessible (schema error)', {
               supabaseError: error.message,
               supabaseCode: error.code,
             })
-            // No mostrar toast de error para errores de esquema (problema de configuración)
-            // El usuario verá una lista vacía de servicios
           } else {
-            // Para otros errores, mostrar notificación
             const errorMessage = error?.message || 'Error loading services'
             const errorForLogging = error instanceof Error 
               ? error 
@@ -98,7 +110,6 @@ export default function NewQuotePage() {
         } else if (data) {
           setServices(data)
         } else {
-          // No hay datos pero tampoco hay error
           setServices([])
         }
       } catch (err) {
@@ -113,7 +124,6 @@ export default function NewQuotePage() {
     return () => {
       cancelled = true
     }
-    // toastError no debe estar en las dependencias - solo se usa para notificaciones, no para lógica de datos
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [supabase])
 
@@ -138,17 +148,14 @@ export default function NewQuotePage() {
         if (cancelled) return
         
         if (error) {
-          // Si el error es de esquema (PGRST106), solo loguear warning
           if (error.code === 'PGRST106' || error.message?.includes('schema')) {
             logger.warn('NewQuotePage', 'Clients table not accessible (schema error)', {
               supabaseError: error.message,
               supabaseCode: error.code,
               searchTerm: searchTerm,
             })
-            // No mostrar toast de error para errores de esquema
             setClients([])
           } else {
-            // Para otros errores, mostrar notificación
             const errorMessage = error?.message || 'Error searching clients'
             const errorForLogging = error instanceof Error 
               ? error 
@@ -175,7 +182,6 @@ export default function NewQuotePage() {
     return () => {
       cancelled = true
     }
-    // toastError no debe estar en las dependencias - solo se usa para notificaciones, no para lógica de datos
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearchClient, supabase])
 
@@ -219,24 +225,20 @@ export default function NewQuotePage() {
   }, [quoteServices])
 
   const saveDraft = async () => {
-    // Limpiar errores previos
     setErrors({})
 
-    // Validar cliente seleccionado
     if (!selectedClient) {
       setErrors({ client: 'Por favor selecciona un cliente' })
       toastError('Por favor selecciona un cliente')
       return
     }
 
-    // Validar servicios agregados
     if (quoteServices.length === 0) {
       setErrors({ services: 'Por favor agrega al menos un servicio' })
       toastError('Por favor agrega al menos un servicio')
       return
     }
 
-    // Validar con Zod
     const validationResult = CreateQuoteSchema.safeParse({
       client_id: selectedClient.id,
       services: quoteServices.map(qs => ({
@@ -285,7 +287,6 @@ export default function NewQuotePage() {
       if (error) {
         const errorMessage = error?.message || 'Error saving quote'
         toastError('Error al guardar: ' + errorMessage)
-        // Convertir error de Supabase a Error estándar
         const errorForLogging = error instanceof Error 
           ? error 
           : new Error(errorMessage)
@@ -302,7 +303,6 @@ export default function NewQuotePage() {
         return
       }
 
-      // Guardar servicios de la cotización
       const quoteServicesData = quoteServices.map((qs) => ({
         quote_id: quote.id,
         service_id: qs.service_id,
@@ -321,7 +321,6 @@ export default function NewQuotePage() {
         return
       }
 
-      // Crear registro de auditoría
       await createAuditLog({
         user_id: user.id,
         action: 'CREATE',
@@ -351,203 +350,315 @@ export default function NewQuotePage() {
   }, [services])
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">Nueva Cotización</h1>
+    <div className="space-y-8 p-6 lg:p-8">
+      <PageHeader
+        title="Nueva Cotización"
+        description="Crea una nueva cotización para tu cliente"
+        breadcrumbs={[
+          { label: 'Dashboard', href: '/dashboard' },
+          { label: 'Cotizaciones', href: '/dashboard/quotes' },
+          { label: 'Nueva' },
+        ]}
+      />
 
-      {/* Indicador de pasos */}
-      <div className="mb-8">
-        <div className="flex items-center">
-          <div
-            className={`flex items-center justify-center w-10 h-10 rounded-full ${
-              step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600 dark:bg-gray-700'
-            }`}
-          >
-            1
+      {/* Premium Step Indicator */}
+      <Card variant="elevated" className="overflow-hidden">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-center">
+            <div className="flex items-center w-full max-w-md">
+              <div className="flex flex-col items-center flex-1">
+                <div className={cn(
+                  "flex items-center justify-center w-12 h-12 rounded-2xl font-bold text-sm transition-all duration-200",
+                  step >= 1 
+                    ? "bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-lg" 
+                    : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+                )}>
+                  {step > 1 ? <CheckCircle2 className="h-6 w-6" /> : '1'}
+                </div>
+                <span className="mt-2 text-xs font-medium text-gray-600 dark:text-gray-400">Cliente</span>
+              </div>
+              <div className={cn(
+                "flex-1 h-1 mx-2 transition-all duration-200",
+                step >= 2 ? "bg-gradient-to-r from-indigo-500 to-violet-500" : "bg-gray-200 dark:bg-gray-700"
+              )} />
+              <div className="flex flex-col items-center flex-1">
+                <div className={cn(
+                  "flex items-center justify-center w-12 h-12 rounded-2xl font-bold text-sm transition-all duration-200",
+                  step >= 2 
+                    ? "bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-lg" 
+                    : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+                )}>
+                  {step > 2 ? <CheckCircle2 className="h-6 w-6" /> : '2'}
+                </div>
+                <span className="mt-2 text-xs font-medium text-gray-600 dark:text-gray-400">Servicios</span>
+              </div>
+            </div>
           </div>
-          <div className={`flex-1 h-1 mx-2 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-200 dark:bg-gray-700'}`} />
-          <div
-            className={`flex items-center justify-center w-10 h-10 rounded-full ${
-              step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600 dark:bg-gray-700'
-            }`}
-          >
-            2
-          </div>
-        </div>
-        <div className="flex justify-between mt-2">
-          <span className="text-sm text-gray-600 dark:text-gray-400">Seleccionar Cliente</span>
-          <span className="text-sm text-gray-600 dark:text-gray-400">Agregar Servicios</span>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
 
       {/* Error messages */}
       {Object.keys(errors).length > 0 && (
-        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-          <p className="text-sm font-medium text-red-800 dark:text-red-200 mb-2">Errores en el formulario:</p>
-          <ul className="list-disc list-inside space-y-1">
-            {Object.values(errors).map((error, idx) => (
-              <li key={idx} className="text-sm text-red-700 dark:text-red-300">{error}</li>
-            ))}
-          </ul>
-        </div>
+        <Card variant="elevated" className="border-2 border-red-200 dark:border-red-800 overflow-hidden">
+          <CardContent className="p-6 bg-red-50 dark:bg-red-950/30">
+            <p className="text-sm font-semibold text-red-800 dark:text-red-200 mb-3">Errores en el formulario:</p>
+            <ul className="list-disc list-inside space-y-1">
+              {Object.values(errors).map((error, idx) => (
+                <li key={idx} className="text-sm text-red-700 dark:text-red-300">{error}</li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       )}
 
       {step === 1 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
-          <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">Seleccionar Cliente</h2>
-          <input
-            type="text"
-            value={searchClient}
-            onChange={(e) => setSearchClient(e.target.value)}
-            placeholder="Buscar cliente por nombre..."
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-          />
-          {clients.length > 0 && (
-            <div className="mt-4 space-y-2">
-              {clients.map((client) => (
-                <button
-                  key={client.id}
-                  onClick={() => {
-                    setSelectedClient(client)
-                    setStep(2)
-                    setErrors({})
-                  }}
-                  className="w-full text-left p-4 border border-gray-200 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors dark:bg-gray-800"
-                >
-                  <p className="font-medium text-gray-900 dark:text-white">{client.name}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">{client.email}</p>
-                </button>
-              ))}
+        <Card variant="elevated" className="overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-xl">Seleccionar Cliente</CardTitle>
+                <CardDescription className="mt-1">Busca y selecciona el cliente para esta cotización</CardDescription>
+              </div>
+              <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg">
+                <User className="h-5 w-5 text-white" />
+              </div>
             </div>
-          )}
-          {selectedClient && (
-            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Cliente seleccionado:</p>
-              <p className="font-medium text-gray-900 dark:text-white">{selectedClient.name}</p>
-            </div>
-          )}
-        </div>
+          </CardHeader>
+          <CardContent className="p-6 space-y-4">
+            <SearchInput
+              placeholder="Buscar cliente por nombre..."
+              value={searchClient}
+              onChange={(e) => setSearchClient(e.target.value)}
+              onClear={() => setSearchClient('')}
+            />
+            {clients.length > 0 && (
+              <div className="space-y-2">
+                {clients.map((client) => (
+                  <button
+                    key={client.id}
+                    onClick={() => {
+                      setSelectedClient(client)
+                      setStep(2)
+                      setErrors({})
+                    }}
+                    className="w-full text-left p-4 rounded-xl border border-gray-200/60 dark:border-gray-800/60 hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-gradient-to-r hover:from-indigo-50/50 hover:to-violet-50/50 dark:hover:from-indigo-950/20 dark:hover:to-violet-950/20 transition-all duration-200 group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                        <User className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900 dark:text-white">{client.name}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400">{client.email}</p>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {selectedClient && (
+              <Card variant="outlined" className="border-2 border-indigo-200 dark:border-indigo-800">
+                <CardContent className="p-4 bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-md">
+                      <CheckCircle2 className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Cliente seleccionado:</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">{selectedClient.name}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {step === 2 && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Agregar Servicios</h2>
-            <button
-              onClick={addService}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800"
-            >
-              + Agregar Servicio
-            </button>
-          </div>
-
-          {quoteServices.length === 0 ? (
-            <p className="text-gray-500 dark:text-gray-400 text-center py-8">
-                No hay servicios agregados. Haz clic en &quot;Agregar Servicio&quot; para comenzar.
-              </p>
-          ) : (
-            <div className="space-y-4">
-              {quoteServices.map((qs, index) => {
-                const service = selectedService(qs.service_id)
-                return (
-                  <div
-                    key={index}
-                    className="p-4 border border-gray-200 dark:border-gray-600 rounded-lg space-y-3 dark:bg-gray-700"
-                  >
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <select
-                          value={qs.service_id}
-                          onChange={(e) => {
-                            const newService = services.find((s) => s.id === e.target.value)
-                            if (newService) {
-                              updateService(index, 'service_id', e.target.value)
-                              updateService(index, 'final_price', newService.base_price)
-                            }
-                          }}
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-600 dark:text-white"
-                        >
-                          {services.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {s.name} - ${s.base_price.toLocaleString()}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <button
-                        onClick={() => removeService(index)}
-                        className="ml-4 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Cantidad
-                        </label>
-                        <input
-                          type="number"
-                          min="1"
-                          value={qs.quantity}
-                          onChange={(e) =>
-                            updateService(index, 'quantity', parseInt(e.target.value) || 1)
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-600 dark:text-white"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          Precio Base: ${service?.base_price.toLocaleString()}
-                        </label>
-                        <input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={qs.final_price}
-                          onChange={(e) =>
-                            updateService(index, 'final_price', parseFloat(e.target.value) || 0)
-                          }
-                          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-600 dark:text-white"
-                        />
-                      </div>
-                    </div>
-                    <div className="text-sm text-gray-600 dark:text-gray-400">
-                      Subtotal: ${(qs.final_price * qs.quantity).toLocaleString('es-MX', {
-                        minimumFractionDigits: 2,
-                      })}
-                    </div>
+        <div className="space-y-6">
+          <Card variant="elevated" className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl">Agregar Servicios</CardTitle>
+                  <CardDescription className="mt-1">Selecciona los servicios para esta cotización</CardDescription>
+                </div>
+                <Button
+                  onClick={addService}
+                  variant="premium"
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Agregar Servicio
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              {quoteServices.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800 mb-4">
+                    <ShoppingCart className="h-8 w-8 text-gray-400 dark:text-gray-500" />
                   </div>
-                )
-              })}
-            </div>
-          )}
+                  <p className="text-gray-500 dark:text-gray-400 font-medium mb-2">
+                    No hay servicios agregados
+                  </p>
+                  <p className="text-sm text-gray-400 dark:text-gray-500 mb-4">
+                    Haz clic en &quot;Agregar Servicio&quot; para comenzar
+                  </p>
+                  <Button onClick={addService} variant="premium" className="gap-2">
+                    <Plus className="h-4 w-4" />
+                    Agregar Primer Servicio
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {quoteServices.map((qs, index) => {
+                    const service = selectedService(qs.service_id)
+                    return (
+                      <Card key={index} variant="outlined" className="border-2 border-gray-200/60 dark:border-gray-800/60">
+                        <CardContent className="p-5 space-y-4">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <Select
+                                value={qs.service_id}
+                                onValueChange={(value: string) => {
+                                  const newService = services.find((s) => s.id === value)
+                                  if (newService) {
+                                    updateService(index, 'service_id', value)
+                                    updateService(index, 'final_price', newService.base_price)
+                                  }
+                                }}
+                              >
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Selecciona un servicio" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {services.map((s) => (
+                                    <SelectItem key={s.id} value={s.id}>
+                                      {s.name} - {new Intl.NumberFormat('es-MX', {
+                                        style: 'currency',
+                                        currency: 'MXN',
+                                      }).format(s.base_price)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removeService(index)}
+                              className="ml-4 text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <Input
+                              type="number"
+                              min="1"
+                              label="Cantidad"
+                              value={qs.quantity.toString()}
+                              onChange={(e) =>
+                                updateService(index, 'quantity', parseInt(e.target.value) || 1)
+                              }
+                            />
+                            <div>
+                              <Input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                label={`Precio (Base: ${new Intl.NumberFormat('es-MX', {
+                                  style: 'currency',
+                                  currency: 'MXN',
+                                }).format(service?.base_price || 0)})`}
+                                icon={<DollarSign className="h-4 w-4" />}
+                                value={qs.final_price.toString()}
+                                onChange={(e) =>
+                                  updateService(index, 'final_price', parseFloat(e.target.value) || 0)
+                                }
+                              />
+                            </div>
+                          </div>
+                          <div className="pt-3 border-t border-gray-200 dark:border-gray-800">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Subtotal:</span>
+                              <span className="text-lg font-bold text-gray-900 dark:text-white">
+                                {new Intl.NumberFormat('es-MX', {
+                                  style: 'currency',
+                                  currency: 'MXN',
+                                  minimumFractionDigits: 2,
+                                }).format(qs.final_price * qs.quantity)}
+                              </span>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-          <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-semibold text-gray-900 dark:text-white">Total:</span>
-              <span className="text-2xl font-bold text-blue-600">
-                ${total.toLocaleString('es-MX', { minimumFractionDigits: 2 })}
-              </span>
-            </div>
-          </div>
+          {/* Premium Total Summary */}
+          <Card variant="elevated" className="overflow-hidden border-2 border-indigo-200 dark:border-indigo-800">
+            <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl">Resumen</CardTitle>
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg">
+                  <DollarSign className="h-5 w-5 text-white" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center">
+                <span className="text-lg font-semibold text-gray-900 dark:text-white">Total:</span>
+                <span className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
+                  {new Intl.NumberFormat('es-MX', {
+                    style: 'currency',
+                    currency: 'MXN',
+                    minimumFractionDigits: 2,
+                  }).format(total)}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
 
-          <div className="mt-6 flex justify-between gap-4">
-            <button
-              onClick={() => {
-                setStep(1)
-                setErrors({})
-              }}
-              className="px-6 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white"
-            >
-              Atrás
-            </button>
-            <button
-              onClick={saveDraft}
-              disabled={loading || quoteServices.length === 0}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {loading ? 'Guardando...' : 'Guardar Borrador'}
-            </button>
+          {/* Premium Actions */}
+          <div className="flex justify-between gap-4">
+            <Link href="/dashboard/quotes">
+              <Button variant="outline" className="gap-2">
+                <ArrowLeft className="h-4 w-4" />
+                Cancelar
+              </Button>
+            </Link>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setStep(1)
+                  setErrors({})
+                }}
+                className="gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Atrás
+              </Button>
+              <Button
+                onClick={saveDraft}
+                disabled={loading || quoteServices.length === 0}
+                variant="premium"
+                size="lg"
+                isLoading={loading}
+                className="gap-2 shadow-lg hover:shadow-xl"
+              >
+                <Sparkles className="h-5 w-5" />
+                Guardar Borrador
+              </Button>
+            </div>
           </div>
         </div>
       )}

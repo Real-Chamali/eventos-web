@@ -117,8 +117,8 @@ export default function AdvancedAnalytics() {
         )
 
       const serviceMap = new Map<string, { revenue: number; count: number }>()
-      quoteServices?.forEach((qs: { service?: { name?: string }; final_price?: number }) => {
-        const serviceName = qs.service?.name || 'Desconocido'
+      quoteServices?.forEach((qs: any) => {
+        const serviceName = (qs.service as { name?: string })?.name || 'Desconocido'
         const existing = serviceMap.get(serviceName) || { revenue: 0, count: 0 }
         serviceMap.set(serviceName, {
           revenue: existing.revenue + (qs.final_price || 0),

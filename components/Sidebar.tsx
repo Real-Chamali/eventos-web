@@ -6,10 +6,9 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
-import { Home, FileText, Plus, LogOut, User, Calendar, BarChart3, Settings } from 'lucide-react'
+import { Home, FileText, Plus, LogOut, User, Calendar, BarChart3, Settings, Sparkles } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import Button from '@/components/ui/Button'
-import { useEffect, useState } from 'react'
 
 export default function Sidebar() {
   const pathname = usePathname()
@@ -39,20 +38,23 @@ export default function Sidebar() {
   ]
 
   return (
-    <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 lg:z-30">
-      <div className="flex flex-col flex-grow bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
-        {/* Header - Minimalista */}
-        <div className="flex items-center h-16 px-6 border-b border-gray-200 dark:border-gray-800">
-          <div className="flex items-center space-x-3">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-sm">
-              <FileText className="h-5 w-5 text-white" />
+    <aside className="hidden lg:flex lg:w-72 lg:flex-col lg:fixed lg:inset-y-0 lg:z-30">
+      <div className="flex flex-col flex-grow bg-white/80 backdrop-blur-xl border-r border-gray-200/60 dark:bg-gray-900/80 dark:border-gray-800/60">
+        {/* Header - Premium Brand */}
+        <div className="flex items-center h-20 px-6 border-b border-gray-200/60 dark:border-gray-800/60">
+          <div className="flex items-center space-x-3 group">
+            <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-shadow duration-200">
+              <Sparkles className="h-5 w-5 text-white" />
             </div>
-            <span className="text-lg font-semibold text-gray-900 dark:text-white">Eventos</span>
+            <div className="flex flex-col">
+              <span className="text-lg font-bold text-gray-900 dark:text-white tracking-tight">Eventos</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Premium</span>
+            </div>
           </div>
         </div>
 
-        {/* Navigation - Minimalista y elegante */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        {/* Navigation - Premium Design */}
+        <nav className="flex-1 px-4 py-6 space-y-1 overflow-y-auto">
           {navItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))
             const Icon = item.icon
@@ -61,31 +63,38 @@ export default function Sidebar() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  'group flex items-center space-x-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150',
+                  'group relative flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200',
+                  'hover:scale-[1.02] active:scale-[0.98]',
                   isActive
-                    ? 'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white shadow-sm'
+                    ? 'bg-gradient-to-r from-indigo-50 to-violet-50 text-indigo-700 shadow-sm dark:from-indigo-950/30 dark:to-violet-950/30 dark:text-indigo-300'
                     : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-white'
                 )}
               >
+                {isActive && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-indigo-600 to-violet-600 rounded-r-full" />
+                )}
                 <Icon className={cn(
-                  'h-5 w-5 transition-colors',
+                  'h-5 w-5 transition-all duration-200',
                   isActive 
-                    ? 'text-gray-900 dark:text-white' 
+                    ? 'text-indigo-600 dark:text-indigo-400' 
                     : 'text-gray-400 dark:text-gray-500 group-hover:text-gray-600 dark:group-hover:text-gray-300'
                 )} />
-                <span>{item.label}</span>
+                <span className="flex-1">{item.label}</span>
+                {isActive && (
+                  <div className="h-1.5 w-1.5 rounded-full bg-indigo-600 dark:bg-indigo-400" />
+                )}
               </Link>
             )
           })}
         </nav>
 
-        {/* Footer - Minimalista */}
-        <div className="p-4 border-t border-gray-200 dark:border-gray-800">
+        {/* Footer - Premium Logout */}
+        <div className="p-4 border-t border-gray-200/60 dark:border-gray-800/60">
           <Button
             variant="ghost"
-            size="sm"
+            size="md"
             onClick={handleLogout}
-            className="w-full justify-start text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            className="w-full justify-start text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50"
           >
             <LogOut className="mr-2 h-4 w-4" />
             Cerrar sesión

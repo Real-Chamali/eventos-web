@@ -9,6 +9,7 @@ import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils/cn'
 import Badge from './Badge'
 import Skeleton from './Skeleton'
+import Button from './Button'
 
 interface EventDate {
   date: string
@@ -188,130 +189,139 @@ export default function Calendar() {
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : null
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center space-x-2">
-            <CalendarIcon className="h-5 w-5" />
-            <span>Calendario de Eventos</span>
-          </CardTitle>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={previousMonth}
-              className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="text-sm font-medium min-w-[140px] text-center">
+    <div className="space-y-4">
+      {/* Header con navegación premium */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-sm">
+            <CalendarIcon className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
               {format(currentDate, 'MMMM yyyy', { locale: es })}
-            </span>
-            <button
-              onClick={nextMonth}
-              className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
+            </h3>
+            <p className="text-xs text-gray-500 dark:text-gray-400">Calendario de eventos</p>
           </div>
         </div>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <div className="space-y-4">
-            <div className="h-64 w-full animate-pulse rounded-lg bg-gray-200 dark:bg-gray-800" />
+        <div className="flex items-center space-x-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={previousMonth}
+            className="h-9 w-9 p-0 rounded-lg"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={nextMonth}
+            className="h-9 w-9 p-0 rounded-lg"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="space-y-4">
+          <Skeleton className="h-64 w-full rounded-xl" />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Días de la semana - Premium styling */}
+          <div className="grid grid-cols-7 gap-2 mb-2">
+            {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day) => (
+              <div
+                key={day}
+                className="text-center text-xs font-semibold text-gray-600 dark:text-gray-400 py-2.5 uppercase tracking-wider"
+              >
+                {day}
+              </div>
+            ))}
           </div>
-        ) : (
-          <div className="space-y-4">
-            {/* Días de la semana */}
-            <div className="grid grid-cols-7 gap-1 mb-2">
-              {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day) => (
-                <div
-                  key={day}
-                  className="text-center text-xs font-medium text-gray-500 dark:text-gray-400 py-2"
+
+          {/* Calendario - Premium grid */}
+          <div className="grid grid-cols-7 gap-2">
+            {calendarDays.map((day, index) => {
+              const isCurrentMonth = isSameMonth(day, currentDate)
+              const isCurrentDay = isToday(day)
+              const dayEvents = getEventsForDate(day)
+              const isSelected = selectedDate && isSameDay(day, selectedDate)
+
+              return (
+                <button
+                  key={index}
+                  onClick={() => setSelectedDate(day)}
+                  className={cn(
+                    'group relative h-20 rounded-xl text-sm font-medium transition-all duration-200',
+                    'hover:bg-gray-50 dark:hover:bg-gray-800/50',
+                    'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2',
+                    !isCurrentMonth && 'text-gray-300 dark:text-gray-600 opacity-50',
+                    isCurrentDay && 'ring-2 ring-indigo-500 ring-offset-2 bg-indigo-50 dark:bg-indigo-950/20',
+                    isSelected && !isCurrentDay && 'bg-indigo-50 dark:bg-indigo-950/20',
+                    dayEvents && dayEvents.count > 0 && 'bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100 dark:hover:bg-emerald-950/30'
+                  )}
                 >
-                  {day}
-                </div>
-              ))}
-            </div>
-
-            {/* Calendario */}
-            <div className="grid grid-cols-7 gap-1">
-              {calendarDays.map((day, index) => {
-                const isCurrentMonth = isSameMonth(day, currentDate)
-                const isCurrentDay = isToday(day)
-                const dayEvents = getEventsForDate(day)
-                const isSelected = selectedDate && isSameDay(day, selectedDate)
-
-                return (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedDate(day)}
-                    className={cn(
-                      'relative h-12 rounded-lg text-sm transition-all duration-150',
-                      'hover:bg-gray-50 dark:hover:bg-gray-800',
-                      !isCurrentMonth && 'text-gray-300 dark:text-gray-600',
-                      isCurrentDay && 'ring-2 ring-blue-500',
-                      isSelected && 'bg-blue-50 dark:bg-blue-900/20',
-                      dayEvents && dayEvents.count > 0 && 'bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30'
-                    )}
-                  >
-                    <span className={cn(
-                      'block',
-                      isCurrentDay && 'font-bold text-blue-600 dark:text-blue-400',
-                      !isCurrentMonth && 'opacity-50'
-                    )}>
-                      {format(day, 'd')}
-                    </span>
-                    {dayEvents && dayEvents.count > 0 && (
-                      <span className="absolute bottom-1 left-1/2 -translate-x-1/2 h-1.5 w-1.5 rounded-full bg-green-500"></span>
-                    )}
-                    {dayEvents && dayEvents.count > 1 && (
-                      <span className="absolute top-1 right-1 text-xs font-semibold text-green-600 dark:text-green-400">
-                        {dayEvents.count}
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Eventos del día seleccionado */}
-            {selectedDate && selectedDateEvents && (
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
-                <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-                  Eventos del {format(selectedDate, "d 'de' MMMM, yyyy", { locale: es })}
-                </h3>
-                <div className="space-y-2">
-                  {selectedDateEvents.events.map((event) => (
-                    <div
-                      key={event.id}
-                      className="flex items-center justify-between p-3 rounded-lg bg-gray-50 dark:bg-gray-800"
-                    >
-                      <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-white">
-                          {event.client_name}
-                        </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {event.status}
-                        </p>
-                      </div>
-                      <Badge variant="success">Confirmado</Badge>
+                  <span className={cn(
+                    'block pt-2 pb-1 px-2',
+                    isCurrentDay && 'font-bold text-indigo-600 dark:text-indigo-400',
+                    !isCurrentMonth && 'opacity-50'
+                  )}>
+                    {format(day, 'd')}
+                  </span>
+                  {dayEvents && dayEvents.count > 0 && (
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center space-x-1">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400"></span>
+                      {dayEvents.count > 1 && (
+                        <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                          {dayEvents.count}
+                        </span>
+                      )}
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {selectedDate && !selectedDateEvents && (
-              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800 text-center">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  No hay eventos programados para esta fecha
-                </p>
-              </div>
-            )}
+                  )}
+                </button>
+              )
+            })}
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          {/* Eventos del día seleccionado - Premium card */}
+          {selectedDate && selectedDateEvents && (
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
+                <CalendarIcon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                <span>Eventos del {format(selectedDate, "d 'de' MMMM, yyyy", { locale: es })}</span>
+              </h3>
+              <div className="space-y-2">
+                {selectedDateEvents.events.map((event) => (
+                  <div
+                    key={event.id}
+                    className="flex items-center justify-between p-4 rounded-xl bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/50 dark:to-gray-900 border border-gray-200 dark:border-gray-800 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all duration-200"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {event.client_name}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                        {event.status}
+                      </p>
+                    </div>
+                    <Badge variant="success">Confirmado</Badge>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {selectedDate && !selectedDateEvents && (
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800 text-center">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No hay eventos programados para esta fecha
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   )
 }
-

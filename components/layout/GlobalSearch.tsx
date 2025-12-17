@@ -64,12 +64,13 @@ export default function GlobalSearch() {
           .limit(5)
 
         if (quotes) {
-          quotes.forEach((quote: { id: string; client?: { name?: string } }) => {
+          quotes.forEach((quote: any) => {
+            const client = Array.isArray(quote.client) ? quote.client[0] : quote.client
             searchResults.push({
               type: 'quote',
               id: quote.id,
               title: `Cotización #${quote.id.slice(0, 8)}`,
-              subtitle: quote.client?.name || 'Sin cliente',
+              subtitle: (client as { name?: string })?.name || 'Sin cliente',
               href: `/dashboard/quotes/${quote.id}`,
             })
           })
@@ -102,12 +103,14 @@ export default function GlobalSearch() {
           .limit(5)
 
         if (events) {
-          events.forEach((event: { id: string; quote?: { client?: { name?: string } } }) => {
+          events.forEach((event: any) => {
+            const quote = Array.isArray(event.quote) ? event.quote[0] : event.quote
+            const client = quote && (Array.isArray(quote.client) ? quote.client[0] : quote.client)
             searchResults.push({
               type: 'event',
               id: event.id,
               title: `Evento #${event.id.slice(0, 8)}`,
-              subtitle: event.quote?.client?.name || 'Sin cliente',
+              subtitle: (client as { name?: string })?.name || 'Sin cliente',
               href: `/dashboard/events/${event.id}`,
             })
           })

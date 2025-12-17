@@ -23,7 +23,7 @@ import Input from '@/components/ui/Input'
 import Textarea from '@/components/ui/Textarea'
 import Button from '@/components/ui/Button'
 import { FinanceEntrySchema, type FinanceEntryFormData } from '@/lib/validations/schemas'
-import { Plus } from 'lucide-react'
+import { Plus, DollarSign, TrendingUp, TrendingDown } from 'lucide-react'
 
 interface AddFinanceEntryDialogProps {
   onSuccess?: () => void
@@ -74,7 +74,6 @@ export default function AddFinanceEntryDialog({
       onSuccess?.()
     } catch (error) {
       console.error('Error al crear movimiento:', error)
-      // El error se manejará por el toast provider si está configurado
     } finally {
       setIsSubmitting(false)
     }
@@ -84,8 +83,8 @@ export default function AddFinanceEntryDialog({
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger || (
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
+          <Button variant="premium" size="lg" className="shadow-lg hover:shadow-xl gap-2">
+            <Plus className="h-5 w-5" />
             Agregar Movimiento
           </Button>
         )}
@@ -97,10 +96,10 @@ export default function AddFinanceEntryDialog({
             Registra un nuevo ingreso o egreso en el ledger financiero
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           {/* Tipo */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Tipo de Movimiento
             </label>
             <Select
@@ -111,12 +110,23 @@ export default function AddFinanceEntryDialog({
                 <SelectValue placeholder="Selecciona el tipo" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="income">Ingreso</SelectItem>
-                <SelectItem value="expense">Egreso</SelectItem>
+                <SelectItem value="income">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4 text-emerald-600" />
+                    Ingreso
+                  </div>
+                </SelectItem>
+                <SelectItem value="expense">
+                  <div className="flex items-center gap-2">
+                    <TrendingDown className="h-4 w-4 text-red-600" />
+                    Egreso
+                  </div>
+                </SelectItem>
               </SelectContent>
             </Select>
             {errors.type && (
-              <p className="mt-1.5 text-sm text-red-600 dark:text-red-400">
+              <p className="mt-1.5 text-sm text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                <span className="text-red-500">•</span>
                 {errors.type.message}
               </p>
             )}
@@ -129,6 +139,7 @@ export default function AddFinanceEntryDialog({
               step="0.01"
               label="Monto"
               placeholder="0.00"
+              icon={<DollarSign className="h-4 w-4" />}
               {...register('amount', { valueAsNumber: true })}
               error={errors.amount?.message}
             />
@@ -145,7 +156,7 @@ export default function AddFinanceEntryDialog({
             />
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="gap-3">
             <Button
               type="button"
               variant="outline"
@@ -157,8 +168,8 @@ export default function AddFinanceEntryDialog({
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? 'Guardando...' : 'Guardar Movimiento'}
+            <Button type="submit" variant="premium" disabled={isSubmitting} isLoading={isSubmitting}>
+              Guardar Movimiento
             </Button>
           </DialogFooter>
         </form>
@@ -166,4 +177,3 @@ export default function AddFinanceEntryDialog({
     </Dialog>
   )
 }
-

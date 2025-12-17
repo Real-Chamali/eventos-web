@@ -8,7 +8,7 @@ import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
 import { exportQuoteToPDF } from '@/lib/utils/export'
 import PageHeader from '@/components/ui/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import CommentThread from '@/components/comments/CommentThread'
@@ -32,7 +32,7 @@ import {
   TableRow,
 } from '@/components/ui/Table'
 import Skeleton from '@/components/ui/Skeleton'
-import { Download, Edit, ArrowLeft, CheckCircle2, Mail, User } from 'lucide-react'
+import { Download, Edit, ArrowLeft, CheckCircle2, Mail, User, Sparkles, FileText, DollarSign } from 'lucide-react'
 import Link from 'next/link'
 
 interface Quote {
@@ -146,7 +146,6 @@ export default function QuoteDetailPage() {
           supabaseError: financeError.message,
           supabaseCode: financeError.code,
         })
-        // No fallar si hay error en finance_ledger
       }
 
       // Mostrar confeti
@@ -212,14 +211,16 @@ export default function QuoteDetailPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8 p-6 lg:p-8">
         <PageHeader title="Detalle de Cotización" />
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Skeleton className="h-96" />
+          <div className="lg:col-span-2 space-y-6">
+            <Skeleton className="h-32 w-full rounded-2xl" />
+            <Skeleton className="h-96 w-full rounded-2xl" />
           </div>
-          <div>
-            <Skeleton className="h-96" />
+          <div className="space-y-6">
+            <Skeleton className="h-64 w-full rounded-2xl" />
+            <Skeleton className="h-64 w-full rounded-2xl" />
           </div>
         </div>
       </div>
@@ -228,11 +229,17 @@ export default function QuoteDetailPage() {
 
   if (!quote) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8 p-6 lg:p-8">
         <PageHeader title="Cotización no encontrada" />
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-red-600 dark:text-red-400 mb-4">
+        <Card variant="elevated">
+          <CardContent className="p-12 text-center">
+            <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-red-50 dark:bg-red-950/30 mb-6">
+              <FileText className="h-10 w-10 text-red-600 dark:text-red-400" />
+            </div>
+            <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Cotización no encontrada
+            </p>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               La cotización solicitada no existe o no tienes acceso a ella.
             </p>
             <Link href="/dashboard/quotes">
@@ -252,8 +259,34 @@ export default function QuoteDetailPage() {
     0
   ) || 0
 
+  const statusConfig = {
+    confirmed: {
+      variant: 'success' as const,
+      label: 'Confirmada',
+      description: 'Esta cotización ha sido confirmada y convertida en evento.',
+      gradient: 'from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30',
+      border: 'border-emerald-200 dark:border-emerald-800',
+    },
+    cancelled: {
+      variant: 'error' as const,
+      label: 'Cancelada',
+      description: 'Esta cotización ha sido cancelada.',
+      gradient: 'from-red-50 to-rose-50 dark:from-red-950/30 dark:to-rose-950/30',
+      border: 'border-red-200 dark:border-red-800',
+    },
+    draft: {
+      variant: 'warning' as const,
+      label: 'Borrador',
+      description: 'Esta cotización está en borrador y puede ser editada.',
+      gradient: 'from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30',
+      border: 'border-amber-200 dark:border-amber-800',
+    },
+  }
+
+  const status = statusConfig[quote.status as keyof typeof statusConfig] || statusConfig.draft
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 p-6 lg:p-8">
       <PageHeader
         title={`Cotización #${quote.id.slice(0, 8)}`}
         description="Detalle completo de la cotización"
@@ -266,57 +299,49 @@ export default function QuoteDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
-          {/* Status Banner */}
-          <Card
-            className={
-              quote.status === 'confirmed'
-                ? 'border-l-4 border-l-green-600 dark:border-l-green-500'
-                : quote.status === 'cancelled'
-                ? 'border-l-4 border-l-red-600 dark:border-l-red-500'
-                : 'border-l-4 border-l-yellow-600 dark:border-l-yellow-500'
-            }
-          >
-            <CardContent className="p-6">
+          {/* Premium Status Banner */}
+          <Card variant="elevated" className={`overflow-hidden border-2 ${status.border}`}>
+            <CardHeader className={`bg-gradient-to-r ${status.gradient} border-b border-gray-200/60 dark:border-gray-800/60`}>
               <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                    Estado: {quote.status === 'confirmed' ? 'Confirmada' : quote.status === 'cancelled' ? 'Cancelada' : 'Borrador'}
-                  </h2>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    {quote.status === 'confirmed'
-                      ? 'Esta cotización ha sido confirmada y convertida en evento.'
+                <div className="flex items-center gap-4">
+                  <div className={`h-12 w-12 rounded-xl bg-gradient-to-br ${
+                    quote.status === 'confirmed' 
+                      ? 'from-emerald-500 to-teal-500' 
                       : quote.status === 'cancelled'
-                      ? 'Esta cotización ha sido cancelada.'
-                      : 'Esta cotización está en borrador y puede ser editada.'}
-                  </p>
+                      ? 'from-red-500 to-rose-500'
+                      : 'from-amber-500 to-orange-500'
+                  } flex items-center justify-center shadow-lg`}>
+                    <FileText className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">Estado: {status.label}</CardTitle>
+                    <CardDescription className="mt-1">{status.description}</CardDescription>
+                  </div>
                 </div>
-                <Badge
-                  variant={
-                    quote.status === 'confirmed'
-                      ? 'success'
-                      : quote.status === 'cancelled'
-                      ? 'error'
-                      : 'warning'
-                  }
-                >
-                  {quote.status === 'confirmed' ? 'Confirmada' : quote.status === 'cancelled' ? 'Cancelada' : 'Borrador'}
+                <Badge variant={status.variant} size="lg">
+                  {status.label}
                 </Badge>
               </div>
-            </CardContent>
+            </CardHeader>
           </Card>
 
-          {/* Services Table */}
-          <Card>
-            <CardHeader>
+          {/* Premium Services Table */}
+          <Card variant="elevated" className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
               <div className="flex items-center justify-between">
-                <CardTitle>Servicios Incluidos</CardTitle>
-                <Button variant="outline" size="sm" onClick={handleExportPDF}>
-                  <Download className="mr-2 h-4 w-4" />
+                <div>
+                  <CardTitle className="text-xl">Servicios Incluidos</CardTitle>
+                  <CardDescription className="mt-1">
+                    {quote.quote_services?.length || 0} {quote.quote_services?.length === 1 ? 'servicio' : 'servicios'} incluido{quote.quote_services?.length !== 1 ? 's' : ''}
+                  </CardDescription>
+                </div>
+                <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-2">
+                  <Download className="h-4 w-4" />
                   Exportar PDF
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
               {quote.quote_services && quote.quote_services.length > 0 ? (
                 <Table>
                   <TableHeader>
@@ -329,15 +354,17 @@ export default function QuoteDetailPage() {
                   </TableHeader>
                   <TableBody>
                     {quote.quote_services.map((qs) => (
-                      <TableRow key={qs.id}>
-                        <TableCell className="font-medium">
+                      <TableRow key={qs.id} className="group">
+                        <TableCell className="font-semibold text-gray-900 dark:text-white">
                           {qs.service?.name || 'Servicio no disponible'}
                         </TableCell>
-                        <TableCell className="text-right">{qs.quantity}</TableCell>
-                        <TableCell className="text-right">
+                        <TableCell className="text-right text-gray-600 dark:text-gray-400">
+                          {qs.quantity}
+                        </TableCell>
+                        <TableCell className="text-right font-medium text-gray-900 dark:text-white">
                           {formatCurrency(qs.final_price)}
                         </TableCell>
-                        <TableCell className="text-right font-semibold">
+                        <TableCell className="text-right font-bold text-gray-900 dark:text-white">
                           {formatCurrency(qs.quantity * qs.final_price)}
                         </TableCell>
                       </TableRow>
@@ -345,67 +372,82 @@ export default function QuoteDetailPage() {
                   </TableBody>
                 </Table>
               ) : (
-                <p className="text-center text-gray-500 dark:text-gray-400 py-8">
-                  No hay servicios agregados a esta cotización
-                </p>
+                <div className="p-12 text-center">
+                  <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800 mb-4">
+                    <FileText className="h-8 w-8 text-gray-400 dark:text-gray-500" />
+                  </div>
+                  <p className="text-gray-500 dark:text-gray-400 font-medium">
+                    No hay servicios agregados a esta cotización
+                  </p>
+                </div>
               )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Sidebar */}
+        {/* Premium Sidebar */}
         <div className="space-y-6">
-          {/* Client Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Información del Cliente</CardTitle>
+          {/* Client Info Card */}
+          <Card variant="elevated" className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl">Información del Cliente</CardTitle>
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg">
+                  <User className="h-5 w-5 text-white" />
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                  <User className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30">
+                  <User className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                  <p className="font-semibold text-gray-900 dark:text-white">
                     {quote.client?.name || 'Cliente no especificado'}
                   </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Cliente</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Cliente</p>
                 </div>
               </div>
               {quote.client?.email && (
-                <div className="flex items-start space-x-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 dark:bg-gray-800">
-                    <Mail className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                <div className="flex items-start gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900">
+                    <Mail className="h-6 w-6 text-gray-600 dark:text-gray-400" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    <p className="font-medium text-gray-900 dark:text-white">
                       {quote.client.email}
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">Email</p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Email</p>
                   </div>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Resumen</CardTitle>
+          {/* Premium Summary Card */}
+          <Card variant="elevated" className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-xl">Resumen Financiero</CardTitle>
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg">
+                  <DollarSign className="h-5 w-5 text-white" />
+                </div>
+              </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-gray-600 dark:text-gray-400">Subtotal:</span>
-                <span className="text-sm font-medium text-gray-900 dark:text-white">
+            <CardContent className="p-6 space-y-4">
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Subtotal:</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
                   {formatCurrency(subtotal)}
                 </span>
               </div>
               <div className="border-t border-gray-200 dark:border-gray-800 pt-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-lg font-semibold text-gray-900 dark:text-white">
+                  <span className="text-lg font-bold text-gray-900 dark:text-white">
                     Total:
                   </span>
-                  <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                  <span className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
                     {formatCurrency(quote.total_price)}
                   </span>
                 </div>
@@ -413,48 +455,51 @@ export default function QuoteDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Actions */}
+          {/* Premium Actions Card */}
           {quote.status === 'draft' && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Acciones</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  <Link href={`/dashboard/quotes/${quoteId}/edit`} className="block">
-                    <Button variant="outline" className="w-full">
-                      <Edit className="mr-2 h-4 w-4" />
-                      Editar Cotización
-                    </Button>
-                  </Link>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button className="w-full" size="lg">
-                        <CheckCircle2 className="mr-2 h-5 w-5" />
-                        Cerrar Venta
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>¿Confirmar cierre de venta?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Esta acción convertirá la cotización en un evento confirmado y registrará
-                          el ingreso en el sistema financiero. Esta acción no se puede deshacer.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleCloseSale}
-                          disabled={closing}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          {closing ? 'Cerrando...' : 'Confirmar Cierre'}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+            <Card variant="elevated" className="overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl">Acciones</CardTitle>
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg">
+                    <Sparkles className="h-5 w-5 text-white" />
+                  </div>
                 </div>
+              </CardHeader>
+              <CardContent className="p-6 space-y-3">
+                <Link href={`/dashboard/quotes/${quoteId}/edit`} className="block">
+                  <Button variant="outline" className="w-full gap-2">
+                    <Edit className="h-4 w-4" />
+                    Editar Cotización
+                  </Button>
+                </Link>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="premium" className="w-full gap-2" size="lg">
+                      <CheckCircle2 className="h-5 w-5" />
+                      Cerrar Venta
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>¿Confirmar cierre de venta?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Esta acción convertirá la cotización en un evento confirmado y registrará
+                        el ingreso en el sistema financiero. Esta acción no se puede deshacer.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={handleCloseSale}
+                        disabled={closing}
+                        variant="destructive"
+                      >
+                        {closing ? 'Cerrando...' : 'Confirmar Cierre'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </CardContent>
             </Card>
           )}
@@ -462,7 +507,14 @@ export default function QuoteDetailPage() {
       </div>
 
       {/* Comments Section */}
-      <CommentThread entityType="quote" entityId={quoteId} />
+      <Card variant="elevated" className="overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-900/50 dark:to-gray-800/30 border-b border-gray-200/60 dark:border-gray-800/60">
+          <CardTitle className="text-xl">Comentarios y Notas</CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          <CommentThread entityType="quote" entityId={quoteId} />
+        </CardContent>
+      </Card>
     </div>
   )
 }

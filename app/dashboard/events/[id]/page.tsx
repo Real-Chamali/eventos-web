@@ -1,19 +1,19 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import confetti from 'canvas-confetti'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
 import PageHeader from '@/components/ui/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Skeleton from '@/components/ui/Skeleton'
 import EventTimeline from '@/components/events/EventTimeline'
 import EventChecklist from '@/components/events/EventChecklist'
-import { CheckCircle2, Calendar, DollarSign, ArrowLeft, FileText, User } from 'lucide-react'
+import { CheckCircle2, Calendar, DollarSign, ArrowLeft, FileText, User, Sparkles, PartyPopper } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Link from 'next/link'
@@ -152,11 +152,17 @@ export default function EventPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8 p-6 lg:p-8">
         <PageHeader title="Evento" />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton className="h-96" />
-          <Skeleton className="h-96" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <Skeleton className="h-32 w-full rounded-2xl" />
+            <Skeleton className="h-96 w-full rounded-2xl" />
+          </div>
+          <div className="space-y-6">
+            <Skeleton className="h-64 w-full rounded-2xl" />
+            <Skeleton className="h-64 w-full rounded-2xl" />
+          </div>
         </div>
       </div>
     )
@@ -164,11 +170,17 @@ export default function EventPage() {
 
   if (!event) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-8 p-6 lg:p-8">
         <PageHeader title="Evento no encontrado" />
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-red-600 dark:text-red-400 mb-4">
+        <Card variant="elevated">
+          <CardContent className="p-12 text-center">
+            <div className="inline-flex h-20 w-20 items-center justify-center rounded-2xl bg-red-50 dark:bg-red-950/30 mb-6">
+              <FileText className="h-10 w-10 text-red-600 dark:text-red-400" />
+            </div>
+            <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Evento no encontrado
+            </p>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               El evento solicitado no existe o no tienes acceso a él.
             </p>
             <Link href="/dashboard">
@@ -221,10 +233,10 @@ export default function EventPage() {
   ]
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 p-6 lg:p-8">
       <PageHeader
         title={`Evento #${event.id.slice(0, 8)}`}
-        description="Vista operativa completa del evento"
+        description="Vista operativa completa del evento confirmado"
         breadcrumbs={[
           { label: 'Dashboard', href: '/dashboard' },
           { label: 'Eventos', href: '/dashboard' },
@@ -232,203 +244,196 @@ export default function EventPage() {
         ]}
       />
 
-      {/* Status Banner */}
-      <Card className="border-l-4 border-l-green-600 dark:border-l-green-500">
-        <CardContent className="p-6">
-          <div className="flex items-start space-x-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
-              <CheckCircle2 className="h-6 w-6 text-green-600 dark:text-green-400" />
+      {/* Premium Status Banner */}
+      <Card variant="elevated" className="overflow-hidden border-2 border-emerald-200 dark:border-emerald-800">
+        <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center shadow-lg">
+                <PartyPopper className="h-7 w-7 text-white" />
+              </div>
+              <div>
+                <CardTitle className="text-xl">¡Evento Confirmado!</CardTitle>
+                <CardDescription className="mt-1">
+                  El evento está activo y listo para ejecutarse. Revisa el checklist para asegurar que todo esté listo.
+                </CardDescription>
+              </div>
             </div>
-            <div className="flex-1">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-                Evento Confirmado
-              </h2>
-              <p className="text-gray-600 dark:text-gray-400">
-                El evento está activo y listo para ejecutarse. Revisa el checklist para asegurar que
-                todo esté listo.
-              </p>
-            </div>
-            <Badge variant="success">Activo</Badge>
+            <Badge variant="success" size="lg">Activo</Badge>
           </div>
-        </CardContent>
+        </CardHeader>
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Timeline */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Timeline del Evento</CardTitle>
+          {/* Premium Timeline */}
+          <Card variant="elevated" className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl">Timeline del Evento</CardTitle>
+                  <CardDescription className="mt-1">Progreso y etapas del evento</CardDescription>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg">
+                  <Calendar className="h-5 w-5 text-white" />
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-6">
               <EventTimeline items={timelineItems} />
             </CardContent>
           </Card>
 
-          {/* Checklist */}
-          <EventChecklist items={checklistItems} />
-
-          {/* Event Details */}
-          <Card>
-          <CardHeader>
-            <CardTitle>Información del Evento</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-50 dark:bg-blue-900/20">
-                <Calendar className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+          {/* Premium Checklist */}
+          <Card variant="elevated" className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl">Checklist de Preparación</CardTitle>
+                  <CardDescription className="mt-1">Tareas pendientes y completadas</CardDescription>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
+                  <CheckCircle2 className="h-5 w-5 text-white" />
+                </div>
               </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  Fecha de Creación
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {formatDate(event.created_at)}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-50 dark:bg-purple-900/20">
-                <FileText className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
-                  ID del Evento
-                </p>
-                <p className="text-sm text-gray-500 dark:text-gray-400 font-mono">
-                  {event.id.slice(0, 8)}...
-                </p>
-              </div>
-            </div>
-            {event.quote_id && (
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
-                <Link href={`/dashboard/quotes/${event.quote_id}`}>
-                  <Button variant="outline" className="w-full">
-                    <FileText className="mr-2 h-4 w-4" />
-                    Ver Cotización Original
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Quote Summary */}
-        {event.quote && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Resumen de la Cotización</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-              {event.quote.client && (
-                <div className="flex items-start space-x-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 dark:bg-gray-800">
-                    <User className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
-                      {event.quote.client.name}
-                    </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      {event.quote.client.email}
-                    </p>
-                  </div>
-                </div>
-              )}
-              <div className="flex items-start space-x-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50 dark:bg-green-900/20">
-                  <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">
-                    Monto Total
-                  </p>
-                  <p className="text-lg font-bold text-green-600 dark:text-green-400">
-                    {formatCurrency(event.quote.total_price)}
-                  </p>
-                </div>
-              </div>
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Servicios incluidos:
-                  </span>
-                  <Badge variant="info">{servicesCount} servicios</Badge>
-                </div>
-              </div>
+            <CardContent className="p-6">
+              <EventChecklist items={checklistItems} />
             </CardContent>
           </Card>
-        )}
+
+          {/* Premium Event Details */}
+          <Card variant="elevated" className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-900/50 dark:to-gray-800/30 border-b border-gray-200/60 dark:border-gray-800/60">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl">Información del Evento</CardTitle>
+                  <CardDescription className="mt-1">Detalles operativos del evento</CardDescription>
+                </div>
+                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-gray-500 to-gray-600 flex items-center justify-center shadow-lg">
+                  <FileText className="h-5 w-5 text-white" />
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 flex items-center justify-center">
+                  <Calendar className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-900 dark:text-white">
+                    Fecha de Creación
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    {formatDate(event.created_at)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30 flex items-center justify-center">
+                  <Sparkles className="h-6 w-6 text-violet-600 dark:text-violet-400" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-semibold text-gray-900 dark:text-white">
+                    ID del Evento
+                  </p>
+                  <p className="text-sm font-mono text-gray-600 dark:text-gray-400 mt-1">
+                    {event.id.slice(0, 8)}...
+                  </p>
+                </div>
+              </div>
+              {event.quote_id && (
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
+                  <Link href={`/dashboard/quotes/${event.quote_id}`}>
+                    <Button variant="outline" className="w-full gap-2">
+                      <FileText className="h-4 w-4" />
+                      Ver Cotización Original
+                    </Button>
+                  </Link>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </div>
 
-        {/* Sidebar */}
+        {/* Premium Sidebar */}
         <div className="space-y-6">
-          {/* Quote Summary */}
+          {/* Quote Summary Card */}
           {event.quote && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Resumen de la Cotización</CardTitle>
+            <Card variant="elevated" className="overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xl">Resumen de la Cotización</CardTitle>
+                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg">
+                    <FileText className="h-5 w-5 text-white" />
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="p-6 space-y-4">
                 {event.quote.client && (
-                  <div className="flex items-start space-x-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gray-50 dark:bg-gray-800">
-                      <User className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                  <div className="flex items-start gap-4">
+                    <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 flex items-center justify-center">
+                      <User className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
                     </div>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                      <p className="font-semibold text-gray-900 dark:text-white">
                         {event.quote.client.name}
                       </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                         {event.quote.client.email}
                       </p>
                     </div>
                   </div>
                 )}
-                <div className="flex items-start space-x-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-50 dark:bg-green-900/20">
-                    <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+                <div className="flex items-start gap-4">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 flex items-center justify-center">
+                    <DollarSign className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    <p className="font-semibold text-gray-900 dark:text-white">
                       Monto Total
                     </p>
-                    <p className="text-lg font-bold text-green-600 dark:text-green-400">
+                    <p className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mt-1">
                       {formatCurrency(event.quote.total_price)}
                     </p>
                   </div>
                 </div>
                 <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                    <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
                       Servicios incluidos:
                     </span>
-                    <Badge variant="info">{servicesCount} servicios</Badge>
+                    <Badge variant="info" size="sm">{servicesCount} servicios</Badge>
                   </div>
                 </div>
               </CardContent>
             </Card>
           )}
-        </div>
-      </div>
 
-      {/* Actions */}
-      <div className="flex gap-4">
-        <Link href="/dashboard">
-          <Button variant="outline">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Volver al Dashboard
-          </Button>
-        </Link>
-        {event.quote_id && (
-          <Link href={`/dashboard/quotes/${event.quote_id}`}>
-            <Button>
-              <FileText className="mr-2 h-4 w-4" />
-              Ver Detalles de la Cotización
-            </Button>
-          </Link>
-        )}
+          {/* Actions Card */}
+          <Card variant="elevated" className="overflow-hidden">
+            <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-900/50 dark:to-gray-800/30 border-b border-gray-200/60 dark:border-gray-800/60">
+              <CardTitle className="text-xl">Acciones</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-3">
+              <Link href="/dashboard" className="block">
+                <Button variant="outline" className="w-full gap-2">
+                  <ArrowLeft className="h-4 w-4" />
+                  Volver al Dashboard
+                </Button>
+              </Link>
+              {event.quote_id && (
+                <Link href={`/dashboard/quotes/${event.quote_id}`} className="block">
+                  <Button variant="premium" className="w-full gap-2">
+                    <FileText className="h-4 w-4" />
+                    Ver Cotización
+                  </Button>
+                </Link>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )
