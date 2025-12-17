@@ -146,6 +146,7 @@ export default function QuoteDetailPage() {
           supabaseError: financeError.message,
           supabaseCode: financeError.code,
         })
+        // No fallar si hay error en finance_ledger
       }
 
       // Mostrar confeti
