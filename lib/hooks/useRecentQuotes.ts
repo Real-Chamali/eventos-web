@@ -34,8 +34,17 @@ const fetcher = async (): Promise<Quote[]> => {
     throw error
   }
   
+  // Tipo para respuesta de Supabase (client puede ser array o objeto)
+  type SupabaseQuoteResponse = {
+    id: string
+    total_price: number
+    status: string
+    created_at: string
+    client?: Array<{ name?: string }> | { name?: string } | null
+  }
+
   // Transformar datos para incluir client_name
-  return (data || []).map((quote: any) => {
+  return (data || []).map((quote: SupabaseQuoteResponse) => {
     // Extraer cliente (puede ser array o objeto)
     const client = quote.client ? (Array.isArray(quote.client) ? quote.client[0] : quote.client) : null
     return {

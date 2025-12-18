@@ -87,9 +87,22 @@ export default function Calendar() {
       // Combinar y procesar eventos
       const eventMap = new Map<string, EventDate>()
 
+      // Tipos para datos de Supabase (pueden venir como array o objeto)
+      type SupabaseEvent = {
+        id: string
+        start_date: string
+        end_date?: string | null
+        status: string
+        quote?: Array<{
+          client?: Array<{ name?: string }> | { name?: string } | null
+        }> | {
+          client?: Array<{ name?: string }> | { name?: string } | null
+        } | null
+      }
+
       // Procesar eventos de la tabla events
       if (eventsData) {
-        eventsData.forEach((event: any) => {
+        eventsData.forEach((event: SupabaseEvent) => {
           // Extraer datos del evento (quote puede ser array o objeto)
           const quote = Array.isArray(event.quote) ? event.quote[0] : event.quote
           const client = quote?.client ? (Array.isArray(quote.client) ? quote.client[0] : quote.client) : null
@@ -121,9 +134,17 @@ export default function Calendar() {
         })
       }
 
+      // Tipo para cotizaciones de Supabase
+      type SupabaseQuote = {
+        id: string
+        event_date: string
+        status: string
+        client?: Array<{ name?: string }> | { name?: string } | null
+      }
+
       // Procesar cotizaciones con event_date
       if (quotesData) {
-        quotesData.forEach((quote: any) => {
+        quotesData.forEach((quote: SupabaseQuote) => {
           // Extraer cliente (puede ser array o objeto)
           const client = quote.client ? (Array.isArray(quote.client) ? quote.client[0] : quote.client) : null
           const dateKey = quote.event_date
