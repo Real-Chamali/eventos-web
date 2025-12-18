@@ -1,15 +1,15 @@
 /**
  * Sistema de validación de API keys
- * Reemplaza los TODOs pendientes en el código
+ * Usa la tabla api_keys de Supabase con hash SHA-256
  */
 
 import { createClient } from '@/utils/supabase/server'
 import { logger } from '@/lib/utils/logger'
+import { hashSHA256, generateSecureToken } from '@/lib/utils/security'
 import { NextRequest } from 'next/server'
 
 export interface ApiKey {
   id: string
-  key: string
   name: string
   user_id: string
   permissions: string[]
@@ -17,6 +17,21 @@ export interface ApiKey {
   last_used_at?: string | null
   expires_at?: string | null
   is_active: boolean
+}
+
+/**
+ * Hashear API key usando SHA-256
+ */
+export function hashApiKey(apiKey: string): string {
+  return hashSHA256(apiKey)
+}
+
+/**
+ * Generar una nueva API key segura
+ */
+export function generateApiKey(): string {
+  // Generar key aleatoria de 64 caracteres (32 bytes = 64 hex chars)
+  return generateSecureToken(32)
 }
 
 /**
@@ -42,49 +57,77 @@ export async function validateApiKey(request: NextRequest): Promise<{
       }
     }
     
+    // Hashear la API key para buscar en la BD
+    const keyHash = hashApiKey(apiKey)
+    
+    // Usar service_role para poder leer todas las API keys
+    // En producción, esto debería hacerse desde un edge function o middleware
     const supabase = await createClient()
     
-    // Buscar API key en la base de datos
-    // NOTA: En producción, deberías tener una tabla 'api_keys'
-    // Por ahora, validamos contra profiles si es necesario
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('id, role')
-      .eq('api_key', apiKey) // Asumiendo que agregas este campo
-      .eq('is_active', true)
+    // Buscar API key en la tabla api_keys usando el hash
+    const { data: apiKeyData, error } = await supabase
+      .from('api_keys')
+      .select('user_id, permissions, is_active, expires_at')
+      .eq('key_hash', keyHash)
       .single()
     
-    if (error || !profile) {
+    if (error || !apiKeyData) {
       logger.warn('API Keys', 'Invalid API key attempted', {
-        apiKey: apiKey.substring(0, 8) + '...',
+        keyHashPrefix: keyHash.substring(0, 8) + '...',
         error: error?.message,
       })
       return {
         valid: false,
-        error: 'API key inválida o expirada',
+        error: 'API key inválida o no encontrada',
       }
     }
     
-    // Actualizar last_used_at (si tienes tabla api_keys)
-    // await supabase
-    //   .from('api_keys')
-    //   .update({ last_used_at: new Date().toISOString() })
-    //   .eq('key', apiKey)
+    // Verificar que esté activa
+    if (!apiKeyData.is_active) {
+      logger.warn('API Keys', 'Inactive API key attempted', {
+        userId: apiKeyData.user_id,
+      })
+      return {
+        valid: false,
+        error: 'API key inactiva',
+      }
+    }
+    
+    // Verificar expiración
+    if (apiKeyData.expires_at && new Date(apiKeyData.expires_at) < new Date()) {
+      logger.warn('API Keys', 'Expired API key attempted', {
+        userId: apiKeyData.user_id,
+        expiresAt: apiKeyData.expires_at,
+      })
+      return {
+        valid: false,
+        error: 'API key expirada',
+      }
+    }
+    
+    // Actualizar last_used_at (usar service_role para poder actualizar)
+    // Nota: Esto requiere permisos especiales, puede hacerse desde un edge function
+    try {
+      await supabase
+        .from('api_keys')
+        .update({ last_used_at: new Date().toISOString() })
+        .eq('key_hash', keyHash)
+    } catch (updateError) {
+      // No fallar si no se puede actualizar last_used_at
+      logger.warn('API Keys', 'Could not update last_used_at', {
+        error: updateError instanceof Error ? updateError.message : String(updateError),
+      })
+    }
     
     logger.info('API Keys', 'API key validated', {
-      userId: profile.id,
-      role: profile.role,
+      userId: apiKeyData.user_id,
+      permissions: apiKeyData.permissions,
     })
-    
-    // Mapear roles a permisos
-    const permissions = profile.role === 'admin'
-      ? ['read', 'write', 'delete', 'admin']
-      : ['read', 'write']
     
     return {
       valid: true,
-      userId: profile.id,
-      permissions,
+      userId: apiKeyData.user_id,
+      permissions: apiKeyData.permissions || ['read', 'write'],
     }
   } catch (error) {
     logger.error('API Keys', 'Error validating API key', error instanceof Error ? error : new Error(String(error)))
@@ -120,5 +163,100 @@ export function withApiKeyAuth(
       ...context,
     })
   }
+}
+
+/**
+ * Crear una nueva API key para un usuario
+ * @param userId - ID del usuario
+ * @param name - Nombre descriptivo para la API key
+ * @param permissions - Permisos (default: ['read', 'write'])
+ * @param expiresAt - Fecha de expiración opcional
+ * @returns La API key generada (solo se muestra una vez)
+ */
+export async function createApiKey(
+  userId: string,
+  name: string,
+  permissions: string[] = ['read', 'write'],
+  expiresAt?: Date
+): Promise<{ apiKey: string; id: string }> {
+  const supabase = await createClient()
+  
+  // Generar API key
+  const apiKey = generateApiKey()
+  const keyHash = hashApiKey(apiKey)
+  
+  // Insertar en la BD
+  const { data, error } = await supabase
+    .from('api_keys')
+    .insert({
+      user_id: userId,
+      name,
+      key_hash: keyHash,
+      permissions,
+      expires_at: expiresAt?.toISOString() || null,
+      is_active: true,
+    })
+    .select('id')
+    .single()
+  
+  if (error || !data) {
+    logger.error('API Keys', 'Error creating API key', error as Error)
+    throw new Error('Error al crear API key')
+  }
+  
+  logger.info('API Keys', 'API key created', {
+    userId,
+    apiKeyId: data.id,
+    name,
+  })
+  
+  // Retornar la API key (solo se muestra una vez, no se almacena)
+  return {
+    apiKey,
+    id: data.id,
+  }
+}
+
+/**
+ * Listar API keys de un usuario
+ */
+export async function listUserApiKeys(userId: string): Promise<ApiKey[]> {
+  const supabase = await createClient()
+  
+  const { data, error } = await supabase
+    .from('api_keys')
+    .select('id, name, user_id, permissions, created_at, last_used_at, expires_at, is_active')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+  
+  if (error) {
+    logger.error('API Keys', 'Error listing API keys', error as Error)
+    throw error
+  }
+  
+  return (data || []) as ApiKey[]
+}
+
+/**
+ * Revocar (desactivar) una API key
+ */
+export async function revokeApiKey(apiKeyId: string, userId: string): Promise<void> {
+  const supabase = await createClient()
+  
+  const { error } = await supabase
+    .from('api_keys')
+    .update({ is_active: false })
+    .eq('id', apiKeyId)
+    .eq('user_id', userId)
+  
+  if (error) {
+    logger.error('API Keys', 'Error revoking API key', error as Error)
+    throw error
+  }
+  
+  logger.info('API Keys', 'API key revoked', {
+    apiKeyId,
+    userId,
+  })
 }
 

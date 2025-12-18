@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { CreateQuoteSchema } from '@/lib/validations/schemas'
-import { useToast, useDebounce } from '@/lib/hooks'
+import { useToast, useDebounce, useOptimisticMutation, useQuotes, useInfiniteQuotes } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 import { createAuditLog } from '@/lib/utils/audit'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
@@ -78,6 +78,9 @@ export default function EditQuotePage() {
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [searchClient, setSearchClient] = useState('')
   const [quoteServices, setQuoteServices] = useState<QuoteService[]>([])
+  const { execute: optimisticUpdate } = useOptimisticMutation<any>()
+  const { refresh: refreshQuotes } = useQuotes()
+  const { refresh: refreshInfiniteQuotes } = useInfiniteQuotes()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -279,82 +282,122 @@ export default function EditQuotePage() {
         return
       }
 
-      // Actualizar cotización
-      const { error: updateError } = await supabase
-        .from('quotes')
-        .update({
-          client_id: selectedClient.id,
-          total_price: total,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', quoteId)
+      const oldTotalPrice = quote?.total_price || 0
+      const oldClientId = quote?.client_id || ''
 
-      if (updateError) {
-        toastError('Error al actualizar: ' + updateError.message)
-        logger.error('EditQuotePage', 'Error updating quote', new Error(updateError.message))
-        setSaving(false)
-        return
-      }
+      // Actualizar cotización con optimistic update
+      await optimisticUpdate({
+        swrKey: 'quotes',
+        optimisticUpdate: (current: any[]) => {
+          if (!current) return current
+          // Actualizar la cotización en el array optimistamente
+          return current.map((q: any) => 
+            q.id === quoteId
+              ? {
+                  ...q,
+                  client_id: selectedClient.id,
+                  total_price: total,
+                  updated_at: new Date().toISOString(),
+                  client_name: selectedClient.name,
+                  clients: { name: selectedClient.name },
+                }
+              : q
+          )
+        },
+        mutateFn: async () => {
+          // Actualizar cotización real
+          const { error: updateError } = await supabase
+            .from('quotes')
+            .update({
+              client_id: selectedClient.id,
+              total_price: total,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', quoteId)
 
-      // Eliminar servicios antiguos
-      const { error: deleteError } = await supabase
-        .from('quote_services')
-        .delete()
-        .eq('quote_id', quoteId)
+          if (updateError) throw updateError
 
-      if (deleteError) {
-        logger.error('EditQuotePage', 'Error deleting old services', new Error(deleteError.message))
-      }
+          // Eliminar servicios antiguos
+          const { error: deleteError } = await supabase
+            .from('quote_services')
+            .delete()
+            .eq('quote_id', quoteId)
 
-      // Insertar servicios nuevos
-      const quoteServicesData = quoteServices.map((qs) => ({
-        quote_id: quoteId,
-        service_id: qs.service_id,
-        quantity: qs.quantity,
-        final_price: qs.final_price,
-      }))
+          if (deleteError) {
+            logger.warn('EditQuotePage', 'Error deleting old services', { error: deleteError.message })
+            // Continuar aunque haya error en eliminar servicios antiguos
+          }
 
-      const { error: insertError } = await supabase
-        .from('quote_services')
-        .insert(quoteServicesData)
-
-      if (insertError) {
-        toastError('Error al guardar los servicios: ' + insertError.message)
-        logger.error('EditQuotePage', 'Error saving services', new Error(insertError.message))
-        setSaving(false)
-        return
-      }
-
-      if (quote) {
-        await createAuditLog({
-          user_id: user.id,
-          action: 'UPDATE',
-          table_name: 'quotes',
-          old_values: {
-            id: quote.id,
-            client_id: quote.client_id,
-            total_price: quote.total_price,
-            status: quote.status,
-          },
-          new_values: {
-            id: quoteId,
-            client_id: selectedClient.id,
-            total_price: total,
-            status: quote.status,
-          },
-          metadata: {
+          // Insertar servicios nuevos
+          const quoteServicesData = quoteServices.map((qs) => ({
             quote_id: quoteId,
-            services_count: quoteServices.length,
-          },
-        })
-      }
+            service_id: qs.service_id,
+            quantity: qs.quantity,
+            final_price: qs.final_price,
+          }))
 
-      toastSuccess('Cotización actualizada correctamente')
+          const { error: insertError } = await supabase
+            .from('quote_services')
+            .insert(quoteServicesData)
+
+          if (insertError) throw insertError
+
+          // Crear audit log
+          if (quote) {
+            await createAuditLog({
+              user_id: user.id,
+              action: 'UPDATE',
+              table_name: 'quotes',
+              old_values: {
+                id: quote.id,
+                client_id: oldClientId,
+                total_price: oldTotalPrice,
+                status: quote.status,
+              },
+              new_values: {
+                id: quoteId,
+                client_id: selectedClient.id,
+                total_price: total,
+                status: quote.status,
+              },
+              metadata: {
+                quote_id: quoteId,
+                services_count: quoteServices.length,
+              },
+            })
+          }
+
+          // Revalidar el cache para obtener datos frescos
+          await refreshQuotes()
+          await refreshInfiniteQuotes()
+
+          // Devolver datos optimistas (se revalida arriba)
+          return null
+        },
+        successMessage: 'Cotización actualizada correctamente',
+        errorMessage: 'Error al actualizar la cotización',
+        rollback: (current: any[]) => {
+          if (!current || !quote) return current
+          // Restaurar valores anteriores en caso de error
+          return current.map((q: any) => 
+            q.id === quoteId
+              ? {
+                  ...q,
+                  client_id: oldClientId,
+                  total_price: oldTotalPrice,
+                }
+              : q
+          )
+        },
+      })
+
       router.push(`/dashboard/quotes/${quoteId}`)
       router.refresh()
     } catch (err) {
       logger.error('EditQuotePage', 'Unexpected error saving quote', err as Error)
-      toastError('Error inesperado al guardar')
+      // El error ya se muestra en el toast del optimistic update
+      setSaving(false)
+    } finally {
       setSaving(false)
     }
   }

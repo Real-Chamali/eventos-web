@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CreateQuoteSchema } from '@/lib/validations/schemas'
-import { useToast, useDebounce } from '@/lib/hooks'
+import { useToast, useDebounce, useOptimisticMutation, useQuotes, useInfiniteQuotes } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 import { createAuditLog } from '@/lib/utils/audit'
 import PageHeader from '@/components/ui/PageHeader'
@@ -56,6 +56,9 @@ export default function NewQuotePage() {
   const supabase = useMemo(() => createClient(), [])
   const { success: toastSuccess, error: toastError } = useToast()
   const debouncedSearchClient = useDebounce(searchClient, 300)
+  const { execute: optimisticCreate } = useOptimisticMutation<any>()
+  const { refresh: refreshQuotes } = useQuotes()
+  const { refresh: refreshInfiniteQuotes } = useInfiniteQuotes()
 
   // Cargar cliente si viene en query params
   useEffect(() => {
@@ -271,74 +274,109 @@ export default function NewQuotePage() {
         return
       }
 
-      const { data: quote, error } = await supabase
-        .from('quotes')
-        .insert({
-          client_id: selectedClient.id,
-          vendor_id: user.id,
-          status: 'draft',
-          total_price: total,
-        })
-        .select()
-        .single()
-
-      if (error) {
-        const errorMessage = error?.message || 'Error saving quote'
-        toastError('Error al guardar: ' + errorMessage)
-        const errorForLogging = error instanceof Error 
-          ? error 
-          : new Error(errorMessage)
-        logger.error('NewQuotePage', 'Error saving quote', errorForLogging, {
-          supabaseError: errorMessage,
-          supabaseCode: error?.code,
-          quoteData: {
-            client_id: selectedClient?.id,
-            total_price: total,
-            services_count: quoteServices.length,
-          },
-        })
-        setLoading(false)
-        return
+      // Crear cotización con optimistic update
+      const tempQuoteId = `temp-${Date.now()}`
+      const optimisticQuote = {
+        id: tempQuoteId,
+        client_id: selectedClient.id,
+        vendor_id: user.id,
+        status: 'draft' as const,
+        total_price: total,
+        created_at: new Date().toISOString(),
+        updated_at: null,
+        client_name: selectedClient.name,
+        clients: { name: selectedClient.name },
       }
 
-      const quoteServicesData = quoteServices.map((qs) => ({
-        quote_id: quote.id,
-        service_id: qs.service_id,
-        quantity: qs.quantity,
-        final_price: qs.final_price,
-      }))
+      let createdQuoteId: string | null = null
 
-      const { error: insertError } = await supabase
-        .from('quote_services')
-        .insert(quoteServicesData)
+      await optimisticCreate({
+        swrKey: 'quotes',
+        optimisticUpdate: (current: any[]) => {
+          // Agregar la cotización optimista al inicio de la lista
+          return current ? [optimisticQuote, ...current] : [optimisticQuote]
+        },
+        mutateFn: async () => {
+          // Crear la cotización real
+          const { data: quote, error } = await supabase
+            .from('quotes')
+            .insert({
+              client_id: selectedClient.id,
+              vendor_id: user.id,
+              status: 'draft',
+              total_price: total,
+            })
+            .select(`
+              id,
+              total_price,
+              status,
+              created_at,
+              updated_at,
+              clients (
+                name
+              )
+            `)
+            .single()
 
-      if (insertError) {
-        toastError('Error al guardar los servicios: ' + insertError.message)
-        logger.error('NewQuotePage', 'Error saving quote services', insertError)
-        setLoading(false)
-        return
-      }
+          if (error) throw error
+          createdQuoteId = quote.id
 
-      await createAuditLog({
-        user_id: user.id,
-        action: 'CREATE',
-        table_name: 'quotes',
-        old_values: null,
-        new_values: quote,
-        metadata: {
-          services_count: quoteServices.length,
-          total_price: total,
+          // Crear servicios de la cotización
+          const quoteServicesData = quoteServices.map((qs) => ({
+            quote_id: quote.id,
+            service_id: qs.service_id,
+            quantity: qs.quantity,
+            final_price: qs.final_price,
+          }))
+
+          const { error: insertError } = await supabase
+            .from('quote_services')
+            .insert(quoteServicesData)
+
+          if (insertError) throw insertError
+
+          // Crear audit log
+          await createAuditLog({
+            user_id: user.id,
+            action: 'CREATE',
+            table_name: 'quotes',
+            old_values: null,
+            new_values: quote,
+            metadata: {
+              services_count: quoteServices.length,
+              total_price: total,
+            },
+          })
+
+          // Revalidar el cache para obtener todas las quotes actualizadas
+          await refreshQuotes()
+          await refreshInfiniteQuotes()
+
+          // Devolver el array completo (se revalida arriba, esto es solo para cumplir con el tipo)
+          return optimisticQuote
+        },
+        successMessage: 'Cotización guardada como borrador exitosamente',
+        errorMessage: 'Error al guardar la cotización',
+        rollback: (current: any[]) => {
+          // Remover la cotización optimista en caso de error
+          return current?.filter((q: any) => q.id !== tempQuoteId) || current
         },
       })
-
-      toastSuccess('Cotización guardada como borrador exitosamente')
-      logger.info('NewQuotePage', 'Quote created successfully', { quoteId: quote.id })
       
-      router.push(`/dashboard/quotes/${quote.id}`)
+      logger.info('NewQuotePage', 'Quote created successfully', { quoteId: createdQuoteId })
+      
+      // Redirigir a la cotización creada
+      if (createdQuoteId) {
+        router.push(`/dashboard/quotes/${createdQuoteId}`)
+      } else {
+        router.push('/dashboard/quotes')
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
-      toastError('Error inesperado: ' + message)
       logger.error('NewQuotePage', 'Unexpected error saving quote', err instanceof Error ? err : new Error(String(err)))
+      // El error ya se muestra en el toast del optimistic update
+      setLoading(false)
+    } finally {
       setLoading(false)
     }
   }

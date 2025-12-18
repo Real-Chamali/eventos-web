@@ -57,27 +57,29 @@ export function useOptimisticMutation<T>() {
     let previousData: T | undefined
     
     try {
-      // Obtener datos actuales
-      const currentData = await new Promise<T | undefined>((resolve) => {
-        mutate(swrKey, (data: T | undefined) => {
-          previousData = data
-          return data
-        }, { revalidate: false })
-        setTimeout(() => resolve(previousData), 0)
-      })
-      
-      // Actualización optimista
+      // Obtener datos actuales usando mutate
       await mutate(
         swrKey,
-        optimisticUpdate(currentData),
-        false // No revalidar aún
+        (data: T | undefined) => {
+          previousData = data
+          return data // No cambiar los datos aún
+        },
+        { revalidate: false }
       )
       
-      // Mutación real
+      // Actualización optimista - actualizar UI inmediatamente
+      mutate(
+        swrKey,
+        optimisticUpdate(previousData),
+        { revalidate: false } // No revalidar aún, usar datos optimistas
+      )
+      
+      // Ejecutar mutación real en el servidor
       const newData = await mutateFn()
       
-      // Actualizar con datos reales
-      await mutate(swrKey, newData, { revalidate: true })
+      // Revalidar cache para obtener datos frescos del servidor
+      // (mutateFn ya debería haber revalidado, pero por seguridad lo hacemos aquí también)
+      await mutate(swrKey, undefined, { revalidate: true })
       
       toast.success(successMessage)
       return newData
@@ -86,10 +88,10 @@ export function useOptimisticMutation<T>() {
       
       // Rollback si está disponible
       if (rollback && previousData !== undefined) {
-        await mutate(swrKey, rollback(previousData), { revalidate: false })
+        mutate(swrKey, rollback(previousData), { revalidate: false })
       } else {
-        // Revalidar para obtener datos reales
-        await mutate(swrKey, undefined, { revalidate: true })
+        // Revalidar para obtener datos reales del servidor
+        mutate(swrKey, undefined, { revalidate: true })
       }
       
       toast.error(errorMessage)
