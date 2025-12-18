@@ -244,4 +244,5 @@ export { useDashboardStats } from './useDashboardStats'
 export { useClients } from './useClients'
 export { useServices } from './useServices'
 export { useEvents } from './useEvents'
+export { useAdminEvents } from './useAdminEvents'
 

@@ -1,9 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { createClient } from '@/utils/supabase/client'
-import { useToast } from '@/lib/hooks'
-import { logger } from '@/lib/utils/logger'
+import { useState, useMemo } from 'react'
+import { useAdminEvents, useToast } from '@/lib/hooks'
 import PageHeader from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
@@ -17,69 +15,25 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import EmptyState from '@/components/ui/EmptyState'
 
-interface Event {
-  id: string
-  start_date: string
-  end_date: string | null
-  status: string
-  quote_id: string
-  quote?: {
-    id: string
-    total_price: number
-    client?: {
-      name: string
-      email: string
-    }
-  }
-}
-
 export default function AdminEventsPage() {
-  const [events, setEvents] = useState<Event[]>([])
-  const [loading, setLoading] = useState(true)
+  const { events, loading, error } = useAdminEvents()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'confirmed' | 'cancelled'>('all')
-  const supabase = createClient()
   const { error: toastError } = useToast()
 
-  useEffect(() => {
-    loadEvents()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const loadEvents = async () => {
-    try {
-      setLoading(true)
-      const { data, error } = await supabase
-        .from('events')
-        .select(`
-          *,
-          quote:quotes (
-            id,
-            total_price,
-            client:clients (
-              name,
-              email
-            )
-          )
-        `)
-        .order('start_date', { ascending: false })
-
-      if (error) throw error
-      setEvents(data || [])
-    } catch (error) {
-      logger.error('AdminEventsPage', 'Error loading events', error as Error)
-      toastError('Error al cargar los eventos')
-    } finally {
-      setLoading(false)
-    }
+  // Mostrar error si hay
+  if (error) {
+    toastError('Error al cargar los eventos')
   }
 
-  const filteredEvents = events.filter((event) => {
-    const clientName = event.quote?.client?.name?.toLowerCase() || ''
-    const matchesSearch = clientName.includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || event.status === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  const filteredEvents = useMemo(() => {
+    return events.filter((event) => {
+      const clientName = event.quote?.client?.name?.toLowerCase() || ''
+      const matchesSearch = clientName.includes(searchTerm.toLowerCase())
+      const matchesStatus = statusFilter === 'all' || event.status === statusFilter
+      return matchesSearch && matchesStatus
+    })
+  }, [events, searchTerm, statusFilter])
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -94,12 +48,12 @@ export default function AdminEventsPage() {
     }
   }
 
-  const stats = {
+  const stats = useMemo(() => ({
     total: events.length,
     confirmed: events.filter(e => e.status === 'confirmed').length,
     pending: events.filter(e => e.status === 'pending').length,
     cancelled: events.filter(e => e.status === 'cancelled').length,
-  }
+  }), [events])
 
   const statusFilters = [
     { value: 'all' as const, label: 'Todos' },

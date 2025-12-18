@@ -1,6 +1,6 @@
-import { createClient } from '@/utils/supabase/server'
-import { redirect } from 'next/navigation'
-import { logger } from '@/lib/utils/logger'
+'use client'
+
+import { useClients } from '@/lib/hooks'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import Button from '@/components/ui/Button'
@@ -10,56 +10,41 @@ import { Plus, Users, Mail, Calendar } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import EmptyState from '@/components/ui/EmptyState'
+import Skeleton from '@/components/ui/Skeleton'
 
-interface Client {
-  id: string
-  name: string
-  email: string | null
-  phone: string | null
-  created_at: string
-  _quotes_count?: number
-}
+export default function ClientsPage() {
+  const { clients: clientsData, loading, error } = useClients()
 
-export default async function ClientsPage() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect('/login')
+  if (loading) {
+    return (
+      <div className="space-y-8 p-6 lg:p-8">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-6 w-64" />
+          </div>
+          <Skeleton className="h-12 w-40" />
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <Skeleton className="h-64 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
-
-  // Obtener clientes con conteo de cotizaciones
-  const { data: clients, error } = await supabase
-    .from('clients')
-    .select(`
-      *,
-      _quotes_count:quotes(count)
-    `)
-    .order('created_at', { ascending: false })
 
   if (error) {
-    logger.error('ClientsPage', 'Error loading clients', error instanceof Error ? error : new Error(String(error)))
+    return (
+      <div className="space-y-8 p-6 lg:p-8">
+        <EmptyState
+          icon={<Users className="h-10 w-10" />}
+          title="Error al cargar clientes"
+          description={error.message || 'Ocurrió un error al cargar los clientes. Por favor, intenta de nuevo.'}
+        />
+      </div>
+    )
   }
-
-  const clientsData: Client[] = (clients || []).map((client: Client & { _quotes_count?: Array<{ count: number }> | number }) => {
-    let quotesCount = 0
-    const quotesCountValue = client._quotes_count
-    if (Array.isArray(quotesCountValue)) {
-      if (quotesCountValue.length > 0 && 'count' in quotesCountValue[0]) {
-        quotesCount = quotesCountValue[0].count
-      } else {
-        quotesCount = quotesCountValue.length
-      }
-    } else if (typeof quotesCountValue === 'number') {
-      quotesCount = quotesCountValue
-    }
-    return {
-      ...client,
-      _quotes_count: quotesCount,
-    }
-  })
 
   return (
     <div className="space-y-8 p-6 lg:p-8">

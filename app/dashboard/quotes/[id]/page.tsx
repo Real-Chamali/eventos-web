@@ -42,6 +42,7 @@ interface Quote {
   status: string
   created_at: string
   updated_at?: string
+  event_date?: string | null
   client?: {
     name: string
     email: string
@@ -122,16 +123,28 @@ export default function QuoteDetailPage() {
 
       if (updateError) throw updateError
 
-      // Crear evento
-      const { data: event, error: eventError } = await supabase
-        .from('events')
-        .insert({
+      // Crear evento con validación de duplicados
+      const { createEventWithValidation } = await import('@/lib/utils/eventValidation')
+      
+      // Usar la fecha del evento de la cotización si existe, o la fecha actual
+      const eventDate = quote?.event_date || new Date().toISOString()
+      
+      let event
+      try {
+        event = await createEventWithValidation({
           quote_id: quoteId,
+          start_date: eventDate,
+          end_date: null,
+          status: 'confirmed',
         })
-        .select()
-        .single()
-
-      if (eventError) throw eventError
+      } catch (validationError) {
+        // Si es error de duplicado, mostrar mensaje específico
+        const errorMessage = validationError instanceof Error 
+          ? validationError.message 
+          : 'Ya existe un evento para esta cotización en estas fechas'
+        toastError(errorMessage)
+        throw validationError
+      }
 
       // Registrar ingreso en finance_ledger
       const { error: financeError } = await supabase.from('finance_ledger').insert({
