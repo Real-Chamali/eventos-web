@@ -78,7 +78,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
     margin: { left: 14, right: 14 },
   })
 
-  yPos = (doc as any).lastAutoTable.finalY + 15
+  yPos = ((doc as unknown) as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15
 
   // Monthly Data Chart
   if (data.monthlyData.length > 0) {
@@ -103,7 +103,7 @@ export async function generatePDFReport(data: ReportData): Promise<Blob> {
       margin: { left: 14, right: 14 },
     })
 
-    yPos = (doc as any).lastAutoTable.finalY + 15
+    yPos = ((doc as unknown) as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15
   }
 
   // Quotes Table

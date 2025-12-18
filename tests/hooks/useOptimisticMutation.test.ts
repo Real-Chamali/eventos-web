@@ -2,15 +2,19 @@
  * Tests para hook useOptimisticMutation
  */
 
+import React from 'react'
 import { renderHook, waitFor } from '@testing-library/react'
 import { SWRConfig } from 'swr'
 import { useOptimisticMutation } from '@/lib/hooks/useOptimisticMutation'
+import type { ReactNode } from 'react'
 
-const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
-    {children}
-  </SWRConfig>
-)
+const wrapper = ({ children }: { children: ReactNode }): React.ReactElement => {
+  return React.createElement(
+    SWRConfig,
+    { value: { provider: () => new Map(), dedupingInterval: 0 } },
+    children
+  )
+}
 
 describe('useOptimisticMutation', () => {
   beforeEach(() => {

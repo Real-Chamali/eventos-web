@@ -1,13 +1,7 @@
 'use client'
 
-import { HTMLAttributes, forwardRef, createContext, useContext } from 'react'
+import { HTMLAttributes, forwardRef } from 'react'
 import { cn } from '@/lib/utils/cn'
-
-interface FormContextValue {
-  error?: string
-}
-
-const FormContext = createContext<FormContextValue>({})
 
 const Form = forwardRef<HTMLFormElement, HTMLAttributes<HTMLFormElement>>(
   ({ className, ...props }, ref) => {

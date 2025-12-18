@@ -11,7 +11,7 @@ import {
 } from './Table'
 import SearchInput from './SearchInput'
 import Button from './Button'
-import { ArrowUpDown, Filter, Download } from 'lucide-react'
+import { ArrowUpDown, Download } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 
 export interface Column<T> {
@@ -33,7 +33,7 @@ interface DataTableProps<T> {
   actions?: React.ReactNode
 }
 
-export default function DataTable<T extends Record<string, any>>({
+export default function DataTable<T extends Record<string, unknown>>({
   data,
   columns,
   searchKey,

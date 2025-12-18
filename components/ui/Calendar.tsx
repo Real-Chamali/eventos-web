@@ -3,7 +3,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
-import { Card, CardContent, CardHeader, CardTitle } from './Card'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -38,6 +37,7 @@ export default function Calendar() {
     }, 30000)
     
     return () => clearInterval(interval)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const loadEvents = async () => {
@@ -90,6 +90,9 @@ export default function Calendar() {
       // Procesar eventos de la tabla events
       if (eventsData) {
         eventsData.forEach((event: any) => {
+          // Extraer datos del evento (quote puede ser array o objeto)
+          const quote = Array.isArray(event.quote) ? event.quote[0] : event.quote
+          const client = quote?.client ? (Array.isArray(quote.client) ? quote.client[0] : quote.client) : null
           const startDate = event.start_date
           const endDate = event.end_date || event.start_date
           
@@ -111,7 +114,7 @@ export default function Calendar() {
             eventDate.count++
             eventDate.events.push({
               id: event.id,
-              client_name: event.quote?.client?.name || 'Sin cliente',
+              client_name: client?.name || 'Sin cliente',
               status: event.status
             })
           })
@@ -121,6 +124,8 @@ export default function Calendar() {
       // Procesar cotizaciones con event_date
       if (quotesData) {
         quotesData.forEach((quote: any) => {
+          // Extraer cliente (puede ser array o objeto)
+          const client = quote.client ? (Array.isArray(quote.client) ? quote.client[0] : quote.client) : null
           const dateKey = quote.event_date
           if (!eventMap.has(dateKey)) {
             eventMap.set(dateKey, {
@@ -133,7 +138,7 @@ export default function Calendar() {
           eventDate.count++
           eventDate.events.push({
             id: quote.id,
-            client_name: quote.client?.name || 'Sin cliente',
+            client_name: client?.name || 'Sin cliente',
             status: quote.status
           })
         })
@@ -174,7 +179,7 @@ export default function Calendar() {
     }
     
     return days
-  }, [currentDate, monthStart, monthEnd, daysInMonth, daysBefore, daysAfter])
+  }, [monthStart, monthEnd, daysInMonth, daysBefore, daysAfter])
 
   const getEventsForDate = (date: Date): EventDate | undefined => {
     const dateKey = format(date, 'yyyy-MM-dd')

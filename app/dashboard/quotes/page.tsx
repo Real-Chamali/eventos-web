@@ -4,7 +4,6 @@ import { useState, useMemo } from 'react'
 import { useQuotes } from '@/lib/hooks/useQuotes'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import SearchInput from '@/components/ui/SearchInput'
-import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import { Plus, FileText, Sparkles, Filter, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
@@ -15,31 +14,9 @@ import { QuotesList } from '@/components/quotes/QuotesList'
  * Usa hooks optimizados con SWR para mejor rendimiento
  */
 export default function QuotesPage() {
-  const { quotes, loading } = useQuotes()
+  const { quotes } = useQuotes()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'confirmed' | 'cancelled' | 'draft'>('all')
-
-  const filteredQuotes = useMemo(() => {
-    return quotes.filter((quote) => {
-      const matchesSearch = quote.client_name?.toLowerCase().includes(searchTerm.toLowerCase())
-      const matchesStatus = statusFilter === 'all' || quote.status === statusFilter
-      return matchesSearch && matchesStatus
-    })
-  }, [quotes, searchTerm, statusFilter])
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'confirmed':
-        return <Badge variant="success" size="sm">Confirmada</Badge>
-      case 'pending':
-      case 'draft':
-        return <Badge variant="warning" size="sm">Pendiente</Badge>
-      case 'cancelled':
-        return <Badge variant="error" size="sm">Cancelada</Badge>
-      default:
-        return <Badge size="sm">{status}</Badge>
-    }
-  }
 
   const stats = useMemo(() => {
     const total = quotes.length

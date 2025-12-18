@@ -23,17 +23,20 @@ const mockQuotes = [
 ]
 
 describe('QuotesList', () => {
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <SWRConfig value={{ provider: () => new Map() }}>
-      {children}
-    </SWRConfig>
-  )
+  const wrapper = ({ children }: { children: React.ReactNode }): React.ReactElement => {
+    return (
+      <SWRConfig value={{ provider: () => new Map() }}>
+        {children}
+      </SWRConfig>
+    )
+  }
 
   beforeEach(() => {
     jest.clearAllMocks()
   })
 
   it('debería mostrar skeleton mientras carga', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useInfiniteQuotes } = require('@/lib/hooks/useInfiniteQuotes')
     useInfiniteQuotes.mockReturnValue({
       quotes: [],
@@ -50,6 +53,7 @@ describe('QuotesList', () => {
   })
 
   it('debería mostrar lista de cotizaciones', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useInfiniteQuotes } = require('@/lib/hooks/useInfiniteQuotes')
     useInfiniteQuotes.mockReturnValue({
       quotes: mockQuotes,
@@ -69,6 +73,7 @@ describe('QuotesList', () => {
   })
 
   it('debería filtrar cotizaciones por término de búsqueda', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useInfiniteQuotes } = require('@/lib/hooks/useInfiniteQuotes')
     useInfiniteQuotes.mockReturnValue({
       quotes: [
@@ -98,6 +103,7 @@ describe('QuotesList', () => {
   })
 
   it('debería mostrar estado vacío cuando no hay cotizaciones', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useInfiniteQuotes } = require('@/lib/hooks/useInfiniteQuotes')
     useInfiniteQuotes.mockReturnValue({
       quotes: [],
@@ -114,6 +120,7 @@ describe('QuotesList', () => {
   })
 
   it('debería mostrar error cuando hay un problema', () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useInfiniteQuotes } = require('@/lib/hooks/useInfiniteQuotes')
     useInfiniteQuotes.mockReturnValue({
       quotes: [],

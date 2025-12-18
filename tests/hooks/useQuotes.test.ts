@@ -2,10 +2,12 @@
  * Tests para hook useQuotes
  */
 
+import React from 'react'
 import { renderHook, waitFor } from '@testing-library/react'
 import { SWRConfig } from 'swr'
 import { useQuotes } from '@/lib/hooks/useQuotes'
 import { createClient } from '@/utils/supabase/client'
+import type { ReactNode } from 'react'
 
 jest.mock('@/utils/supabase/client')
 
@@ -16,11 +18,13 @@ describe('useQuotes', () => {
     jest.clearAllMocks()
   })
 
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <SWRConfig value={{ provider: () => new Map(), dedupingInterval: 0 }}>
-      {children}
-    </SWRConfig>
-  )
+  const wrapper = ({ children }: { children: ReactNode }): React.ReactElement => {
+    return React.createElement(
+      SWRConfig,
+      { value: { provider: () => new Map(), dedupingInterval: 0 } },
+      children
+    )
+  }
 
   it('returns loading state initially', () => {
     const mockSupabase = {
@@ -40,7 +44,7 @@ describe('useQuotes', () => {
       }),
     }
 
-    mockCreateClient.mockReturnValue(mockSupabase as any)
+    mockCreateClient.mockReturnValue(mockSupabase as unknown as ReturnType<typeof createClient>)
 
     const { result } = renderHook(() => useQuotes(), { wrapper })
 
@@ -83,7 +87,7 @@ describe('useQuotes', () => {
       }),
     }
 
-    mockCreateClient.mockReturnValue(mockSupabase as any)
+    mockCreateClient.mockReturnValue(mockSupabase as unknown as ReturnType<typeof createClient>)
 
     const { result } = renderHook(() => useQuotes(), { wrapper })
 
@@ -114,7 +118,7 @@ describe('useQuotes', () => {
       }),
     }
 
-    mockCreateClient.mockReturnValue(mockSupabase as any)
+    mockCreateClient.mockReturnValue(mockSupabase as unknown as ReturnType<typeof createClient>)
 
     const { result } = renderHook(() => useQuotes(), { wrapper })
 
@@ -137,7 +141,7 @@ describe('useQuotes', () => {
       from: jest.fn(),
     }
 
-    mockCreateClient.mockReturnValue(mockSupabase as any)
+    mockCreateClient.mockReturnValue(mockSupabase as unknown as ReturnType<typeof createClient>)
 
     const { result } = renderHook(() => useQuotes(), { wrapper })
 

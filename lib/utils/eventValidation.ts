@@ -90,7 +90,7 @@ export async function createEventWithValidation(eventData: {
   start_date: string
   end_date?: string | null
   status?: string
-}): Promise<{ id: string; [key: string]: any }> {
+}): Promise<{ id: string; quote_id: string; start_date: string; end_date: string | null; status: string; created_at: string }> {
   const supabase = createClient()
   
   // Validar duplicados antes de insertar

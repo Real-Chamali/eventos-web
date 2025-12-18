@@ -33,10 +33,6 @@ export function generateGoogleCalendarLink(event: CalendarEvent): string {
 }
 
 export function generateOutlookCalendarLink(event: CalendarEvent): string {
-  const formatDate = (date: Date) => {
-    return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
-  }
-
   const params = new URLSearchParams({
     subject: event.title,
     startdt: event.start.toISOString(),

@@ -33,12 +33,15 @@ const fetcher = async (): Promise<ClientWithQuotesCount[]> => {
   }
   
   // Transformar datos para incluir conteo de cotizaciones
-  return (data || []).map((client: any) => {
+  return (data || []).map((client: {
+    _quotes_count?: Array<{ count?: number }> | number | null
+    [key: string]: unknown
+  }) => {
     let quotesCount = 0
     const quotesCountValue = client._quotes_count
-    if (Array.isArray(quotesCountValue)) {
-      if (quotesCountValue.length > 0 && 'count' in quotesCountValue[0]) {
-        quotesCount = quotesCountValue[0].count
+      if (Array.isArray(quotesCountValue)) {
+        if (quotesCountValue.length > 0 && 'count' in quotesCountValue[0]) {
+          quotesCount = quotesCountValue[0].count ?? 0
       } else {
         quotesCount = quotesCountValue.length
       }

@@ -1,14 +1,12 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 import PageHeader from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import Badge from '@/components/ui/Badge'
-import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
 import SearchInput from '@/components/ui/SearchInput'
 import { Users, Filter, Mail, Phone, TrendingUp, FileText } from 'lucide-react'
@@ -33,7 +31,6 @@ export default function AdminVendorsPage() {
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const supabase = createClient()
   const { error: toastError } = useToast()
 
   useEffect(() => {

@@ -105,7 +105,7 @@ export async function generateContractPDF(data: ContractData): Promise<Blob> {
     margin: { left: margin, right: margin },
   })
 
-  yPos = (doc as any).lastAutoTable.finalY + 15
+  yPos = ((doc as unknown) as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 15
 
   // Total
   doc.setFontSize(11)

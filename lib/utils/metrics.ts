@@ -117,13 +117,13 @@ export const metrics = new MetricsCollector()
  */
 export function measurePerformance(name: string) {
   return function (
-    target: any,
+    target: unknown,
     propertyKey: string,
     descriptor: PropertyDescriptor
   ) {
     const originalMethod = descriptor.value
     
-    descriptor.value = async function (...args: any[]) {
+    descriptor.value = async function (...args: unknown[]) {
       const start = Date.now()
       try {
         const result = await originalMethod.apply(this, args)

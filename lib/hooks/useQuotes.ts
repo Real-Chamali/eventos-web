@@ -8,7 +8,8 @@ import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import type { Quote } from '@/types'
 
-const fetcher = async (key: string): Promise<Quote[]> => {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const fetcher = async (_key: string): Promise<Quote[]> => {
   const supabase = createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   
@@ -37,10 +38,14 @@ const fetcher = async (key: string): Promise<Quote[]> => {
   }
   
   // Transformar datos para incluir client_name
-  return (data || []).map((quote: any) => ({
-    ...quote,
-    client_name: quote.clients?.name || 'Cliente sin nombre',
-  })) as Quote[]
+  return (data || []).map((quote: any) => {
+    // Extraer cliente (puede ser array o objeto)
+    const client = quote.clients ? (Array.isArray(quote.clients) ? quote.clients[0] : quote.clients) : null
+    return {
+      ...quote,
+      client_name: client?.name || 'Cliente sin nombre',
+    }
+  }) as Quote[]
 }
 
 export function useQuotes() {

@@ -144,7 +144,7 @@ export async function validateApiKey(request: NextRequest): Promise<{
 export function withApiKeyAuth(
   handler: (request: NextRequest, context: { userId: string; permissions: string[] }) => Promise<Response>
 ) {
-  return async (request: NextRequest, context?: any) => {
+  return async (request: NextRequest, context?: Record<string, unknown>) => {
     const validation = await validateApiKey(request)
     
     if (!validation.valid) {

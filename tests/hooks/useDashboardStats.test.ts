@@ -3,9 +3,11 @@
  * Verifica cálculo correcto de estadísticas
  */
 
+import React from 'react'
 import { renderHook, waitFor } from '@testing-library/react'
 import { SWRConfig } from 'swr'
 import { useDashboardStats } from '@/lib/hooks/useDashboardStats'
+import type { ReactNode } from 'react'
 
 // Mock de createClient
 jest.mock('@/utils/supabase/client', () => ({
@@ -24,14 +26,17 @@ jest.mock('@/utils/supabase/client', () => ({
 }))
 
 describe('useDashboardStats', () => {
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <SWRConfig value={{ provider: () => new Map() }}>
-      {children}
-    </SWRConfig>
-  ) as React.ComponentType<{ children: React.ReactNode }>
+  const wrapper = ({ children }: { children: ReactNode }): React.ReactElement => {
+    return React.createElement(
+      SWRConfig,
+      { value: { provider: () => new Map() } },
+      children
+    )
+  }
 
   it('debería calcular estadísticas correctamente', async () => {
     // Mock de datos de Supabase
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { createClient } = require('@/utils/supabase/client')
     const mockSupabase = createClient()
     
@@ -60,6 +65,7 @@ describe('useDashboardStats', () => {
   })
 
   it('debería manejar errores correctamente', async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { createClient } = require('@/utils/supabase/client')
     const mockSupabase = createClient()
     

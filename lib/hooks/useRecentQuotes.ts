@@ -35,10 +35,14 @@ const fetcher = async (): Promise<Quote[]> => {
   }
   
   // Transformar datos para incluir client_name
-  return (data || []).map((quote: any) => ({
-    ...quote,
-    client_name: quote.client?.name || 'Cliente sin nombre',
-  })) as Quote[]
+  return (data || []).map((quote: any) => {
+    // Extraer cliente (puede ser array o objeto)
+    const client = quote.client ? (Array.isArray(quote.client) ? quote.client[0] : quote.client) : null
+    return {
+      ...quote,
+      client_name: client?.name || 'Cliente sin nombre',
+    }
+  }) as Quote[]
 }
 
 export function useRecentQuotes() {

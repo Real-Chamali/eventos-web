@@ -68,9 +68,10 @@ export function QuotesList({ searchTerm = '', statusFilter = 'all' }: QuotesList
       observerRef.current.observe(loadMoreRef.current)
     }
     
+    const currentRef = loadMoreRef.current
     return () => {
-      if (observerRef.current && loadMoreRef.current) {
-        observerRef.current.unobserve(loadMoreRef.current)
+      if (observerRef.current && currentRef) {
+        observerRef.current.unobserve(currentRef)
       }
     }
   }, [isReachingEnd, isLoading, isLoadingMore, loadMore])

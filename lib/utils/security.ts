@@ -125,7 +125,9 @@ export function decryptData(encrypted: string, key: string = process.env.ENCRYPT
     // NOTA: createDecipher está deprecado pero necesario para desencriptar datos antiguos
     if (parts.length === 1 && /^[0-9a-f]+$/i.test(encrypted)) {
       try {
-        // @ts-ignore - createDecipher está deprecado pero necesario para compatibilidad
+        // createDecipher está deprecado pero necesario para compatibilidad
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore - createDecipher deprecated
         const decipher = crypto.createDecipher('aes-256-cbc', key)
         let decrypted = decipher.update(encrypted, 'hex', 'utf8')
         decrypted += decipher.final('utf8')

@@ -7,6 +7,7 @@ import { CreateQuoteSchema } from '@/lib/validations/schemas'
 import { useToast, useDebounce, useOptimisticMutation, useQuotes, useInfiniteQuotes } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 import { createAuditLog } from '@/lib/utils/audit'
+import type { Quote, QuoteService as QuoteServiceType } from '@/types'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
@@ -43,29 +44,13 @@ interface Service {
   base_price: number
 }
 
-interface QuoteService {
+// Tipo local para QuoteService (id opcional para nuevos servicios)
+interface LocalQuoteService {
   id?: string
   service_id: string
   quantity: number
   final_price: number
   service?: Service
-}
-
-interface Quote {
-  id: string
-  client_id: string
-  total_price: number
-  status: string
-  quote_services?: Array<{
-    id: string
-    service_id: string
-    quantity: number
-    final_price: number
-    service: {
-      name: string
-      base_price: number
-    }
-  }>
 }
 
 export default function EditQuotePage() {
@@ -77,15 +62,15 @@ export default function EditQuotePage() {
   const [services, setServices] = useState<Service[]>([])
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
   const [searchClient, setSearchClient] = useState('')
-  const [quoteServices, setQuoteServices] = useState<QuoteService[]>([])
-  const { execute: optimisticUpdate } = useOptimisticMutation<any>()
+  const [quoteServices, setQuoteServices] = useState<LocalQuoteService[]>([])
+  const { execute: optimisticUpdate } = useOptimisticMutation<Quote[]>()
   const { refresh: refreshQuotes } = useQuotes()
   const { refresh: refreshInfiniteQuotes } = useInfiniteQuotes()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const supabase = useMemo(() => createClient(), [])
-  const { success: toastSuccess, error: toastError } = useToast()
+  const { error: toastError } = useToast()
   const debouncedSearchClient = useDebounce(searchClient, 300)
 
   useEffect(() => {
@@ -212,7 +197,7 @@ export default function EditQuotePage() {
     setQuoteServices(quoteServices.filter((_, i) => i !== index))
   }
 
-  const updateService = (index: number, field: keyof QuoteService, value: string | number) => {
+  const updateService = (index: number, field: keyof LocalQuoteService, value: string | number) => {
     const updated = [...quoteServices]
     updated[index] = { ...updated[index], [field]: value }
 
@@ -288,10 +273,10 @@ export default function EditQuotePage() {
       // Actualizar cotización con optimistic update
       await optimisticUpdate({
         swrKey: 'quotes',
-        optimisticUpdate: (current: any[]) => {
+        optimisticUpdate: (current: Quote[] | undefined) => {
           if (!current) return current
           // Actualizar la cotización en el array optimistamente
-          return current.map((q: any) => 
+          return current.map((q: Quote) => 
             q.id === quoteId
               ? {
                   ...q,
@@ -371,15 +356,22 @@ export default function EditQuotePage() {
           await refreshQuotes()
           await refreshInfiniteQuotes()
 
-          // Devolver datos optimistas (se revalida arriba)
-          return null
+          // Obtener la cotización actualizada para retornarla
+          const { data: updatedQuote } = await supabase
+            .from('quotes')
+            .select('*')
+            .eq('id', quoteId)
+            .single()
+
+          // Retornar array con la cotización actualizada
+          return updatedQuote ? [updatedQuote as Quote] : []
         },
         successMessage: 'Cotización actualizada correctamente',
         errorMessage: 'Error al actualizar la cotización',
-        rollback: (current: any[]) => {
+        rollback: (current: Quote[] | undefined) => {
           if (!current || !quote) return current
           // Restaurar valores anteriores en caso de error
-          return current.map((q: any) => 
+          return current.map((q: Quote) => 
             q.id === quoteId
               ? {
                   ...q,

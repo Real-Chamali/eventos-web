@@ -34,6 +34,7 @@ import {
 import Skeleton from '@/components/ui/Skeleton'
 import { Download, Edit, ArrowLeft, CheckCircle2, Mail, User, Sparkles, FileText, DollarSign } from 'lucide-react'
 import Link from 'next/link'
+import PaymentsList from '@/components/payments/PaymentsList'
 
 interface Quote {
   id: string
@@ -519,6 +520,9 @@ export default function QuoteDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Pagos Parciales Premium */}
+      <PaymentsList quoteId={quote.id} totalPrice={quote.total_price} />
 
       {/* Comments Section */}
       <Card variant="elevated" className="overflow-hidden">

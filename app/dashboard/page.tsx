@@ -17,7 +17,7 @@ import { useRecentQuotes } from '@/lib/hooks/useRecentQuotes'
  */
 export default function DashboardPage() {
   const { stats, loading: statsLoading } = useDashboardStats()
-  const { quotes: recentQuotes, loading: quotesLoading } = useRecentQuotes()
+  const { loading: quotesLoading } = useRecentQuotes()
   
   // Calcular datos para gráfico de ventas mensuales (últimos 6 meses)
   const monthlyData = useMemo(() => {

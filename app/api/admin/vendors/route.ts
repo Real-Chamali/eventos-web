@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
@@ -7,7 +7,7 @@ import { logger } from '@/lib/utils/logger'
  * GET /api/admin/vendors - Get all vendors with statistics
  * Requires admin role
  */
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const supabase = await createClient()
     const {

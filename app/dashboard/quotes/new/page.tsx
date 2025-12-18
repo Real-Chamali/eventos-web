@@ -7,6 +7,7 @@ import { CreateQuoteSchema } from '@/lib/validations/schemas'
 import { useToast, useDebounce, useOptimisticMutation, useQuotes, useInfiniteQuotes } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 import { createAuditLog } from '@/lib/utils/audit'
+import type { Quote } from '@/types'
 import PageHeader from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import Input from '@/components/ui/Input'
@@ -54,9 +55,9 @@ export default function NewQuotePage() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const router = useRouter()
   const supabase = useMemo(() => createClient(), [])
-  const { success: toastSuccess, error: toastError } = useToast()
+  const { error: toastError } = useToast()
   const debouncedSearchClient = useDebounce(searchClient, 300)
-  const { execute: optimisticCreate } = useOptimisticMutation<any>()
+  const { execute: optimisticCreate } = useOptimisticMutation<Quote[]>()
   const { refresh: refreshQuotes } = useQuotes()
   const { refresh: refreshInfiniteQuotes } = useInfiniteQuotes()
 
@@ -292,7 +293,7 @@ export default function NewQuotePage() {
 
       await optimisticCreate({
         swrKey: 'quotes',
-        optimisticUpdate: (current: any[]) => {
+        optimisticUpdate: (current: Quote[] | undefined) => {
           // Agregar la cotización optimista al inicio de la lista
           return current ? [optimisticQuote, ...current] : [optimisticQuote]
         },
@@ -352,14 +353,14 @@ export default function NewQuotePage() {
           await refreshQuotes()
           await refreshInfiniteQuotes()
 
-          // Devolver el array completo (se revalida arriba, esto es solo para cumplir con el tipo)
-          return optimisticQuote
+          // Retornar array con la cotización creada (cast seguro)
+          return quote ? [quote as unknown as Quote] : []
         },
         successMessage: 'Cotización guardada como borrador exitosamente',
         errorMessage: 'Error al guardar la cotización',
-        rollback: (current: any[]) => {
+        rollback: (current: Quote[] | undefined) => {
           // Remover la cotización optimista en caso de error
-          return current?.filter((q: any) => q.id !== tempQuoteId) || current
+          return current?.filter((q: Quote) => q.id !== tempQuoteId) || current
         },
       })
       
@@ -372,7 +373,7 @@ export default function NewQuotePage() {
         router.push('/dashboard/quotes')
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : String(err)
+      // El error ya se maneja en useOptimisticMutation
       logger.error('NewQuotePage', 'Unexpected error saving quote', err instanceof Error ? err : new Error(String(err)))
       // El error ya se muestra en el toast del optimistic update
       setLoading(false)

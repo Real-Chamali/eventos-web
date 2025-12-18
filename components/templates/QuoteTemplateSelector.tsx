@@ -17,7 +17,13 @@ interface Template {
   name: string
   description: string | null
   event_type: string | null
-  services: any[]
+  services: Array<{
+    id: string
+    name: string
+    base_price: number
+    quantity?: number
+    final_price?: number
+  }>
   default_notes: string | null
   is_public: boolean
   created_by: string

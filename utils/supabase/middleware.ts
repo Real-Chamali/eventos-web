@@ -64,55 +64,9 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Obtener el perfil del usuario una sola vez si está autenticado
-  let userRole: string | null = null
-  if (user) {
-    try {
-      // Intentar obtener el perfil con manejo de errores mejorado
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle() // Usar maybeSingle en lugar de single para evitar errores si no existe
-      
-      // Si hay error al obtener el perfil, usar rol por defecto
-      if (profileError) {
-        // Log del error solo si no es un error de "no encontrado"
-        if (profileError.code !== 'PGRST116' && profileError.code !== 'PGRST106') {
-          console.warn('Middleware: Error fetching profile', {
-            code: profileError.code,
-            message: profileError.message,
-            userId: user.id,
-          })
-        }
-        userRole = 'vendor'
-      } else if (profile) {
-        // Convertir el enum a string si es necesario
-        userRole = typeof profile.role === 'string' ? profile.role : String(profile.role)
-        // Asegurar que sea 'admin' o 'vendor'
-        userRole = (userRole === 'admin' ? 'admin' : 'vendor')
-      } else {
-        // No hay perfil, usar rol por defecto
-        userRole = 'vendor'
-      }
-    } catch (error) {
-      // En caso de error inesperado, usar rol por defecto
-      console.warn('Middleware: Unexpected error fetching profile', error)
-      userRole = 'vendor'
-    }
-  }
-
-  // Si el usuario está autenticado y está en /login, permitir acceso
-  // La página de login mostrará un mensaje si ya está autenticado
-  // Esto permite cambiar de cuenta si es necesario
-  // if (user && pathname === '/login') {
-  //   const url = request.nextUrl.clone()
-  //   url.pathname = userRole === 'admin' ? '/admin' : '/dashboard'
-  //   return NextResponse.redirect(url)
-  // }
-
   // NOTA: Las redirecciones según rol se manejan en los layouts
   // para evitar bucles de redirección entre middleware y layouts
+  // El perfil del usuario se obtiene en los layouts cuando es necesario
 
   return supabaseResponse
 }

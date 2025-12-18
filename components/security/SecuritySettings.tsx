@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/lib/hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -15,19 +14,17 @@ export default function SecuritySettings() {
   const { success: toastSuccess, error: toastError } = useToast()
 
   useEffect(() => {
-    loadSecuritySettings()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const loadSecuritySettings = async () => {
-    try {
-      // TODO: Implementar verificación de 2FA
-      // Por ahora, solo mostramos la UI
-      setTwoFactorEnabled(false)
-    } catch (error) {
-      logger.error('SecuritySettings', 'Error loading security settings', error as Error)
+    const loadSecuritySettings = async () => {
+      try {
+        // TODO: Implementar verificación de 2FA
+        // Por ahora, solo mostramos la UI
+        setTwoFactorEnabled(false)
+      } catch (error) {
+        logger.error('SecuritySettings', 'Error loading security settings', error as Error)
+      }
     }
-  }
+    loadSecuritySettings()
+  }, [])
 
   const handleEnable2FA = async () => {
     try {

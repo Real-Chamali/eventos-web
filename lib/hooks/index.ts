@@ -239,6 +239,7 @@ export function useForm<T extends Record<string, unknown>>(initialValues: T, onS
 // Re-export hooks con SWR
 export { useQuotes } from './useQuotes'
 export { useRecentQuotes } from './useRecentQuotes'
+export { usePartialPayments, usePaymentSummary, type PartialPayment, type PaymentSummary } from './usePartialPayments'
 export { useInfiniteQuotes } from './useInfiniteQuotes'
 export { useDashboardStats } from './useDashboardStats'
 export { useClients } from './useClients'
