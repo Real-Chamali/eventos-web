@@ -8,6 +8,7 @@ import { Calendar as CalendarIcon, Plus } from 'lucide-react'
 import Link from 'next/link'
 import { DashboardStats } from '@/components/dashboard/DashboardStats'
 import { DashboardRecentQuotes } from '@/components/dashboard/DashboardRecentQuotes'
+import { DashboardAdvancedMetrics } from '@/components/dashboard/DashboardAdvancedMetrics'
 import { useDashboardStats } from '@/lib/hooks/useDashboardStats'
 import { useRecentQuotes } from '@/lib/hooks/useRecentQuotes'
 import { useMonthlyData } from '@/lib/hooks/useMonthlyData'
@@ -68,6 +69,9 @@ export default function DashboardPage() {
 
       {/* Stats Cards - Optimizadas con hook */}
       <DashboardStats />
+
+      {/* Advanced Metrics - Métricas Avanzadas */}
+      <DashboardAdvancedMetrics />
 
       {/* Calendar and Chart Grid - Premium Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

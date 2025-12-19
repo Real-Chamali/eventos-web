@@ -60,12 +60,63 @@ export async function validateApiKey(request: NextRequest): Promise<{
     // Hashear la API key para buscar en la BD
     const keyHash = hashApiKey(apiKey)
     
-    // Usar service_role para poder leer todas las API keys
-    // En producción, esto debería hacerse desde un edge function o middleware
-    const supabase = await createClient()
+    // Usar service_role para poder leer todas las API keys sin problemas de RLS
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      logger.warn('API Keys', 'Service role key not available, using regular client')
+      const supabase = await createClient()
+      const { data: apiKeyData, error } = await supabase
+        .from('api_keys')
+        .select('user_id, permissions, is_active, expires_at')
+        .eq('key_hash', keyHash)
+        .single()
+      
+      if (error || !apiKeyData) {
+        logger.warn('API Keys', 'Invalid API key attempted', {
+          keyHashPrefix: keyHash.substring(0, 8) + '...',
+          error: error?.message,
+        })
+        return {
+          valid: false,
+          error: 'API key inválida o no encontrada',
+        }
+      }
+      
+      // Continuar con la validación normal
+      if (!apiKeyData.is_active) {
+        return {
+          valid: false,
+          error: 'API key inactiva',
+        }
+      }
+      
+      if (apiKeyData.expires_at && new Date(apiKeyData.expires_at) < new Date()) {
+        return {
+          valid: false,
+          error: 'API key expirada',
+        }
+      }
+      
+      return {
+        valid: true,
+        userId: apiKeyData.user_id,
+        permissions: apiKeyData.permissions || ['read', 'write'],
+      }
+    }
+    
+    // Usar cliente admin para validación más robusta
+    const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+    const adminClient = createAdminClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
     
     // Buscar API key en la tabla api_keys usando el hash
-    const { data: apiKeyData, error } = await supabase
+    const { data: apiKeyData, error } = await adminClient
       .from('api_keys')
       .select('user_id, permissions, is_active, expires_at')
       .eq('key_hash', keyHash)
@@ -105,10 +156,9 @@ export async function validateApiKey(request: NextRequest): Promise<{
       }
     }
     
-    // Actualizar last_used_at (usar service_role para poder actualizar)
-    // Nota: Esto requiere permisos especiales, puede hacerse desde un edge function
+    // Actualizar last_used_at usando el cliente admin
     try {
-      await supabase
+      await adminClient
         .from('api_keys')
         .update({ last_used_at: new Date().toISOString() })
         .eq('key_hash', keyHash)

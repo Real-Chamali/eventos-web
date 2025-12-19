@@ -5,7 +5,11 @@ import { logger } from '@/lib/utils/logger'
 
 /**
  * GET /api/admin/debug-role - Debug endpoint para verificar roles
- * Solo para debugging, remover en producción
+ * 
+ * ⚠️ IMPORTANTE: Este endpoint está protegido por autenticación admin
+ * pero debería ser removido o protegido adicionalmente en producción
+ * 
+ * Uso: Solo para debugging durante desarrollo
  */
 export async function GET() {
   try {
