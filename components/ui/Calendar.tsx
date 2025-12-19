@@ -40,6 +40,12 @@ export default function Calendar() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Recargar cuando cambia el mes para mostrar eventos del mes actual
+  useEffect(() => {
+    loadEvents()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentDate])
+
   const loadEvents = async () => {
     try {
       setLoading(true)

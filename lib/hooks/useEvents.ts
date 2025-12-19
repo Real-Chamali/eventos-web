@@ -21,7 +21,7 @@ const fetcher = async (): Promise<Event[]> => {
       *,
       quote:quotes(
         id,
-        total_price,
+        total_amount,
         status,
         client:clients(
           name,

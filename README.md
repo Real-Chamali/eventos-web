@@ -62,14 +62,19 @@ Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
 
 ## 📚 Documentación
 
+### Guías Principales
 - [**SETUP.md**](SETUP.md) - Configuración inicial y base de datos
-- [**GUIA_RAPIDA_SENTRY.md**](GUIA_RAPIDA_SENTRY.md) - Configurar Sentry en 5 minutos
-- [**IMPROVEMENTS.md**](IMPROVEMENTS.md) - 50 mejoras implementadas
-- [**CORRECTIONS_REPORT.md**](CORRECTIONS_REPORT.md) - Errores corregidos
-- [**docs/ARCHITECTURE.md**](docs/ARCHITECTURE.md) - Decisiones arquitectónicas (10 ADRs)
+- [**GUIA_PRODUCCION.md**](GUIA_PRODUCCION.md) - Guía completa de despliegue a producción
+- [**RESUMEN_MIGRACIONES_Y_VARIABLES.md**](RESUMEN_MIGRACIONES_Y_VARIABLES.md) - Migraciones y variables de entorno
+
+### Documentación Técnica
+- [**docs/ARCHITECTURE.md**](docs/ARCHITECTURE.md) - Decisiones arquitectónicas (ADRs)
 - [**docs/CONTRIBUTING.md**](docs/CONTRIBUTING.md) - Guía de contribución
 - [**docs/TROUBLESHOOTING.md**](docs/TROUBLESHOOTING.md) - Solución de problemas
-- [**docs/SENTRY_SETUP.md**](docs/SENTRY_SETUP.md) - Configuración completa de Sentry
+- [**docs/API.md**](docs/API.md) - Documentación de API
+- [**docs/AUDIT_LOGS.md**](docs/AUDIT_LOGS.md) - Sistema de auditoría
+- [**docs/QUOTE_HISTORY.md**](docs/QUOTE_HISTORY.md) - Historial de cotizaciones
+- [**docs/SENTRY_SETUP.md**](docs/SENTRY_SETUP.md) - Configuración de Sentry
 
 ## 🔧 Comandos
 

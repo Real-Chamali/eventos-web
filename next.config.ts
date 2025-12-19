@@ -6,6 +6,29 @@ const nextConfig: NextConfig = {
   // Next.js detecta package-lock.json en /home/voldemort/ pero usa correctamente
   // el del proyecto. Si quieres eliminar el warning, puedes eliminar o renombrar
   // /home/voldemort/package-lock.json (es un archivo vacío que no se necesita).
+  
+  // Headers para manejar cookies de Cloudflare y WebSockets
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          {
+            key: 'X-Content-Type-Options',
+            value: 'nosniff',
+          },
+          {
+            key: 'X-Frame-Options',
+            value: 'DENY',
+          },
+          {
+            key: 'X-XSS-Protection',
+            value: '1; mode=block',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 // Solo usar Sentry si está configurado

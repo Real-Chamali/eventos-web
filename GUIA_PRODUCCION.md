@@ -16,15 +16,68 @@ Antes de desplegar, verifica que todo esté listo:
 
 ### 1.1 Migraciones Pendientes
 
-Aplica estas migraciones en orden en Supabase:
+⚠️ **IMPORTANTE**: Aplica estas migraciones en el orden exacto indicado. Algunas dependen de otras.
 
-1. **Migración de eventos duplicados** (si no está aplicada):
-   - Archivo: `migrations/011_prevent_duplicate_events.sql`
-   - Aplicar en: Supabase Dashboard → SQL Editor
+#### Migraciones CRÍTICAS (Aplicar Primero):
 
-2. **Migración de API Keys** (si no está aplicada):
-   - Archivo: `migrations/012_create_api_keys_table.sql`
-   - Aplicar en: Supabase Dashboard → SQL Editor
+1. **001 - Sistema de Auditoría** (CRÍTICO - Crea función `is_admin()`):
+   - Archivo: `migrations/001_create_audit_logs_table.sql`
+   - **Por qué es crítica**: Crea la función `is_admin()` usada por todas las demás migraciones
+
+2. **003 - Corrección RLS** (CRÍTICO - Idempotente):
+   - Archivo: `migrations/003_fix_profiles_rls_recursion_idempotent.sql`
+   - **Por qué es crítica**: Corrige problemas de recursión en políticas RLS
+   - **Nota**: Es idempotente, puede ejecutarse múltiples veces sin problemas
+
+3. **009 - Campo created_by en clients** (CRÍTICO - Requerido por 008):
+   - Archivo: `migrations/009_add_created_by_to_clients.sql`
+   - **Por qué es crítica**: Requerida antes de la migración 008
+
+#### Migraciones Premium (Aplicar Después):
+
+4. **004 - Sistema de Notificaciones**:
+   - Archivo: `migrations/004_create_notifications_table.sql`
+   - Requiere: 001, 003
+
+5. **005 - Sistema de Comentarios**:
+   - Archivo: `migrations/005_create_comments_table.sql`
+   - Requiere: 001, 003
+
+6. **006 - Plantillas de Cotizaciones**:
+   - Archivo: `migrations/006_create_quote_templates_table.sql`
+   - Requiere: 001, 003
+
+7. **007 - Preferencias de Usuario**:
+   - Archivo: `migrations/007_create_user_preferences_table.sql`
+   - Requiere: 003
+
+8. **008 - Optimización RLS** (Requiere 009):
+   - Archivo: `migrations/008_optimize_rls_performance.sql`
+   - Requiere: 009 (aplicar antes)
+
+#### Migraciones de Seguridad y Funcionalidad:
+
+9. **010 - Corrección Vista Services**:
+   - Archivo: `migrations/010_fix_services_public_view_security.sql`
+   - Corrige problema de seguridad en vista `services_public`
+
+10. **011 - Prevenir Eventos Duplicados**:
+    - Archivo: `migrations/011_prevent_duplicate_events.sql`
+    - Previene eventos duplicados y solapamientos de fechas
+
+11. **012 - Sistema de API Keys**:
+    - Archivo: `migrations/012_create_api_keys_table.sql`
+    - Crea tabla para gestionar API keys de usuarios
+
+12. **013 - Pagos Parciales**:
+    - Archivo: `migrations/013_create_partial_payments_table.sql`
+    - Sistema premium de pagos parciales para cotizaciones
+
+#### Migraciones Opcionales:
+
+- **002 - Versiones de Cotizaciones** (Opcional):
+  - Archivo: `migrations/002_create_quote_versions_table_final.sql`
+  - Solo si necesitas versionado de cotizaciones
 
 ### 1.2 Cómo Aplicar Migraciones
 
@@ -47,14 +100,29 @@ supabase db push
 
 ### 1.3 Verificar Migraciones
 
-Ejecuta estas queries en Supabase SQL Editor para verificar:
+Ejecuta estas queries en Supabase SQL Editor para verificar que las migraciones se aplicaron correctamente:
 
 ```sql
--- Verificar tabla api_keys
+-- Verificar tablas creadas
 SELECT table_name 
 FROM information_schema.tables 
 WHERE table_schema = 'public' 
-AND table_name = 'api_keys';
+AND table_name IN (
+  'audit_logs',
+  'notifications',
+  'comments',
+  'quote_templates',
+  'user_preferences',
+  'api_keys',
+  'partial_payments'
+)
+ORDER BY table_name;
+
+-- Verificar función is_admin() (CRÍTICO)
+SELECT routine_name 
+FROM information_schema.routines 
+WHERE routine_schema = 'public' 
+AND routine_name = 'is_admin';
 
 -- Verificar función prevent_overlapping_events
 SELECT proname 
@@ -65,6 +133,18 @@ WHERE proname = 'prevent_overlapping_events';
 SELECT tgname 
 FROM pg_trigger 
 WHERE tgname = 'check_overlapping_events';
+
+-- Verificar columna created_by en clients
+SELECT column_name 
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+AND table_name = 'clients' 
+AND column_name = 'created_by';
+
+-- Verificar funciones de pagos parciales
+SELECT proname 
+FROM pg_proc 
+WHERE proname IN ('get_total_paid', 'get_balance_due');
 ```
 
 ---
@@ -332,7 +412,62 @@ Si tienes problemas:
 
 ---
 
+## 🎯 Próximos Pasos Después del Despliegue
+
+Una vez que tu aplicación esté desplegada en producción, considera estos pasos:
+
+### 1. **Verificación Funcional Completa**
+- [ ] Probar flujo completo: Login → Dashboard → Crear Cliente → Crear Cotización → Crear Evento
+- [ ] Verificar permisos por rol (Admin, Vendor, Client)
+- [ ] Probar sistema de notificaciones (si aplicaste migración 004)
+- [ ] Probar sistema de comentarios (si aplicaste migración 005)
+- [ ] Probar pagos parciales (si aplicaste migración 013)
+- [ ] Verificar exportación PDF de cotizaciones
+
+### 2. **Monitoreo y Observabilidad**
+- [ ] Configurar alertas en Sentry para errores críticos
+- [ ] Revisar logs de Vercel regularmente
+- [ ] Monitorear métricas de performance en Vercel Analytics
+- [ ] Configurar alertas de uptime (opcional)
+
+### 3. **Optimizaciones Post-Producción**
+- [ ] Revisar métricas de rendimiento
+- [ ] Optimizar queries lentas si es necesario
+- [ ] Implementar caching donde sea apropiado
+- [ ] Revisar y optimizar imágenes/assets
+
+### 4. **Seguridad**
+- [ ] Verificar que todas las políticas RLS están activas
+- [ ] Revisar logs de acceso sospechoso
+- [ ] Rotar API keys si es necesario
+- [ ] Verificar que las variables de entorno sensibles no están expuestas
+
+### 5. **Documentación y Capacitación**
+- [ ] Documentar procesos específicos de tu negocio
+- [ ] Capacitar a usuarios finales
+- [ ] Crear guías de uso para funciones premium
+- [ ] Documentar flujos de trabajo comunes
+
+### 6. **Mejoras Continuas**
+- [ ] Recolectar feedback de usuarios
+- [ ] Priorizar nuevas funcionalidades según necesidades
+- [ ] Planificar iteraciones futuras
+- [ ] Considerar integraciones adicionales (pagos, email, etc.)
+
+---
+
+## 📚 Recursos Adicionales
+
+- **Guía de Migraciones**: `APLICAR_MIGRACIONES_AHORA.md`
+- **Qué Sigue**: `QUE_SIGUE.md`
+- **Documentación Completa**: `DOCUMENTATION_INDEX.md`
+- **Solución de Problemas**: Ver sección "Solución de Problemas" arriba
+
+---
+
 **¡Tu aplicación está lista para producción! 🎉**
+
+**Próximo paso recomendado**: Ejecuta `npm run dev` localmente para verificar que todo funciona antes de desplegar, o si ya desplegaste, realiza las verificaciones funcionales completas listadas arriba.
 
 
 

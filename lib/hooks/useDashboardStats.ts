@@ -19,7 +19,7 @@ const fetcher = async (): Promise<DashboardStats> => {
   // Una sola consulta optimizada que obtiene todo lo necesario
   const { data: quotes, error: quotesError } = await supabase
     .from('quotes')
-    .select('total_price, status, created_at')
+    .select('total_amount, status, created_at')
     .eq('vendor_id', user.id)
   
   if (quotesError) {
@@ -39,12 +39,12 @@ const fetcher = async (): Promise<DashboardStats> => {
   }
   
   const quotesData = quotes || []
-  const sales = quotesData.filter((q) => q.status === 'confirmed')
-  const totalSales = sales.reduce((acc, s) => acc + (s.total_price || 0), 0)
+  const sales = quotesData.filter((q) => q.status === 'APPROVED' || q.status === 'confirmed')
+  const totalSales = sales.reduce((acc, s) => acc + (Number(s.total_amount) || 0), 0)
   const commissionRate = 0.1
   const totalCommissions = totalSales * commissionRate
   
-  const pendingQuotes = quotesData.filter((q) => q.status === 'draft').length
+  const pendingQuotes = quotesData.filter((q) => q.status === 'DRAFT' || q.status === 'draft').length
   const confirmedQuotes = sales.length
   
   // Calcular ventas del mes actual
@@ -55,7 +55,7 @@ const fetcher = async (): Promise<DashboardStats> => {
       const saleDate = new Date(sale.created_at)
       return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear
     })
-    .reduce((acc, sale) => acc + (sale.total_price || 0), 0)
+    .reduce((acc, sale) => acc + (Number(sale.total_amount) || 0), 0)
   
   // Calcular tasa de conversión
   const conversionRate =

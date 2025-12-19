@@ -7,7 +7,7 @@ import SearchInput from '@/components/ui/SearchInput'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
-import { PartyPopper, Filter, Calendar as CalendarIcon, User, DollarSign, ArrowRight } from 'lucide-react'
+import { PartyPopper, Filter, Calendar as CalendarIcon, User, DollarSign, ArrowRight, Plus, Edit, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -15,6 +15,15 @@ import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
+import CreateEventDialog from '@/components/events/CreateEventDialog'
+import EditEventDialog from '@/components/events/EditEventDialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/Dialog'
 
 interface Event {
   id: string
@@ -24,7 +33,7 @@ interface Event {
   created_at: string
   quote?: {
     id: string
-    total_price: number
+    total_amount: number
     status: string
     vendor_id?: string
     client?: {
@@ -36,7 +45,7 @@ interface Event {
     }[]
   } | {
     id: string
-    total_price: number
+    total_amount: number
     status: string
     vendor_id?: string
     client?: {
@@ -55,8 +64,19 @@ export default function EventsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'confirmed' | 'pending' | 'completed' | 'cancelled'>('all')
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'upcoming'>('all')
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [selectedEvent, setSelectedEvent] = useState<{
+    id: string
+    quote_id: string
+    start_date: string
+    end_date: string | null
+    status: string
+  } | null>(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [eventToDelete, setEventToDelete] = useState<string | null>(null)
   const supabase = createClient()
-  const { error: toastError } = useToast()
+  const { success: toastSuccess, error: toastError } = useToast()
 
   useEffect(() => {
     loadEvents()
@@ -81,7 +101,7 @@ export default function EventsPage() {
           created_at,
           quote:quotes(
             id,
-            total_price,
+            total_amount,
             status,
             vendor_id,
             client:clients(
@@ -227,6 +247,50 @@ export default function EventsPage() {
     }
   }
 
+  const handleEdit = (event: Event) => {
+    // Obtener quote_id del evento si está disponible
+    const quote = Array.isArray(event.quote) ? event.quote[0] : event.quote
+    const quoteId = quote?.id
+    if (!quoteId) {
+      toastError('No se puede editar el evento: falta información de la cotización')
+      return
+    }
+    setSelectedEvent({
+      id: event.id,
+      quote_id: quoteId,
+      start_date: event.start_date,
+      end_date: event.end_date,
+      status: event.status,
+    })
+    setEditDialogOpen(true)
+  }
+
+  const handleDeleteClick = (eventId: string) => {
+    setEventToDelete(eventId)
+    setDeleteConfirmOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!eventToDelete) return
+
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', eventToDelete)
+
+      if (error) throw error
+
+      toastSuccess('Evento eliminado exitosamente')
+      loadEvents()
+      setDeleteConfirmOpen(false)
+      setEventToDelete(null)
+    } catch (error) {
+      logger.error('EventsPage', 'Error deleting event', error as Error)
+      toastError('Error al eliminar el evento: ' + (error instanceof Error ? error.message : String(error)))
+    }
+  }
+
   const stats = useMemo(() => {
     const total = events.length
     const confirmed = events.filter(e => e.status?.toLowerCase() === 'confirmed' || e.status?.toLowerCase() === 'active').length
@@ -235,7 +299,7 @@ export default function EventsPage() {
       .filter(e => e.status?.toLowerCase() === 'confirmed' || e.status?.toLowerCase() === 'active')
       .reduce((acc, e) => {
         const quote = Array.isArray(e.quote) ? e.quote[0] : e.quote
-        return acc + (quote?.total_price || 0)
+        return acc + (quote?.total_amount || 0)
       }, 0)
     
     return { total, confirmed, pending, totalValue }
@@ -269,6 +333,13 @@ export default function EventsPage() {
             Gestiona todos tus eventos programados
           </p>
         </div>
+        <Button
+          onClick={() => setCreateDialogOpen(true)}
+          className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg hover:shadow-xl"
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          Crear Evento
+        </Button>
       </div>
 
       {/* Premium Stats Grid */}
@@ -471,16 +542,36 @@ export default function EventsPage() {
                       </TableCell>
                       <TableCell>
                         <span className="font-semibold text-gray-900 dark:text-white">
-                          {quote?.total_price ? formatCurrency(quote.total_price) : '—'}
+                          {quote?.total_amount ? formatCurrency(quote.total_amount) : '—'}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Link href={`/dashboard/events/${event.id}`}>
-                          <Button variant="ghost" size="sm" className="group-hover:bg-indigo-100 dark:group-hover:bg-indigo-900/30">
-                            Ver detalles
-                            <ArrowRight className="ml-2 h-4 w-4" />
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEdit(event)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            title="Editar evento"
+                          >
+                            <Edit className="h-4 w-4" />
                           </Button>
-                        </Link>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteClick(event.id)}
+                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                            title="Eliminar evento"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <Link href={`/dashboard/events/${event.id}`}>
+                            <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                              Ver detalles
+                              <ArrowRight className="ml-2 h-4 w-4" />
+                            </Button>
+                          </Link>
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
@@ -490,6 +581,58 @@ export default function EventsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Diálogo de Crear Evento */}
+      <CreateEventDialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        onSuccess={() => {
+          loadEvents()
+        }}
+      />
+
+      {/* Diálogo de Editar Evento */}
+      <EditEventDialog
+        open={editDialogOpen}
+        onClose={() => {
+          setEditDialogOpen(false)
+          setSelectedEvent(null)
+        }}
+        onSuccess={() => {
+          loadEvents()
+          setSelectedEvent(null)
+        }}
+        event={selectedEvent}
+      />
+
+      {/* Diálogo de Confirmación para Borrar */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-red-600 dark:text-red-400">
+              Confirmar Eliminación
+            </DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas eliminar este evento? Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="ghost" onClick={() => {
+              setDeleteConfirmOpen(false)
+              setEventToDelete(null)
+            }}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Eliminar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

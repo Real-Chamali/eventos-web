@@ -29,10 +29,11 @@ export default function AdminSidebar() {
 
   const navItems = [
     { href: '/admin', label: 'Dashboard', icon: BarChart3 },
-    { href: '/admin/services', label: 'Servicios', icon: Settings },
+    { href: '/admin/services', label: 'Gestión de Servicios', icon: Settings },
+    { href: '/admin/vendors', label: 'Gestión de Personal', icon: Users },
     { href: '/admin/finance', label: 'Finanzas', icon: DollarSign },
     { href: '/admin/events', label: 'Eventos', icon: Calendar },
-    { href: '/admin/vendors', label: 'Administrar Vendedores', icon: Users },
+    { href: '/admin/users', label: 'Gestión de Usuarios', icon: Shield },
   ]
 
   return (

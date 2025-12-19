@@ -23,40 +23,55 @@ export default async function DashboardLayout({
   let userRole = 'vendor' // Rol por defecto
 
   try {
-    const { data, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle() // Usar maybeSingle para evitar errores si no existe
+    // Usar el cliente admin para obtener el perfil sin problemas de RLS
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    
+    if (supabaseUrl && supabaseServiceKey) {
+      const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+      const adminClient = createAdminClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      })
 
-    if (profileError) {
-      // Si el error es de esquema (PGRST106), usar rol por defecto
-      if (profileError.code === 'PGRST106' || profileError.message?.includes('schema')) {
-        logger.warn('DashboardLayout', 'Profile table not accessible (schema error), using default role', {
+      const { data, error: profileError } = await adminClient
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (profileError) {
+        logger.warn('DashboardLayout', 'Error fetching profile with admin client', {
           userId: user.id,
           error: profileError.message,
           code: profileError.code,
         })
-        // Continuar con rol por defecto
-      } else if (profileError.code === 'PGRST116') {
-        // No encontrado - usar rol por defecto
-        logger.info('DashboardLayout', 'Profile not found, using default role', {
+      } else if (data && data.role) {
+        // Manejar el enum de PostgreSQL correctamente
+        const roleStr = String(data.role).trim().toLowerCase()
+        userRole = roleStr === 'admin' ? 'admin' : 'vendor'
+        
+        logger.debug('DashboardLayout', 'Role determined', {
           userId: user.id,
+          roleRaw: data.role,
+          roleStr,
+          userRole,
         })
-        // Continuar con rol por defecto
-      } else {
-        // Otros errores - loguear pero continuar con rol por defecto
-        logger.error('DashboardLayout', 'Error fetching profile', new Error(profileError.message), {
-          supabaseError: profileError.message,
-          supabaseCode: profileError.code,
-          userId: user.id,
-        })
-        // Continuar con rol por defecto en lugar de redirigir (evita bucles)
       }
-    } else if (data) {
-      // Convertir el enum a string si es necesario
-      userRole = typeof data.role === 'string' ? data.role : String(data.role)
-      userRole = (userRole === 'admin' ? 'admin' : 'vendor')
+    } else {
+      // Fallback al cliente normal si no hay service key
+      const { data, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (!profileError && data && data.role) {
+        const roleStr = String(data.role).trim().toLowerCase()
+        userRole = roleStr === 'admin' ? 'admin' : 'vendor'
+      }
     }
   } catch (error) {
     // Error inesperado - usar rol por defecto

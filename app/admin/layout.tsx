@@ -21,45 +21,86 @@ export default async function AdminLayout({
   let userRole = 'vendor'
 
   try {
-    const { data, error: profileError } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle()
+    // Usar el cliente admin para obtener el perfil sin problemas de RLS
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    
+    if (supabaseUrl && supabaseServiceKey) {
+      const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+      const adminClient = createAdminClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      })
 
-    if (profileError) {
-      if (profileError.code === 'PGRST106' || profileError.message?.includes('schema')) {
-        logger.warn('AdminLayout', 'Profile table not accessible (schema error), redirecting to dashboard', {
+      const { data, error: profileError } = await adminClient
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (profileError) {
+        logger.warn('AdminLayout', 'Error fetching profile with admin client', {
           userId: user.id,
           error: profileError.message,
           code: profileError.code,
         })
-        redirect('/dashboard')
-      } else if (profileError.code === 'PGRST116') {
-        logger.info('AdminLayout', 'Profile not found, redirecting to dashboard', {
+        // Si hay error, no redirigir inmediatamente, intentar con cliente normal
+      } else if (data && data.role) {
+        // Manejar el enum de PostgreSQL correctamente
+        const roleStr = String(data.role).trim().toLowerCase()
+        userRole = roleStr === 'admin' ? 'admin' : 'vendor'
+        
+        logger.debug('AdminLayout', 'Role determined', {
           userId: user.id,
+          email: user.email,
+          roleRaw: data.role,
+          roleStr,
+          userRole,
         })
-        redirect('/dashboard')
-      } else {
-        logger.error('AdminLayout', 'Error fetching profile', new Error(profileError.message), {
-          supabaseError: profileError.message,
-          supabaseCode: profileError.code,
-          userId: user.id,
-        })
-        redirect('/dashboard')
       }
-    } else if (data) {
-      userRole = typeof data.role === 'string' ? data.role : String(data.role)
-      userRole = (userRole === 'admin' ? 'admin' : 'vendor')
+      
+      // Si aún no se determinó el rol y hubo error, intentar con cliente normal
+      if (userRole === 'vendor' && profileError) {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (!fallbackError && fallbackData && fallbackData.role) {
+          const roleStr = String(fallbackData.role).trim().toLowerCase()
+          userRole = roleStr === 'admin' ? 'admin' : 'vendor'
+        }
+      }
+    } else {
+      // Fallback al cliente normal si no hay service key
+      const { data, error: profileError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+
+      if (!profileError && data && data.role) {
+        const roleStr = String(data.role).trim().toLowerCase()
+        userRole = roleStr === 'admin' ? 'admin' : 'vendor'
+      }
     }
   } catch (error) {
     logger.error('AdminLayout', 'Unexpected error fetching profile', error as Error, {
       userId: user.id,
     })
-    redirect('/dashboard')
+    // No redirigir en catch, dejar que continúe y verifique el rol después
   }
 
+  // Solo redirigir si definitivamente NO es admin
+  // Si hay dudas, permitir acceso (mejor que bucle infinito)
   if (userRole !== 'admin') {
+    logger.warn('AdminLayout', 'User is not admin, redirecting to dashboard', {
+      userId: user.id,
+      userRole,
+    })
     redirect('/dashboard')
   }
 

@@ -56,7 +56,7 @@ export async function GET() {
     // Obtener estadísticas de cotizaciones por vendedor
     const { data: quotesData, error: quotesError } = await supabase
       .from('quotes')
-      .select('vendor_id, total_price, status')
+      .select('vendor_id, total_amount, status')
 
     if (quotesError) {
       logger.warn('API /admin/vendors', 'Error loading quotes stats', { error: quotesError.message })
@@ -69,17 +69,75 @@ export async function GET() {
         if (quote.vendor_id) {
           const existing = statsMap.get(quote.vendor_id) || { count: 0, sales: 0 }
           existing.count++
-          if (quote.status === 'confirmed') {
-            existing.sales += quote.total_price || 0
+          if (quote.status === 'APPROVED' || quote.status === 'confirmed') {
+            existing.sales += Number(quote.total_amount) || 0
           }
           statsMap.set(quote.vendor_id, existing)
         }
       })
     }
 
-    // Combinar datos de usuarios con estadísticas
+    // Obtener roles de perfiles usando el cliente admin para evitar problemas con RLS
+    const { data: profilesData, error: profilesError } = await adminClient
+      .from('profiles')
+      .select('id, role, full_name')
+    
+    if (profilesError) {
+      logger.warn('API /admin/vendors', 'Error loading profiles', { error: profilesError.message })
+    }
+    
+    const profilesMap = new Map<string, { role: 'admin' | 'vendor'; full_name: string | null }>()
+    if (profilesData) {
+      profilesData.forEach((profile) => {
+        // Manejar el enum de PostgreSQL correctamente
+        let role: 'admin' | 'vendor' = 'vendor' // default
+        
+        if (profile.role !== null && profile.role !== undefined) {
+          // Convertir a string y normalizar
+          const roleStr = String(profile.role).trim().toLowerCase()
+          
+          // Verificar explícitamente si es 'admin'
+          if (roleStr === 'admin') {
+            role = 'admin'
+          } else {
+            role = 'vendor'
+          }
+          
+          // Log para debugging
+          logger.debug('API /admin/vendors', 'Processing role', {
+            userId: profile.id,
+            roleRaw: profile.role,
+            roleStr,
+            roleFinal: role,
+            roleType: typeof profile.role,
+          })
+        }
+        
+        profilesMap.set(profile.id, {
+          role,
+          full_name: profile.full_name,
+        })
+      })
+    }
+
+    // Combinar datos de usuarios con estadísticas y roles
     const vendorsWithStats = (usersData?.users || []).map((user) => {
       const stats = statsMap.get(user.id) || { count: 0, sales: 0 }
+      const profile = profilesMap.get(user.id)
+      
+      // Usar el rol del mapa de perfiles (ya procesado correctamente)
+      const role: 'admin' | 'vendor' = profile?.role || 'vendor'
+      
+      // Log para debugging del usuario admin
+      if (user.email === 'admin@chamali.com') {
+        logger.info('API /admin/vendors', 'Admin user found', {
+          userId: user.id,
+          email: user.email,
+          profileRole: profile?.role,
+          finalRole: role,
+        })
+      }
+      
       return {
         id: user.id,
         email: user.email || '',
@@ -88,6 +146,8 @@ export async function GET() {
         last_sign_in_at: user.last_sign_in_at,
         quotes_count: stats.count,
         total_sales: stats.sales,
+        role,
+        full_name: profile?.full_name || user.user_metadata?.name || null,
       }
     })
 

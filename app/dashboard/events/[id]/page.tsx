@@ -24,7 +24,7 @@ interface Event {
   created_at: string
   quote?: {
     id: string
-    total_price: number
+    total_amount: number
     status: string
     created_at: string
     client?: {
@@ -97,7 +97,7 @@ export default function EventPage() {
           *,
           quote:quotes(
             id,
-            total_price,
+            total_amount,
             status,
             created_at,
             client:clients(name, email),
@@ -395,7 +395,7 @@ export default function EventPage() {
                       Monto Total
                     </p>
                     <p className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mt-1">
-                      {formatCurrency(event.quote.total_price)}
+                      {formatCurrency(event.quote.total_amount)}
                     </p>
                   </div>
                 </div>

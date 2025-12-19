@@ -1,19 +1,46 @@
 'use client'
 
+import { useState } from 'react'
 import { useClients } from '@/lib/hooks'
+import { createClient } from '@/utils/supabase/client'
+import { logger } from '@/lib/utils/logger'
+import { useToast } from '@/lib/hooks'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Link from 'next/link'
-import { Plus, Users, Mail, Calendar } from 'lucide-react'
+import { Plus, Users, Mail, Calendar, Edit2, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
+import EditClientDialog from '@/components/clients/EditClientDialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/Dialog'
+
+interface Client {
+  id: string
+  name: string
+  email: string | null
+  phone: string | null
+  created_at: string
+  _quotes_count?: number
+}
 
 export default function ClientsPage() {
-  const { clients: clientsData, loading, error } = useClients()
+  const { clients: clientsData, loading, error, refresh } = useClients()
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [clientToDelete, setClientToDelete] = useState<string | null>(null)
+  const supabase = createClient()
+  const { success: toastSuccess, error: toastError } = useToast()
 
   if (loading) {
     return (
@@ -44,6 +71,37 @@ export default function ClientsPage() {
         />
       </div>
     )
+  }
+
+  const handleEdit = (client: Client) => {
+    setSelectedClient(client)
+    setEditDialogOpen(true)
+  }
+
+  const handleDeleteClick = (clientId: string) => {
+    setClientToDelete(clientId)
+    setDeleteConfirmOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!clientToDelete) return
+
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .delete()
+        .eq('id', clientToDelete)
+
+      if (error) throw error
+
+      toastSuccess('Cliente eliminado exitosamente')
+      refresh() // Recargar lista de clientes
+      setDeleteConfirmOpen(false)
+      setClientToDelete(null)
+    } catch (error) {
+      logger.error('ClientsPage', 'Error deleting client', error as Error)
+      toastError('Error al eliminar el cliente: ' + (error instanceof Error ? error.message : String(error)))
+    }
   }
 
   return (
@@ -185,11 +243,29 @@ export default function ClientsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
                       <Link href={`/dashboard/clients/${client.id}`}>
                         <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                           Ver detalles
                         </Button>
                       </Link>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(client)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        >
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteClick(client.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -198,6 +274,43 @@ export default function ClientsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Client Dialog */}
+      <EditClientDialog
+        open={editDialogOpen}
+        onClose={() => {
+          setEditDialogOpen(false)
+          setSelectedClient(null)
+        }}
+        onSuccess={() => {
+          refresh() // Recargar lista de clientes
+        }}
+        client={selectedClient}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>¿Eliminar cliente?</DialogTitle>
+            <DialogDescription>
+              Esta acción no se puede deshacer. El cliente será eliminado permanentemente.
+              Si tiene cotizaciones asociadas, estas no se eliminarán pero el cliente ya no aparecerá en la lista.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 mt-4">
+            <Button variant="ghost" onClick={() => setDeleteConfirmOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteConfirm}
+            >
+              Eliminar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

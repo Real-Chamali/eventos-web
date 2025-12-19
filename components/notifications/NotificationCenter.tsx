@@ -17,6 +17,7 @@ import Button from '@/components/ui/Button'
 
 interface Notification {
   id: string
+  user_id: string
   type: 'quote' | 'event' | 'payment' | 'reminder' | 'system'
   title: string
   message: string
@@ -38,26 +39,83 @@ export default function NotificationCenter() {
   useEffect(() => {
     loadNotifications()
     
+    // Solicitar permiso para notificaciones del navegador
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {
+        // Usuario rechazó, no hacer nada
+      })
+    }
+    
     // Suscribirse a nuevas notificaciones en tiempo real
-    const channel = supabase
-      .channel('notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-        },
-        (payload) => {
-          const newNotification = payload.new as Notification
-          setNotifications((prev) => [newNotification, ...prev])
-          setUnreadCount((prev) => prev + 1)
-        }
-      )
-      .subscribe()
+    let channel: ReturnType<typeof supabase.channel> | null = null
+    
+    const setupRealtime = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      
+      channel = supabase
+        .channel(`notifications:${user.id}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `user_id=eq.${user.id}`,
+          },
+          (payload) => {
+            const newNotification = payload.new as Notification
+            
+            // Verificar que la notificación sea para este usuario
+            if (newNotification.user_id !== user.id) return
+            
+            setNotifications((prev) => [newNotification, ...prev])
+            setUnreadCount((prev) => prev + 1)
+            
+            // Reproducir sonido de notificación
+            if (typeof window !== 'undefined' && 'AudioContext' in window) {
+              try {
+                const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+                const oscillator = audioContext.createOscillator()
+                const gainNode = audioContext.createGain()
+                
+                oscillator.connect(gainNode)
+                gainNode.connect(audioContext.destination)
+                
+                oscillator.frequency.value = 800
+                oscillator.type = 'sine'
+                
+                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime)
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5)
+                
+                oscillator.start(audioContext.currentTime)
+                oscillator.stop(audioContext.currentTime + 0.5)
+              } catch (error) {
+                logger.debug('NotificationCenter', 'Could not play notification sound', {
+                  error: error instanceof Error ? error.message : String(error),
+                })
+              }
+            }
+            
+            // Mostrar notificación del navegador si está permitido
+            if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+              new Notification(newNotification.title, {
+                body: newNotification.message,
+                icon: '/favicon.ico',
+                tag: newNotification.id,
+              })
+            }
+          }
+        )
+        .subscribe()
+    }
+    
+    setupRealtime()
 
     return () => {
-      supabase.removeChannel(channel)
+      if (channel) {
+        supabase.removeChannel(channel)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -231,10 +289,13 @@ export default function NotificationCenter() {
   return (
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
-        <button className="relative rounded-lg p-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 transition-colors">
-          <Bell className="h-5 w-5" />
+        <button className="relative rounded-lg p-2 text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 transition-all duration-200 hover:scale-105 active:scale-95">
+          <Bell className={cn(
+            "h-5 w-5 transition-all duration-200",
+            unreadCount > 0 && "animate-pulse"
+          )} />
           {unreadCount > 0 && (
-            <span className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white">
+            <span className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white animate-bounce">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}

@@ -6,21 +6,41 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import Badge from '@/components/ui/Badge'
-import { Shield, Smartphone, CheckCircle2 } from 'lucide-react'
+import { Shield, Smartphone, CheckCircle2, Copy, Check } from 'lucide-react'
 import { logger } from '@/lib/utils/logger'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/Dialog'
 
 export default function SecuritySettings() {
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [setupLoading, setSetupLoading] = useState(false)
+  const [verifying, setVerifying] = useState(false)
+  const [showSetupDialog, setShowSetupDialog] = useState(false)
+  const [qrCode, setQrCode] = useState<string | null>(null)
+  const [secret, setSecret] = useState<string | null>(null)
+  const [verificationToken, setVerificationToken] = useState('')
+  const [copied, setCopied] = useState(false)
   const { success: toastSuccess, error: toastError } = useToast()
 
   useEffect(() => {
     const loadSecuritySettings = async () => {
       try {
-        // TODO: Implementar verificación de 2FA
-        // Por ahora, solo mostramos la UI
-        setTwoFactorEnabled(false)
+        const response = await fetch('/api/auth/2fa/check')
+        if (response.ok) {
+          const data = await response.json()
+          setTwoFactorEnabled(data.enabled || false)
+        }
       } catch (error) {
         logger.error('SecuritySettings', 'Error loading security settings', error as Error)
+      } finally {
+        setLoading(false)
       }
     }
     loadSecuritySettings()
@@ -28,24 +48,88 @@ export default function SecuritySettings() {
 
   const handleEnable2FA = async () => {
     try {
-      // TODO: Implementar 2FA con Supabase Auth
-      // Esto requeriría configurar TOTP
-      toastSuccess('2FA habilitado (simulado)')
-      setTwoFactorEnabled(true)
+      setSetupLoading(true)
+      const response = await fetch('/api/auth/2fa/setup', {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        throw new Error('Error setting up 2FA')
+      }
+
+      const data = await response.json()
+      setQrCode(data.qrCode)
+      setSecret(data.secret)
+      setShowSetupDialog(true)
     } catch (error) {
       logger.error('SecuritySettings', 'Error enabling 2FA', error as Error)
-      toastError('Error al habilitar 2FA')
+      toastError('Error al configurar 2FA')
+    } finally {
+      setSetupLoading(false)
+    }
+  }
+
+  const handleVerify2FA = async () => {
+    if (!verificationToken || !secret) {
+      toastError('Por favor ingresa el código de verificación')
+      return
+    }
+
+    try {
+      setVerifying(true)
+      const response = await fetch('/api/auth/2fa/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token: verificationToken,
+          secret: secret,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Error verifying 2FA')
+      }
+
+      toastSuccess('2FA habilitado correctamente')
+      setTwoFactorEnabled(true)
+      setShowSetupDialog(false)
+      setVerificationToken('')
+      setQrCode(null)
+      setSecret(null)
+    } catch (error) {
+      logger.error('SecuritySettings', 'Error verifying 2FA', error as Error)
+      toastError(error instanceof Error ? error.message : 'Error al verificar 2FA')
+    } finally {
+      setVerifying(false)
     }
   }
 
   const handleDisable2FA = async () => {
     try {
-      // TODO: Implementar deshabilitación de 2FA
-      toastSuccess('2FA deshabilitado')
+      const response = await fetch('/api/auth/2fa/disable', {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        throw new Error('Error disabling 2FA')
+      }
+
+      toastSuccess('2FA deshabilitado correctamente')
       setTwoFactorEnabled(false)
     } catch (error) {
       logger.error('SecuritySettings', 'Error disabling 2FA', error as Error)
       toastError('Error al deshabilitar 2FA')
+    }
+  }
+
+  const copySecret = () => {
+    if (secret) {
+      navigator.clipboard.writeText(secret)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     }
   }
 
@@ -73,7 +157,9 @@ export default function SecuritySettings() {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              {twoFactorEnabled ? (
+              {loading ? (
+                <div className="h-8 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse" />
+              ) : twoFactorEnabled ? (
                 <>
                   <Badge variant="success">Habilitado</Badge>
                   <Button variant="outline" size="sm" onClick={handleDisable2FA}>
@@ -81,12 +167,68 @@ export default function SecuritySettings() {
                   </Button>
                 </>
               ) : (
-                <Button size="sm" onClick={handleEnable2FA}>
-                  Habilitar 2FA
+                <Button size="sm" onClick={handleEnable2FA} disabled={setupLoading}>
+                  {setupLoading ? 'Configurando...' : 'Habilitar 2FA'}
                 </Button>
               )}
             </div>
           </div>
+
+          {/* 2FA Setup Dialog */}
+          <Dialog open={showSetupDialog} onOpenChange={setShowSetupDialog}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Configurar Autenticación de Dos Factores</DialogTitle>
+                <DialogDescription>
+                  Escanea el código QR con tu aplicación de autenticación (Google Authenticator, Authy, etc.)
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                {qrCode && (
+                  <div className="flex flex-col items-center space-y-4">
+                    <img src={qrCode} alt="QR Code" className="w-64 h-64 border rounded-lg" />
+                    {secret && (
+                      <div className="w-full">
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          O ingresa manualmente esta clave:
+                        </p>
+                        <div className="flex items-center space-x-2">
+                          <code className="flex-1 px-3 py-2 bg-gray-100 dark:bg-gray-800 rounded text-sm font-mono break-all">
+                            {secret}
+                          </code>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={copySecret}
+                            className="shrink-0"
+                          >
+                            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                    <div className="w-full">
+                      <Input
+                        label="Código de verificación"
+                        placeholder="000000"
+                        value={verificationToken}
+                        onChange={(e) => setVerificationToken(e.target.value)}
+                        maxLength={6}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setShowSetupDialog(false)}>
+                  Cancelar
+                </Button>
+                <Button onClick={handleVerify2FA} disabled={verifying || !verificationToken}>
+                  {verifying ? 'Verificando...' : 'Verificar y Habilitar'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Active Sessions */}
           <div>

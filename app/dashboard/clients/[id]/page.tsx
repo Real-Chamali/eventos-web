@@ -11,12 +11,13 @@ import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Skeleton from '@/components/ui/Skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
-import { Users, Mail, Phone, FileText, Calendar, ArrowLeft, Sparkles, DollarSign } from 'lucide-react'
+import { Users, Mail, Phone, FileText, Calendar, ArrowLeft, Sparkles, DollarSign, Edit2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Link from 'next/link'
 import CommentThread from '@/components/comments/CommentThread'
 import EmptyState from '@/components/ui/EmptyState'
+import EditClientDialog from '@/components/clients/EditClientDialog'
 
 interface Client {
   id: string
@@ -40,8 +41,9 @@ export default function ClientDetailPage() {
   const [client, setClient] = useState<Client | null>(null)
   const [quotes, setQuotes] = useState<Quote[]>([])
   const [loading, setLoading] = useState(true)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
   const supabase = createClient()
-  const { error: toastError } = useToast()
+  const { error: toastError, success: toastSuccess } = useToast()
 
   useEffect(() => {
     loadClientData()
@@ -346,6 +348,14 @@ export default function ClientDetailPage() {
               <CardTitle className="text-xl">Acciones</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-3">
+              <Button
+                variant="premium"
+                className="w-full gap-2"
+                onClick={() => setEditDialogOpen(true)}
+              >
+                <Edit2 className="h-4 w-4" />
+                Editar Cliente
+              </Button>
               <Link href={`/dashboard/quotes/new?client_id=${clientId}`} className="block">
                 <Button variant="premium" className="w-full gap-2">
                   <Sparkles className="h-4 w-4" />
@@ -362,6 +372,17 @@ export default function ClientDetailPage() {
           </Card>
         </div>
       </div>
+
+      {/* Edit Client Dialog */}
+      <EditClientDialog
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        onSuccess={() => {
+          loadClientData() // Recargar datos del cliente
+          toastSuccess('Cliente actualizado exitosamente')
+        }}
+        client={client}
+      />
     </div>
   )
 }

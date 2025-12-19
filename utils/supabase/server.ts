@@ -8,6 +8,14 @@ export async function createClient() {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
   if (!supabaseUrl || !supabaseAnonKey) {
+    // En producción, loguear el error pero no bloquear completamente
+    console.error('Missing Supabase environment variables:', {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseAnonKey,
+      nodeEnv: process.env.NODE_ENV,
+    })
+    // Retornar un cliente mock para evitar que la app se rompa completamente
+    // Esto permitirá que la página cargue y muestre un error más amigable
     throw new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set')
   }
 

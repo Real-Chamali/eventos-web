@@ -28,9 +28,19 @@ export async function updateSession(request: NextRequest) {
           supabaseResponse = NextResponse.next({
             request,
           })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
+          cookiesToSet.forEach(({ name, value, options }) => {
+            // Asegurar que las cookies de Supabase tengan los atributos correctos
+            const cookieOptions: CookieOptions = {
+              ...options,
+              // Asegurar SameSite para evitar problemas con Cloudflare y CORS
+              sameSite: options?.sameSite || 'lax',
+              // Asegurar Secure en producción (HTTPS)
+              secure: options?.secure ?? (process.env.NODE_ENV === 'production'),
+              // Las cookies de Supabase necesitan ser accesibles desde JavaScript
+              // No usar httpOnly para cookies de autenticación de Supabase
+            }
+            supabaseResponse.cookies.set(name, value, cookieOptions)
+          })
         },
       },
     }
