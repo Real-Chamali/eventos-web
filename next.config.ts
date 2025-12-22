@@ -7,6 +7,12 @@ const nextConfig: NextConfig = {
   // el del proyecto. Si quieres eliminar el warning, puedes eliminar o renombrar
   // /home/voldemort/package-lock.json (es un archivo vacío que no se necesita).
   
+  // Deshabilitar source maps en producción para evitar warnings
+  productionBrowserSourceMaps: false,
+  
+  // Optimizar CSS para prevenir FOUC
+  optimizeFonts: true,
+  
   // Headers para manejar cookies de Cloudflare y WebSockets
   async headers() {
     return [

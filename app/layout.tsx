@@ -34,6 +34,26 @@ export default function RootLayout({
       <body
         className={`${inter.variable} font-sans antialiased`}
       >
+        <Script
+          id="prevent-fouc"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                // Prevenir FOUC - mostrar contenido solo cuando esté listo
+                if (document.readyState === 'loading') {
+                  document.documentElement.style.visibility = 'hidden';
+                  document.documentElement.style.opacity = '0';
+                  document.addEventListener('DOMContentLoaded', function() {
+                    document.documentElement.style.visibility = 'visible';
+                    document.documentElement.style.opacity = '1';
+                    document.documentElement.style.transition = 'opacity 0.2s';
+                  });
+                }
+              })();
+            `,
+          }}
+        />
         <ErrorBoundary>
           <ThemeProviderWrapper>
             <AppProvider>
