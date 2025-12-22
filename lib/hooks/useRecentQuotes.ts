@@ -23,7 +23,7 @@ const fetcher = async (): Promise<Quote[]> => {
       total_amount,
       status,
       created_at,
-      client:clients(name)
+      clients(name)
     `)
     .eq('vendor_id', user.id)
     .order('created_at', { ascending: false })
@@ -40,13 +40,13 @@ const fetcher = async (): Promise<Quote[]> => {
     total_amount: number
     status: string
     created_at: string
-    client?: Array<{ name?: string }> | { name?: string } | null
+    clients?: Array<{ name?: string }> | { name?: string } | null
   }
 
   // Transformar datos para incluir client_name
   return (data || []).map((quote: SupabaseQuoteResponse) => {
     // Extraer cliente (puede ser array o objeto)
-    const client = quote.client ? (Array.isArray(quote.client) ? quote.client[0] : quote.client) : null
+    const client = quote.clients ? (Array.isArray(quote.clients) ? quote.clients[0] : quote.clients) : null
     return {
       id: quote.id,
       client_id: '',

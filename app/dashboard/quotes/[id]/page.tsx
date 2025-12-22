@@ -80,7 +80,7 @@ export default function QuoteDetailPage() {
         .from('quotes')
         .select(`
           *,
-          client:clients(name, email),
+          clients(name, email),
           quote_services(
             id,
             quantity,

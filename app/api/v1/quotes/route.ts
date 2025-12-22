@@ -178,7 +178,7 @@ export async function GET(request: NextRequest) {
     
     let query = supabase
       .from('quotes')
-      .select('id, total_amount, status, created_at, client:clients(name)')
+      .select('id, total_amount, status, created_at, clients(name)')
       .eq('vendor_id', userId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)

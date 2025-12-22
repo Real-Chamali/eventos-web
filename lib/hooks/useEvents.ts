@@ -23,7 +23,7 @@ const fetcher = async (): Promise<Event[]> => {
         id,
         total_amount,
         status,
-        client:clients(
+        clients(
           name,
           email
         )

@@ -91,7 +91,7 @@ export default function EditQuotePage() {
         .from('quotes')
         .select(`
           *,
-          client:clients(*),
+          clients(*),
           quote_services(
             id,
             service_id,

@@ -56,7 +56,7 @@ export default async function AdminPage() {
     supabase.from('services').select('id'),
     supabase
       .from('quotes')
-      .select('id, total_price, status, created_at, client:clients(name)')
+      .select('id, total_price, status, created_at, clients(name)')
       .order('created_at', { ascending: false })
       .limit(5),
   ])
@@ -266,7 +266,7 @@ export default async function AdminPage() {
                         </div>
                         <div>
                           <p className="font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                            {(quote.client as { name?: string })?.name || 'Cliente no especificado'}
+                            {(Array.isArray(quote.clients) ? quote.clients[0] : quote.clients)?.name || 'Cliente no especificado'}
                           </p>
                           <p className="text-sm text-gray-500 dark:text-gray-400">
                             {new Date(quote.created_at).toLocaleDateString('es-MX', {

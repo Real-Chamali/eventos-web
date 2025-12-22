@@ -60,13 +60,13 @@ export default function GlobalSearch() {
         // Buscar cotizaciones
         const { data: quotes } = await supabase
           .from('quotes')
-          .select('id, total_price, created_at, client:clients(name)')
-          .or(`id.ilike.%${query}%,client:clients.name.ilike.%${query}%`)
+          .select('id, total_price, created_at, clients(name)')
+          .or(`id.ilike.%${query}%,clients.name.ilike.%${query}%`)
           .limit(5)
 
         if (quotes) {
-          quotes.forEach((quote: { id: string; client?: { name?: string } | { name?: string }[] }) => {
-            const client = Array.isArray(quote.client) ? quote.client[0] : quote.client
+          quotes.forEach((quote: { id: string; clients?: { name?: string } | { name?: string }[] }) => {
+            const client = Array.isArray(quote.clients) ? quote.clients[0] : quote.clients
             searchResults.push({
               type: 'quote',
               id: quote.id,
@@ -99,14 +99,14 @@ export default function GlobalSearch() {
         // Buscar eventos
         const { data: events } = await supabase
           .from('events')
-          .select('id, created_at, quote:quotes(id, client:clients(name))')
+          .select('id, created_at, quote:quotes(id, clients(name))')
           .ilike('id', `%${query}%`)
           .limit(5)
 
         if (events) {
-          events.forEach((event: { id: string; quote?: { client?: { name?: string } | { name?: string }[] } | Array<{ client?: { name?: string } | { name?: string }[] }> }) => {
+          events.forEach((event: { id: string; quote?: { clients?: { name?: string } | { name?: string }[] } | Array<{ clients?: { name?: string } | { name?: string }[] }> }) => {
             const quote = Array.isArray(event.quote) ? event.quote[0] : event.quote
-            const client = quote && (Array.isArray(quote.client) ? quote.client[0] : quote.client)
+            const client = quote && (Array.isArray(quote.clients) ? quote.clients[0] : quote.clients)
             searchResults.push({
               type: 'event',
               id: event.id,

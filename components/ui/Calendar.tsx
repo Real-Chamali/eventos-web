@@ -61,7 +61,7 @@ export default function Calendar() {
           quote_id,
           quote:quotes (
             client_id,
-            client:clients (
+            clients (
               name
             )
           )
@@ -76,7 +76,7 @@ export default function Calendar() {
           event_date,
           status,
           client_id,
-          client:clients (
+          clients (
             name
           )
         `)

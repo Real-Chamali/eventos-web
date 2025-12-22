@@ -104,7 +104,7 @@ export default function EventsPage() {
             total_amount,
             status,
             vendor_id,
-            client:clients(
+            clients(
               name,
               email
             )
