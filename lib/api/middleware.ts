@@ -105,13 +105,30 @@ export async function checkAdmin(userId: string): Promise<boolean> {
     }
 
     // Manejar enum de PostgreSQL correctamente
-    const roleStr = String(profile.role).trim().toLowerCase()
+    // El enum puede venir como string o como objeto, normalizar
+    let roleStr: string
+    if (typeof profile.role === 'string') {
+      roleStr = profile.role.trim().toLowerCase()
+    } else if (profile.role && typeof profile.role === 'object' && 'value' in profile.role) {
+      roleStr = String(profile.role.value).trim().toLowerCase()
+    } else {
+      roleStr = String(profile.role).trim().toLowerCase()
+    }
+    
     const isAdmin = roleStr === 'admin'
 
     // Cachear resultado
     roleCache.set(userId, { 
       role: roleStr, 
       expires: Date.now() + CACHE_TTL 
+    })
+
+    logger.debug('Auth Middleware', 'Role checked', {
+      userId,
+      roleRaw: profile.role,
+      roleType: typeof profile.role,
+      roleStr,
+      isAdmin,
     })
 
     return isAdmin
