@@ -80,7 +80,7 @@ export default function Calendar() {
             name
           )
         `)
-        .eq('status', 'confirmed')
+        .eq('status', 'APPROVED')
         .not('event_date', 'is', null)
 
       if (eventsError && quotesError) {
