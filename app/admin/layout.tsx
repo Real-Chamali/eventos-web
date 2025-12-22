@@ -49,13 +49,23 @@ export default async function AdminLayout({
         // Si hay error, no redirigir inmediatamente, intentar con cliente normal
       } else if (data && data.role) {
         // Manejar el enum de PostgreSQL correctamente
-        const roleStr = String(data.role).trim().toLowerCase()
+        // El enum puede venir como string o como objeto, normalizar
+        let roleStr: string
+        if (typeof data.role === 'string') {
+          roleStr = data.role.trim().toLowerCase()
+        } else if (data.role && typeof data.role === 'object' && 'value' in data.role) {
+          roleStr = String(data.role.value).trim().toLowerCase()
+        } else {
+          roleStr = String(data.role).trim().toLowerCase()
+        }
+        
         userRole = roleStr === 'admin' ? 'admin' : 'vendor'
         
-        logger.debug('AdminLayout', 'Role determined', {
+        logger.info('AdminLayout', 'Role determined', {
           userId: user.id,
           email: user.email,
           roleRaw: data.role,
+          roleType: typeof data.role,
           roleStr,
           userRole,
         })
@@ -70,8 +80,23 @@ export default async function AdminLayout({
           .maybeSingle()
 
         if (!fallbackError && fallbackData && fallbackData.role) {
-          const roleStr = String(fallbackData.role).trim().toLowerCase()
+          // Manejar enum de PostgreSQL correctamente
+          let roleStr: string
+          if (typeof fallbackData.role === 'string') {
+            roleStr = fallbackData.role.trim().toLowerCase()
+          } else if (fallbackData.role && typeof fallbackData.role === 'object' && 'value' in fallbackData.role) {
+            roleStr = String(fallbackData.role.value).trim().toLowerCase()
+          } else {
+            roleStr = String(fallbackData.role).trim().toLowerCase()
+          }
           userRole = roleStr === 'admin' ? 'admin' : 'vendor'
+          
+          logger.info('AdminLayout', 'Role determined from fallback', {
+            userId: user.id,
+            roleRaw: fallbackData.role,
+            roleStr,
+            userRole,
+          })
         }
       }
     } else {
@@ -83,8 +108,23 @@ export default async function AdminLayout({
         .maybeSingle()
 
       if (!profileError && data && data.role) {
-        const roleStr = String(data.role).trim().toLowerCase()
+        // Manejar enum de PostgreSQL correctamente
+        let roleStr: string
+        if (typeof data.role === 'string') {
+          roleStr = data.role.trim().toLowerCase()
+        } else if (data.role && typeof data.role === 'object' && 'value' in data.role) {
+          roleStr = String(data.role.value).trim().toLowerCase()
+        } else {
+          roleStr = String(data.role).trim().toLowerCase()
+        }
         userRole = roleStr === 'admin' ? 'admin' : 'vendor'
+        
+        logger.info('AdminLayout', 'Role determined from normal client', {
+          userId: user.id,
+          roleRaw: data.role,
+          roleStr,
+          userRole,
+        })
       }
     }
   } catch (error) {
@@ -99,10 +139,18 @@ export default async function AdminLayout({
   if (userRole !== 'admin') {
     logger.warn('AdminLayout', 'User is not admin, redirecting to dashboard', {
       userId: user.id,
+      email: user.email,
       userRole,
+      timestamp: new Date().toISOString(),
     })
     redirect('/dashboard')
   }
+  
+  logger.info('AdminLayout', 'Admin access granted', {
+    userId: user.id,
+    email: user.email,
+    userRole,
+  })
 
   return (
     <div className="flex h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
