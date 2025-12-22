@@ -152,7 +152,7 @@ export default function Calendar() {
       if (quotesData) {
         quotesData.forEach((quote: SupabaseQuote) => {
           // Extraer cliente (puede ser array o objeto)
-          const client = quote.client ? (Array.isArray(quote.client) ? quote.client[0] : quote.client) : null
+          const client = quote.clients ? (Array.isArray(quote.clients) ? quote.clients[0] : quote.clients) : null
           const dateKey = quote.event_date
           if (!eventMap.has(dateKey)) {
             eventMap.set(dateKey, {
