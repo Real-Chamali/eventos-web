@@ -10,8 +10,6 @@ import { logger } from '@/lib/utils/logger'
 
 // Web Crypto API está disponible globalmente en Node.js 15+ y Edge Runtime
 // No importar crypto de Node.js - usar Web Crypto API global
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-expect-error - crypto está disponible globalmente pero TypeScript puede no reconocerlo
 const webCrypto: Crypto = (typeof globalThis !== 'undefined' && globalThis.crypto && 'subtle' in globalThis.crypto)
   ? globalThis.crypto
   : (typeof crypto !== 'undefined' && 'subtle' in crypto)
