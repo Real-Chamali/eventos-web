@@ -8,6 +8,7 @@ import { SentryProvider } from "@/components/SentryProvider";
 import { SWRProvider } from "@/components/providers/SWRProvider";
 import { AppProvider } from "@/contexts/AppContext";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
+import PreventFOUC from "@/components/PreventFOUC";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -31,29 +32,37 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es" suppressHydrationWarning>
-      <body
-        className={`${inter.variable} font-sans antialiased`}
-      >
-        <Script
-          id="prevent-fouc"
-          strategy="beforeInteractive"
+      <head>
+        <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
                 // Prevenir FOUC - mostrar contenido solo cuando esté listo
-                if (document.readyState === 'loading') {
-                  document.documentElement.style.visibility = 'hidden';
-                  document.documentElement.style.opacity = '0';
-                  document.addEventListener('DOMContentLoaded', function() {
+                try {
+                  if (document.readyState === 'loading') {
+                    document.documentElement.style.visibility = 'hidden';
+                    document.documentElement.style.opacity = '0';
+                    document.addEventListener('DOMContentLoaded', function() {
+                      setTimeout(function() {
+                        document.documentElement.style.visibility = 'visible';
+                        document.documentElement.style.opacity = '1';
+                        document.documentElement.style.transition = 'opacity 0.2s';
+                      }, 0);
+                    });
+                  } else {
                     document.documentElement.style.visibility = 'visible';
                     document.documentElement.style.opacity = '1';
-                    document.documentElement.style.transition = 'opacity 0.2s';
-                  });
-                }
+                  }
+                } catch(e) {}
               })();
             `,
           }}
         />
+      </head>
+      <body
+        className={`${inter.variable} font-sans antialiased`}
+      >
+        <PreventFOUC />
         <ErrorBoundary>
           <ThemeProviderWrapper>
             <AppProvider>

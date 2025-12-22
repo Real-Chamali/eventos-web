@@ -10,9 +10,6 @@ const nextConfig: NextConfig = {
   // Deshabilitar source maps en producción para evitar warnings
   productionBrowserSourceMaps: false,
   
-  // Optimizar CSS para prevenir FOUC
-  optimizeFonts: true,
-  
   // Headers para manejar cookies de Cloudflare y WebSockets
   async headers() {
     return [
