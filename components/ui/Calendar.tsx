@@ -100,9 +100,9 @@ export default function Calendar() {
         end_date?: string | null
         status: string
         quote?: Array<{
-          client?: Array<{ name?: string }> | { name?: string } | null
+          clients?: Array<{ name?: string }> | { name?: string } | null
         }> | {
-          client?: Array<{ name?: string }> | { name?: string } | null
+          clients?: Array<{ name?: string }> | { name?: string } | null
         } | null
       }
 
@@ -111,7 +111,7 @@ export default function Calendar() {
         eventsData.forEach((event: SupabaseEvent) => {
           // Extraer datos del evento (quote puede ser array o objeto)
           const quote = Array.isArray(event.quote) ? event.quote[0] : event.quote
-          const client = quote?.client ? (Array.isArray(quote.client) ? quote.client[0] : quote.client) : null
+          const client = quote?.clients ? (Array.isArray(quote.clients) ? quote.clients[0] : quote.clients) : null
           const startDate = event.start_date
           const endDate = event.end_date || event.start_date
           
