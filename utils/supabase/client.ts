@@ -37,10 +37,21 @@ NOTA: Obtén tus credenciales en https://app.supabase.com -> Tu Proyecto -> Sett
         autoRefreshToken: true,
         detectSessionInUrl: true,
         flowType: 'pkce',
+        storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+        storageKey: 'sb-auth-token',
+        debug: process.env.NODE_ENV === 'development',
       },
       global: {
         headers: {
           'x-client-info': 'eventos-web',
+        },
+      },
+      db: {
+        schema: 'public',
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 10,
         },
       },
     }

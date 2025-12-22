@@ -30,18 +30,24 @@ export async function updateSession(request: NextRequest) {
           })
           cookiesToSet.forEach(({ name, value, options }) => {
             // Asegurar que las cookies de Supabase tengan los atributos correctos
+            const isProduction = process.env.NODE_ENV === 'production'
+            const isHttps = request.url.startsWith('https://')
+            
             const cookieOptions: CookieOptions = {
               ...options,
-              // Asegurar SameSite para evitar problemas con Cloudflare y CORS
-              // Usar 'none' en producción si hay problemas de CORS, 'lax' por defecto
-              sameSite: options?.sameSite || (process.env.NODE_ENV === 'production' ? 'lax' : 'lax'),
-              // Asegurar Secure en producción (HTTPS)
-              secure: options?.secure ?? (process.env.NODE_ENV === 'production'),
+              // SameSite: 'lax' funciona bien para la mayoría de casos
+              // 'none' solo es necesario si el frontend y backend están en dominios diferentes
+              // y requiere Secure=true (HTTPS)
+              sameSite: options?.sameSite || (isHttps && isProduction ? 'lax' : 'lax'),
+              // Secure solo en HTTPS (producción)
+              secure: options?.secure ?? isHttps,
               // Las cookies de Supabase necesitan ser accesibles desde JavaScript
               // No usar httpOnly para cookies de autenticación de Supabase
               // Asegurar que el dominio sea correcto
               domain: options?.domain,
               path: options?.path || '/',
+              // Max age para persistencia
+              maxAge: options?.maxAge || 60 * 60 * 24 * 7, // 7 días por defecto
             }
             supabaseResponse.cookies.set(name, value, cookieOptions)
           })
