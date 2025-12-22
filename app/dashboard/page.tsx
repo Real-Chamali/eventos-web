@@ -1,17 +1,26 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, lazy, Suspense } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import Chart from '@/components/ui/Chart'
 import Calendar from '@/components/ui/Calendar'
 import { Calendar as CalendarIcon, Plus } from 'lucide-react'
 import Link from 'next/link'
+import Skeleton from '@/components/ui/Skeleton'
 import { DashboardStats } from '@/components/dashboard/DashboardStats'
 import { DashboardRecentQuotes } from '@/components/dashboard/DashboardRecentQuotes'
 import { DashboardAdvancedMetrics } from '@/components/dashboard/DashboardAdvancedMetrics'
 import { useDashboardStats } from '@/lib/hooks/useDashboardStats'
 import { useRecentQuotes } from '@/lib/hooks/useRecentQuotes'
 import { useMonthlyData } from '@/lib/hooks/useMonthlyData'
+
+// Lazy load componentes pesados para mejor performance inicial
+const DashboardRevenueTrends = lazy(() => 
+  import('@/components/dashboard/DashboardRevenueTrends').then(m => ({ default: m.DashboardRevenueTrends }))
+)
+const DashboardServicePerformance = lazy(() => 
+  import('@/components/dashboard/DashboardServicePerformance').then(m => ({ default: m.DashboardServicePerformance }))
+)
 
 /**
  * Dashboard principal optimizado con SWR
@@ -121,6 +130,34 @@ export default function DashboardPage() {
 
       {/* Recent Quotes - Optimizado con hook */}
       <DashboardRecentQuotes />
+
+      {/* Revenue Trends - Comparación año anterior (Lazy loaded) */}
+      <Suspense fallback={
+        <Card variant="elevated" className="overflow-hidden">
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-64 w-full" />
+          </CardContent>
+        </Card>
+      }>
+        <DashboardRevenueTrends />
+      </Suspense>
+
+      {/* Service Performance - Top servicios (Lazy loaded) */}
+      <Suspense fallback={
+        <Card variant="elevated" className="overflow-hidden">
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-64 w-full" />
+          </CardContent>
+        </Card>
+      }>
+        <DashboardServicePerformance />
+      </Suspense>
     </div>
   )
 }

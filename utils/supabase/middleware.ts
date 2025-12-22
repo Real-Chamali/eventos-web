@@ -52,13 +52,25 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname
 
-  // Excluir rutas estáticas y de Next.js del middleware
+  // Excluir solo rutas estáticas, NO APIs
   if (
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
     pathname === '/favicon.ico' ||
     pathname.match(/\.(ico|png|jpg|jpeg|svg|gif|webp)$/)
   ) {
+    return supabaseResponse
+  }
+
+  // Para rutas API, verificar autenticación pero no redirigir
+  if (pathname.startsWith('/api')) {
+    if (!user) {
+      // Para APIs, retornar JSON en lugar de redirigir
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+    // Permitir que el endpoint maneje autorización específica
     return supabaseResponse
   }
 

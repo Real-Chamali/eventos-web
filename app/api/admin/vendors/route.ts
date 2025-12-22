@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
+import { sanitizeForLogging } from '@/lib/utils/security'
+import { getUserFromSession, checkAdmin } from '@/lib/api/middleware'
 
 /**
  * GET /api/admin/vendors - Get all vendors with statistics
@@ -9,24 +11,25 @@ import { logger } from '@/lib/utils/logger'
  */
 export async function GET() {
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    // Usar función centralizada para obtener usuario de sesión
+    const { user, error: authError } = await getUserFromSession()
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!user || authError) {
+      const response = NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      response.headers.set('X-Content-Type-Options', 'nosniff')
+      return response
     }
 
-    // Verificar que sea admin
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle()
+    // Verificar que sea admin usando checkAdmin
+    const isAdmin = await checkAdmin(user.id)
 
-    if (profile?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (!isAdmin) {
+      logger.warn('API /admin/vendors', 'Non-admin attempted access', sanitizeForLogging({
+        userId: user.id,
+      }))
+      const response = NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      response.headers.set('X-Content-Type-Options', 'nosniff')
+      return response
     }
 
     // Crear cliente de administración con service role key
@@ -34,8 +37,10 @@ export async function GET() {
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      logger.error('API /admin/vendors', 'Missing service role key', new Error('SUPABASE_SERVICE_ROLE_KEY not set'))
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+      logger.error('API /admin/vendors', 'Missing service role key', new Error('SUPABASE_SERVICE_ROLE_KEY not set'), sanitizeForLogging({}))
+      const response = NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+      response.headers.set('X-Content-Type-Options', 'nosniff')
+      return response
     }
 
     const adminClient = createAdminClient(supabaseUrl, supabaseServiceKey, {
@@ -49,9 +54,14 @@ export async function GET() {
     const { data: usersData, error: usersError } = await adminClient.auth.admin.listUsers()
 
     if (usersError) {
-      logger.error('API /admin/vendors', 'Error listing users', new Error(usersError.message))
-      return NextResponse.json({ error: 'Error al obtener usuarios' }, { status: 500 })
+      logger.error('API /admin/vendors', 'Error listing users', new Error(usersError.message), sanitizeForLogging({}))
+      const response = NextResponse.json({ error: 'Error al obtener usuarios' }, { status: 500 })
+      response.headers.set('X-Content-Type-Options', 'nosniff')
+      return response
     }
+
+    // Crear cliente de Supabase para queries regulares
+    const supabase = await createClient()
 
     // Obtener estadísticas de cotizaciones por vendedor
     const { data: quotesData, error: quotesError } = await supabase
@@ -59,7 +69,7 @@ export async function GET() {
       .select('vendor_id, total_amount, status')
 
     if (quotesError) {
-      logger.warn('API /admin/vendors', 'Error loading quotes stats', { error: quotesError.message })
+      logger.warn('API /admin/vendors', 'Error loading quotes stats', sanitizeForLogging({ error: quotesError.message }))
     }
 
     // Calcular estadísticas por vendedor
@@ -83,7 +93,7 @@ export async function GET() {
       .select('id, role, full_name')
     
     if (profilesError) {
-      logger.warn('API /admin/vendors', 'Error loading profiles', { error: profilesError.message })
+      logger.warn('API /admin/vendors', 'Error loading profiles', sanitizeForLogging({ error: profilesError.message }))
     }
     
     const profilesMap = new Map<string, { role: 'admin' | 'vendor'; full_name: string | null }>()
@@ -103,14 +113,14 @@ export async function GET() {
             role = 'vendor'
           }
           
-          // Log para debugging
-          logger.debug('API /admin/vendors', 'Processing role', {
+          // Log para debugging (sanitizado)
+          logger.debug('API /admin/vendors', 'Processing role', sanitizeForLogging({
             userId: profile.id,
-            roleRaw: profile.role,
+            roleRaw: String(profile.role),
             roleStr,
             roleFinal: role,
             roleType: typeof profile.role,
-          })
+          }))
         }
         
         profilesMap.set(profile.id, {
@@ -128,14 +138,14 @@ export async function GET() {
       // Usar el rol del mapa de perfiles (ya procesado correctamente)
       const role: 'admin' | 'vendor' = profile?.role || 'vendor'
       
-      // Log para debugging del usuario admin
+      // Log para debugging del usuario admin (sanitizado)
       if (user.email === 'admin@chamali.com') {
-        logger.info('API /admin/vendors', 'Admin user found', {
+        logger.info('API /admin/vendors', 'Admin user found', sanitizeForLogging({
           userId: user.id,
           email: user.email,
-          profileRole: profile?.role,
+          profileRole: String(profile?.role || ''),
           finalRole: role,
-        })
+        }))
       }
       
       return {
@@ -151,10 +161,16 @@ export async function GET() {
       }
     })
 
-    return NextResponse.json({ data: vendorsWithStats })
+    const response = NextResponse.json({ data: vendorsWithStats })
+    response.headers.set('X-Content-Type-Options', 'nosniff')
+    response.headers.set('X-Frame-Options', 'DENY')
+    response.headers.set('X-XSS-Protection', '1; mode=block')
+    return response
   } catch (error) {
-    logger.error('API /admin/vendors', 'Unexpected error', error as Error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    logger.error('API /admin/vendors', 'Unexpected error', error as Error, sanitizeForLogging({}))
+    const response = NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    response.headers.set('X-Content-Type-Options', 'nosniff')
+    return response
   }
 }
 

@@ -1,5 +1,6 @@
 import { Resend } from 'resend'
 import { logger } from '@/lib/utils/logger'
+import { sanitizeForEmail } from '@/lib/utils/security'
 
 // Inicializar Resend solo si hay API key (para evitar errores en build)
 const getResend = () => {
@@ -21,6 +22,22 @@ export interface EmailOptions {
     contentType?: string
   }>
 }
+
+// Tipos MIME permitidos para attachments
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+  'text/csv',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+]
+
+const MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_ATTACHMENTS = 5
 
 export async function sendEmail(options: EmailOptions): Promise<{ success: boolean; messageId?: string }> {
   try {
@@ -45,7 +62,35 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
       emailData.replyTo = options.replyTo
     }
 
+    // Validar y procesar attachments
     if (options.attachments && options.attachments.length > 0) {
+      // Validar número de attachments
+      if (options.attachments.length > MAX_ATTACHMENTS) {
+        throw new Error(`Maximum ${MAX_ATTACHMENTS} attachments allowed`)
+      }
+
+      // Validar cada attachment
+      for (const att of options.attachments) {
+        // Validar tamaño
+        const size = typeof att.content === 'string' 
+          ? Buffer.byteLength(att.content)
+          : att.content.length
+        
+        if (size > MAX_ATTACHMENT_SIZE) {
+          throw new Error(`Attachment ${att.filename} exceeds maximum size of ${MAX_ATTACHMENT_SIZE / 1024 / 1024}MB`)
+        }
+
+        // Validar tipo MIME si se proporciona
+        if (att.contentType && !ALLOWED_MIME_TYPES.includes(att.contentType)) {
+          throw new Error(`Attachment type ${att.contentType} not allowed. Allowed types: ${ALLOWED_MIME_TYPES.join(', ')}`)
+        }
+
+        // Validar nombre de archivo (prevenir path traversal)
+        if (att.filename.includes('..') || att.filename.includes('/') || att.filename.includes('\\')) {
+          throw new Error(`Invalid filename: ${att.filename}`)
+        }
+      }
+
       emailData.attachments = options.attachments.map((att) => ({
         filename: att.filename,
         content: typeof att.content === 'string' ? Buffer.from(att.content) : att.content,
@@ -103,13 +148,13 @@ export const emailTemplates = {
               <h1>Nueva Cotización Creada</h1>
             </div>
             <div class="content">
-              <p>Hola ${clientName},</p>
+              <p>Hola ${sanitizeForEmail(clientName)},</p>
               <p>Se ha creado una nueva cotización para ti:</p>
               <ul>
-                <li><strong>ID:</strong> ${quoteId.slice(0, 8)}</li>
-                <li><strong>Total:</strong> $${totalAmount.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</li>
+                <li><strong>ID:</strong> ${sanitizeForEmail(quoteId.slice(0, 8))}</li>
+                <li><strong>Total:</strong> $${sanitizeForEmail(totalAmount.toLocaleString('es-MX', { minimumFractionDigits: 2 }))}</li>
               </ul>
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://eventos-web-lovat.vercel.app'}/dashboard/quotes/${quoteId}" class="button">Ver Cotización</a>
+              <a href="${sanitizeForEmail(process.env.NEXT_PUBLIC_APP_URL || 'https://eventos-web-lovat.vercel.app')}/dashboard/quotes/${sanitizeForEmail(quoteId)}" class="button">Ver Cotización</a>
             </div>
             <div class="footer">
               <p>Este es un email automático, por favor no responder.</p>
@@ -142,13 +187,13 @@ export const emailTemplates = {
               <h1>¡Cotización Aprobada!</h1>
             </div>
             <div class="content">
-              <p>Hola ${clientName},</p>
+              <p>Hola ${sanitizeForEmail(clientName)},</p>
               <p>Tu cotización ha sido aprobada:</p>
               <ul>
-                <li><strong>ID:</strong> ${quoteId.slice(0, 8)}</li>
-                <li><strong>Total:</strong> $${totalAmount.toLocaleString('es-MX', { minimumFractionDigits: 2 })}</li>
+                <li><strong>ID:</strong> ${sanitizeForEmail(quoteId.slice(0, 8))}</li>
+                <li><strong>Total:</strong> $${sanitizeForEmail(totalAmount.toLocaleString('es-MX', { minimumFractionDigits: 2 }))}</li>
               </ul>
-              <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://eventos-web-lovat.vercel.app'}/dashboard/quotes/${quoteId}" class="button">Ver Cotización</a>
+              <a href="${sanitizeForEmail(process.env.NEXT_PUBLIC_APP_URL || 'https://eventos-web-lovat.vercel.app')}/dashboard/quotes/${sanitizeForEmail(quoteId)}" class="button">Ver Cotización</a>
             </div>
             <div class="footer">
               <p>Este es un email automático, por favor no responder.</p>
@@ -180,11 +225,11 @@ export const emailTemplates = {
               <h1>Recordatorio de Evento</h1>
             </div>
             <div class="content">
-              <p>Hola ${clientName},</p>
+              <p>Hola ${sanitizeForEmail(clientName)},</p>
               <p>Este es un recordatorio de tu próximo evento:</p>
               <ul>
-                <li><strong>Evento:</strong> ${eventName}</li>
-                <li><strong>Fecha:</strong> ${eventDate}</li>
+                <li><strong>Evento:</strong> ${sanitizeForEmail(eventName)}</li>
+                <li><strong>Fecha:</strong> ${sanitizeForEmail(eventDate)}</li>
               </ul>
               <p>Por favor, asegúrate de tener todo listo.</p>
             </div>

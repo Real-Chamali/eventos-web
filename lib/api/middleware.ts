@@ -11,7 +11,8 @@ import { logger } from '@/lib/utils/logger'
 import { createAuditLog } from '@/lib/utils/audit'
 
 /**
- * Verify JWT token and get authenticated user
+ * Verify JWT token and get authenticated user (from Authorization header)
+ * Use this for REST APIs that use Bearer tokens
  */
 export async function verifyAuth(request: NextRequest) {
   try {
@@ -40,23 +41,96 @@ export async function verifyAuth(request: NextRequest) {
 }
 
 /**
+ * Get authenticated user from session cookies
+ * Use this for endpoints that rely on browser session cookies
+ * This is a centralized way to get the user from cookies
+ */
+export async function getUserFromSession(): Promise<{
+  user: { id: string; email?: string } | null
+  error: string | null
+}> {
+  try {
+    const supabase = await createClient()
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser()
+
+    if (error || !user) {
+      return { user: null, error: error?.message || 'Not authenticated' }
+    }
+
+    return { user, error: null }
+  } catch (error) {
+    logger.error('Auth Middleware', 'Failed to get user from session', error as Error)
+    return { user: null, error: 'Authentication failed' }
+  }
+}
+
+// Caché simple para roles (TTL: 5 minutos)
+const roleCache = new Map<string, { role: string; expires: number }>()
+const CACHE_TTL = 5 * 60 * 1000 // 5 minutos
+
+/**
  * Check if user has admin role
+ * Incluye caché y manejo correcto de enum de PostgreSQL
  */
 export async function checkAdmin(userId: string): Promise<boolean> {
   try {
-    const supabase = await createClient()
-    const res = await supabase.from('profiles').select('role').eq('id', userId).single()
-    const data = res.data as { role?: string } | null
-    const error = res.error
+    // Verificar caché
+    const cached = roleCache.get(userId)
+    if (cached && cached.expires > Date.now()) {
+      return cached.role === 'admin'
+    }
 
-    if (error || !data) {
+    const supabase = await createClient()
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .maybeSingle()
+
+    if (error) {
+      logger.error('Auth Middleware', 'Error checking admin role', new Error(error.message), {
+        userId,
+        errorCode: error.code,
+      })
+      return false // Fail secure
+    }
+
+    if (!profile || !profile.role) {
+      // Cachear resultado negativo
+      roleCache.set(userId, { role: 'vendor', expires: Date.now() + CACHE_TTL })
       return false
     }
-    
-    return data.role === 'admin'
+
+    // Manejar enum de PostgreSQL correctamente
+    const roleStr = String(profile.role).trim().toLowerCase()
+    const isAdmin = roleStr === 'admin'
+
+    // Cachear resultado
+    roleCache.set(userId, { 
+      role: roleStr, 
+      expires: Date.now() + CACHE_TTL 
+    })
+
+    return isAdmin
   } catch (error) {
-    logger.error('Auth Middleware', 'Failed to check admin role', error as Error)
-    return false
+    logger.error('Auth Middleware', 'Failed to check admin role', error as Error, {
+      userId,
+    })
+    return false // Fail secure
+  }
+}
+
+/**
+ * Limpiar caché de roles (útil para testing o cuando se actualiza un rol)
+ */
+export function clearRoleCache(userId?: string): void {
+  if (userId) {
+    roleCache.delete(userId)
+  } else {
+    roleCache.clear()
   }
 }
 
@@ -131,31 +205,10 @@ export async function auditAPIAction(
 }
 
 /**
- * Rate limiting (simple in-memory implementation)
- * For production, use Redis
+ * Rate limiting
+ * Importa desde rateLimit.ts para usar implementación distribuida
  */
-const rateLimitMap = new Map<string, { count: number; resetTime: number }>()
-
-export function checkRateLimit(
-  key: string,
-  maxRequests: number = 60,
-  windowMs: number = 60000 // 1 minute
-): boolean {
-  const now = Date.now()
-  const entry = rateLimitMap.get(key)
-
-  if (!entry || entry.resetTime < now) {
-    rateLimitMap.set(key, { count: 1, resetTime: now + windowMs })
-    return true
-  }
-
-  if (entry.count >= maxRequests) {
-    return false
-  }
-
-  entry.count++
-  return true
-}
+export { checkRateLimit, clearRateLimit } from '@/lib/api/rateLimit'
 
 /**
  * Handle API errors with proper logging

@@ -339,7 +339,7 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
       if (servicesError) throw servicesError
 
       // 3. Crear evento
-      const { error: eventError } = await supabase
+      const { data: event, error: eventError } = await supabase
         .from('events')
         .insert({
           quote_id: quote.id,
@@ -347,8 +347,49 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
           end_date: endDateTime ? endDateTime.toISOString() : null,
           status: 'confirmed',
         })
+        .select()
+        .single()
 
       if (eventError) throw eventError
+
+      // 4. Crear notificaciones
+      if (event) {
+        try {
+          const { createNotification } = await import('@/lib/utils/notifications')
+          
+          // Notificar al vendedor
+          await createNotification({
+            userId: user.id,
+            type: 'event',
+            title: 'Evento creado',
+            message: `Has creado un nuevo evento para ${selectedClient.name}`,
+            metadata: {
+              event_id: event.id,
+              quote_id: quote.id,
+              link: `/dashboard/events/${event.id}`,
+            },
+          })
+
+          // Notificar al cliente
+          await createNotification({
+            userId: selectedClient.id,
+            type: 'event',
+            title: 'Nuevo evento programado',
+            message: `Se ha programado un nuevo evento para ti`,
+            metadata: {
+              event_id: event.id,
+              quote_id: quote.id,
+              link: `/dashboard/events/${event.id}`,
+            },
+          })
+        } catch (notificationError) {
+          // No fallar si hay error en notificaciones
+          logger.warn('CreateEventDialog', 'Error creating notifications', notificationError as Error, {
+            eventId: event?.id,
+            quoteId: quote.id,
+          })
+        }
+      }
 
       toastSuccess('Evento creado exitosamente')
       

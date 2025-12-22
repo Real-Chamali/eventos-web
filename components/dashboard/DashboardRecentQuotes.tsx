@@ -5,6 +5,7 @@
 
 'use client'
 
+import { useMemo } from 'react'
 import { useRecentQuotes } from '@/lib/hooks/useRecentQuotes'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
@@ -13,7 +14,8 @@ import Skeleton from '@/components/ui/Skeleton'
 import Link from 'next/link'
 import { Plus, ArrowRight, Sparkles, FileText } from 'lucide-react'
 
-function getStatusBadge(status: string) {
+// Memoizar función de badge para evitar recreaciones
+const getStatusBadge = (status: string) => {
   switch (status) {
     case 'confirmed':
       return <Badge variant="success" size="sm">Confirmada</Badge>
@@ -27,6 +29,24 @@ function getStatusBadge(status: string) {
 
 export function DashboardRecentQuotes() {
   const { quotes, loading } = useRecentQuotes()
+  
+  // Memoizar formateo de fechas y precios para evitar recálculos
+  const formattedQuotes = useMemo(() => {
+    return quotes.map(quote => ({
+      ...quote,
+      formattedDate: new Date(quote.created_at).toLocaleDateString('es-MX', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      }),
+      formattedPrice: new Intl.NumberFormat('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
+      }).format(Number(quote.total_price || 0)),
+    }))
+  }, [quotes])
   
   if (loading) {
     return (
@@ -96,11 +116,7 @@ export function DashboardRecentQuotes() {
                         <div className="flex items-center gap-2 mt-1">
                           {getStatusBadge(quote.status)}
                           <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {new Date(quote.created_at).toLocaleDateString('es-MX', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                            })}
+                            {quote.formattedDate}
                           </span>
                         </div>
                       </div>
@@ -108,12 +124,7 @@ export function DashboardRecentQuotes() {
                   </div>
                   <div className="text-right space-y-1">
                     <p className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-                      {new Intl.NumberFormat('es-MX', {
-                        style: 'currency',
-                        currency: 'MXN',
-                        minimumFractionDigits: 0,
-                        maximumFractionDigits: 0,
-                      }).format(Number(quote.total_price || 0))}
+                      {quote.formattedPrice}
                     </p>
                     <ArrowRight className="h-4 w-4 text-gray-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 ml-auto transition-colors" />
                   </div>

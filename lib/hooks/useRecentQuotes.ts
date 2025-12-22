@@ -20,7 +20,7 @@ const fetcher = async (): Promise<Quote[]> => {
     .from('quotes')
     .select(`
       id,
-      total_price,
+      total_amount,
       status,
       created_at,
       client:clients(name)
@@ -37,7 +37,7 @@ const fetcher = async (): Promise<Quote[]> => {
   // Tipo para respuesta de Supabase (client puede ser array o objeto)
   type SupabaseQuoteResponse = {
     id: string
-    total_price: number
+    total_amount: number
     status: string
     created_at: string
     client?: Array<{ name?: string }> | { name?: string } | null

@@ -163,6 +163,45 @@ export default function QuoteDetailPage() {
         // No fallar si hay error en finance_ledger
       }
 
+      // Crear notificaciones
+      try {
+        const { createNotification } = await import('@/lib/utils/notifications')
+        
+        // Notificar al vendedor
+        await createNotification({
+          userId: user.id,
+          type: 'quote',
+          title: 'Cotización aprobada',
+          message: `La cotización #${quoteId.slice(0, 8)} ha sido aprobada y el evento ha sido creado`,
+          metadata: {
+            quote_id: quoteId,
+            event_id: event.id,
+            link: `/dashboard/events/${event.id}`,
+          },
+        })
+
+        // Notificar al cliente si existe
+        if (quote?.client_id) {
+          await createNotification({
+            userId: quote.client_id,
+            type: 'quote',
+            title: 'Cotización aprobada',
+            message: `Tu cotización #${quoteId.slice(0, 8)} ha sido aprobada`,
+            metadata: {
+              quote_id: quoteId,
+              event_id: event.id,
+              link: `/dashboard/quotes/${quoteId}`,
+            },
+          })
+        }
+      } catch (notificationError) {
+        // No fallar si hay error en notificaciones
+        logger.warn('QuoteDetailPage', 'Error creating notifications', notificationError as Error, {
+          quoteId,
+          eventId: event.id,
+        })
+      }
+
       // Mostrar confeti
       const duration = 3000
       const animationEnd = Date.now() + duration

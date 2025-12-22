@@ -17,10 +17,13 @@ const fetcher = async (): Promise<DashboardStats> => {
   }
   
   // Una sola consulta optimizada que obtiene todo lo necesario
+  // Usa índices: vendor_id (idx_quotes_vendor_created), status (idx_quotes_vendor_status)
   const { data: quotes, error: quotesError } = await supabase
     .from('quotes')
     .select('total_amount, status, created_at')
     .eq('vendor_id', user.id)
+    // Optimización: ordenar por índice existente
+    .order('created_at', { ascending: false })
   
   if (quotesError) {
     logger.error('useDashboardStats', 'Error fetching quotes', quotesError as Error)

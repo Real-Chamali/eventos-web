@@ -22,8 +22,8 @@ export interface ApiKey {
 /**
  * Hashear API key usando SHA-256
  */
-export function hashApiKey(apiKey: string): string {
-  return hashSHA256(apiKey)
+export async function hashApiKey(apiKey: string): Promise<string> {
+  return await hashSHA256(apiKey)
 }
 
 /**
@@ -44,11 +44,10 @@ export async function validateApiKey(request: NextRequest): Promise<{
   error?: string
 }> {
   try {
-    // Buscar API key en headers o query params
+    // Buscar API key SOLO en headers (NO en query params por seguridad)
     const apiKey = 
       request.headers.get('x-api-key') || 
-      request.headers.get('authorization')?.replace('Bearer ', '') ||
-      request.nextUrl.searchParams.get('api_key')
+      request.headers.get('authorization')?.replace('Bearer ', '')
     
     if (!apiKey) {
       return {
@@ -56,9 +55,31 @@ export async function validateApiKey(request: NextRequest): Promise<{
         error: 'API key no proporcionada',
       }
     }
+
+    // Validar formato básico (longitud, caracteres)
+    if (apiKey.length < 32 || apiKey.length > 256) {
+      logger.warn('API Keys', 'Invalid API key format', {
+        length: apiKey.length,
+      })
+      return {
+        valid: false,
+        error: 'API key inválida',
+      }
+    }
+
+    // Validar que solo contenga caracteres alfanuméricos y guiones
+    if (!/^[a-zA-Z0-9_-]+$/.test(apiKey)) {
+      logger.warn('API Keys', 'Invalid API key characters', {
+        length: apiKey.length,
+      })
+      return {
+        valid: false,
+        error: 'API key inválida',
+      }
+    }
     
     // Hashear la API key para buscar en la BD
-    const keyHash = hashApiKey(apiKey)
+    const keyHash = await hashApiKey(apiKey)
     
     // Usar service_role para poder leer todas las API keys sin problemas de RLS
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -233,7 +254,7 @@ export async function createApiKey(
   
   // Generar API key
   const apiKey = generateApiKey()
-  const keyHash = hashApiKey(apiKey)
+  const keyHash = await hashApiKey(apiKey)
   
   // Insertar en la BD
   const { data, error } = await supabase

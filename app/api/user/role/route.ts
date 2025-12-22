@@ -1,17 +1,21 @@
 import { createClient } from '@/utils/supabase/server'
 import { NextResponse } from 'next/server'
 import { logger } from '@/lib/utils/logger'
+import { sanitizeForLogging } from '@/lib/utils/security'
+import { getUserFromSession } from '@/lib/api/middleware'
 
 export async function GET() {
   try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+    // Usar función centralizada para obtener usuario de sesión
+    const { user, error: authError } = await getUserFromSession()
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!user || authError) {
+      const response = NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      response.headers.set('X-Content-Type-Options', 'nosniff')
+      return response
     }
+
+    const supabase = await createClient()
 
     // Intentar obtener el perfil desde el servidor
     const { data: profile, error: profileError } = await supabase
@@ -23,26 +27,32 @@ export async function GET() {
     if (profileError) {
       // Si el error es de esquema (PGRST106), loguear pero retornar rol por defecto
       if (profileError.code === 'PGRST106' || profileError.message?.includes('schema')) {
-        logger.warn('API /user/role', 'Profile table not accessible (schema error), using default role', {
+        logger.warn('API /user/role', 'Profile table not accessible (schema error), using default role', sanitizeForLogging({
           userId: user.id,
           error: profileError.message,
           code: profileError.code,
-        })
-        return NextResponse.json({ role: 'vendor' })
+        }))
+        const response = NextResponse.json({ role: 'vendor' })
+        response.headers.set('X-Content-Type-Options', 'nosniff')
+        return response
       } else if (profileError.code === 'PGRST116') {
         // No encontrado
-        logger.info('API /user/role', 'Profile not found, using default role', {
+        logger.info('API /user/role', 'Profile not found, using default role', sanitizeForLogging({
           userId: user.id,
-        })
-        return NextResponse.json({ role: 'vendor' })
+        }))
+        const response = NextResponse.json({ role: 'vendor' })
+        response.headers.set('X-Content-Type-Options', 'nosniff')
+        return response
       } else {
         // Otros errores
-        logger.error('API /user/role', 'Error fetching profile', new Error(profileError.message), {
+        logger.error('API /user/role', 'Error fetching profile', new Error(profileError.message), sanitizeForLogging({
           supabaseError: profileError.message,
           supabaseCode: profileError.code,
           userId: user.id,
-        })
-        return NextResponse.json({ role: 'vendor' })
+        }))
+        const response = NextResponse.json({ role: 'vendor' })
+        response.headers.set('X-Content-Type-Options', 'nosniff')
+        return response
       }
     }
 
@@ -52,8 +62,10 @@ export async function GET() {
 
     return NextResponse.json({ role })
   } catch (error) {
-    logger.error('API /user/role', 'Unexpected error', error as Error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    logger.error('API /user/role', 'Unexpected error', error as Error, sanitizeForLogging({}))
+    const response = NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    response.headers.set('X-Content-Type-Options', 'nosniff')
+    return response
   }
 }
 

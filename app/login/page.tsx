@@ -12,7 +12,14 @@ import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import { FormGroup } from '@/components/ui/Form'
 import { useRouter } from 'next/navigation'
-import { CheckCircle2, LogOut } from 'lucide-react'
+import { CheckCircle2, LogOut, Shield } from 'lucide-react'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/Dialog'
 
 // Forzar renderizado dinámico para evitar prerendering durante build
 export const dynamic = 'force-dynamic'
@@ -20,6 +27,12 @@ export const dynamic = 'force-dynamic'
 type LoginFormData = {
   email: string
   password: string
+}
+
+type PendingLoginData = {
+  email: string
+  password: string
+  user: any
 }
 
 export default function LoginPage() {
@@ -30,6 +43,10 @@ export default function LoginPage() {
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [checking, setChecking] = useState(true)
+  const [show2FADialog, setShow2FADialog] = useState(false)
+  const [twoFactorCode, setTwoFactorCode] = useState('')
+  const [verifying2FA, setVerifying2FA] = useState(false)
+  const [pendingLoginData, setPendingLoginData] = useState<PendingLoginData | null>(null)
   
   const {
     register,
@@ -212,6 +229,23 @@ export default function LoginPage() {
         return
       }
 
+      // Verificar si el usuario tiene 2FA habilitado
+      const twoFactorEnabled = authData.user.user_metadata?.two_factor_enabled === true
+
+      if (twoFactorEnabled) {
+        // Guardar datos del login pendiente (incluyendo password) y mostrar diálogo de 2FA
+        // Mantener la sesión activa pero no redirigir hasta verificar 2FA
+        setPendingLoginData({
+          email: data.email,
+          password: data.password,
+          user: authData.user,
+        })
+        setShow2FADialog(true)
+        // NO cerrar sesión aquí - mantenerla activa para que después de verificar 2FA
+        // podamos continuar sin necesidad de hacer login nuevamente
+        return
+      }
+
       // Obtener el rol del usuario con manejo mejorado de errores
       let role = 'vendor' // Rol por defecto
       
@@ -344,6 +378,84 @@ export default function LoginPage() {
     }
   }
 
+  const handle2FAVerification = async () => {
+    if (!twoFactorCode || !pendingLoginData) {
+      toastError('Por favor ingresa el código de verificación')
+      return
+    }
+
+    try {
+      setVerifying2FA(true)
+
+      // Verificar código TOTP
+      const response = await fetch('/api/auth/2fa/login-verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: pendingLoginData.email,
+          token: twoFactorCode,
+        }),
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || 'Código de verificación inválido')
+      }
+
+      // Verificar que la sesión sigue activa
+      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      
+      if (!currentUser || currentUser.id !== pendingLoginData.user.id) {
+        // Si la sesión expiró, hacer login nuevamente
+        const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: pendingLoginData.email,
+          password: pendingLoginData.password,
+        })
+
+        if (signInError || !authData.user) {
+          throw new Error('Error al completar el inicio de sesión. Por favor, intenta de nuevo.')
+        }
+      }
+
+      // Obtener el rol del usuario
+      let role = 'vendor'
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', pendingLoginData.user.id)
+        .maybeSingle()
+
+      if (profile) {
+        role = typeof profile.role === 'string' ? profile.role : String(profile.role)
+        role = role === 'admin' ? 'admin' : 'vendor'
+      }
+
+      toastSuccess('¡Bienvenido de vuelta!')
+      logger.info('LoginPage', 'User logged in successfully with 2FA', {
+        userId: pendingLoginData.user.id,
+        role,
+        email: pendingLoginData.email,
+      })
+
+      // Cerrar diálogo y redirigir
+      setShow2FADialog(false)
+      setTwoFactorCode('')
+      setPendingLoginData(null)
+
+      const targetPath = role === 'admin' ? '/admin' : '/dashboard'
+      window.location.assign(targetPath)
+    } catch (error) {
+      logger.error('LoginPage', 'Error verifying 2FA', error as Error)
+      toastError(error instanceof Error ? error.message : 'Error al verificar código 2FA')
+      // Si falla la verificación, cerrar sesión para seguridad
+      await supabase.auth.signOut()
+    } finally {
+      setVerifying2FA(false)
+    }
+  }
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-50 via-indigo-50/30 to-violet-50/30 dark:from-gray-900 dark:via-indigo-950/20 dark:to-violet-950/20 px-4 py-12">
       <div className="w-full max-w-md space-y-8">
@@ -420,6 +532,64 @@ export default function LoginPage() {
           </p>
         </div>
       </div>
+
+      {/* 2FA Verification Dialog */}
+      <Dialog open={show2FADialog} onOpenChange={setShow2FADialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <div className="flex items-center space-x-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/20">
+                <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <DialogTitle>Verificación de Dos Factores</DialogTitle>
+            </div>
+            <DialogDescription>
+              Ingresa el código de 6 dígitos de tu aplicación de autenticación
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <FormGroup>
+              <Input
+                id="2fa-code"
+                type="text"
+                label="Código de verificación"
+                placeholder="000000"
+                value={twoFactorCode}
+                onChange={(e) => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 6)
+                  setTwoFactorCode(value)
+                }}
+                maxLength={6}
+                autoFocus
+                autoComplete="one-time-code"
+              />
+            </FormGroup>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              <p>Se requiere autenticación de dos factores para esta cuenta.</p>
+              <p className="mt-1">Abre tu aplicación de autenticación (Google Authenticator, Authy, etc.) y ingresa el código de 6 dígitos.</p>
+            </div>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShow2FADialog(false)
+                setTwoFactorCode('')
+                setPendingLoginData(null)
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={handle2FAVerification}
+              disabled={verifying2FA || twoFactorCode.length !== 6}
+              isLoading={verifying2FA}
+            >
+              {verifying2FA ? 'Verificando...' : 'Verificar y Continuar'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

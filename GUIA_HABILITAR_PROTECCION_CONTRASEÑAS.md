@@ -26,18 +26,23 @@ La protección de contraseñas comprometidas ayuda a:
 ### Paso 2: Navegar a Authentication Settings
 
 1. En el menú lateral izquierdo, haz clic en **"Authentication"**
-2. Luego haz clic en **"Policies"** o busca la sección de **"Password Security"**
+2. En el submenú de Authentication, haz clic en **"Policies"** o **"Settings"**
+3. Busca la sección **"Password Security"** o **"Password Requirements"**
+
+**Nota**: La ubicación exacta puede variar según la versión del dashboard. Si no encuentras "Password Security", busca en:
+- Authentication → Settings → Password
+- Authentication → Configuration → Password Security
 
 ### Paso 3: Habilitar Leaked Password Protection
 
-1. Busca la opción **"Leaked Password Protection"** o **"Password Strength"**
-2. Activa el toggle para habilitar la protección
-3. Opcionalmente, puedes configurar:
-   - **Minimum password length**: Longitud mínima de contraseña (recomendado: 8 caracteres)
-   - **Require uppercase**: Requerir mayúsculas
-   - **Require lowercase**: Requerir minúsculas
-   - **Require numbers**: Requerir números
-   - **Require special characters**: Requerir caracteres especiales
+1. Busca la opción **"Leaked Password Protection"** o **"Check for compromised passwords"**
+2. Activa el toggle/switch para habilitar la protección
+3. **Recomendado**: Configura también los requisitos de contraseña:
+   - **Minimum password length**: 8 caracteres (mínimo recomendado)
+   - **Require uppercase**: ✅ Habilitar
+   - **Require lowercase**: ✅ Habilitar
+   - **Require numbers**: ✅ Habilitar
+   - **Require special characters**: ✅ Habilitar (opcional pero recomendado)
 
 ### Paso 4: Guardar Cambios
 
@@ -83,5 +88,34 @@ Para verificar que la protección está habilitada:
 
 ---
 
-**Última actualización**: $(date)
+## 📋 Checklist Rápido
+
+- [ ] Acceder a Supabase Dashboard
+- [ ] Navegar a Authentication → Settings/Configuration
+- [ ] Buscar sección "Password Security"
+- [ ] Habilitar "Leaked Password Protection"
+- [ ] Configurar requisitos mínimos de contraseña
+- [ ] Guardar cambios
+- [ ] Probar con contraseña común (ej: `password123`) para verificar
+
+**Tiempo estimado**: 5-10 minutos
+
+---
+
+## 🔗 Enlaces Directos
+
+- **Supabase Dashboard Principal**: https://supabase.com/dashboard/project/nmcrmgdnpzrrklpcgyzn
+- **Authentication Settings**: https://supabase.com/dashboard/project/nmcrmgdnpzrrklpcgyzn/auth/providers
+- **Security Advisors** (verificar estado): https://supabase.com/dashboard/project/nmcrmgdnpzrrklpcgyzn/advisors/security
+- **Documentación oficial**: https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
+
+## ✅ Verificación Después de Habilitar
+
+Una vez que hayas habilitado la protección, verifica usando:
+- **Script de verificación**: Ver `VERIFICACION_PROTECCION_CONTRASEÑAS.md`
+- **Supabase Advisor**: Debe dejar de mostrar el warning "Leaked Password Protection Disabled"
+
+---
+
+**Última actualización**: Diciembre 2024
 

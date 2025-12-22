@@ -1,11 +1,24 @@
 /**
  * Utilidades de seguridad
  * Sanitización, encriptación, y protección contra ataques comunes
+ * 
+ * Usa Web Crypto API para compatibilidad con Edge Runtime
  */
 
 import DOMPurify from 'isomorphic-dompurify'
-import crypto from 'crypto'
 import { logger } from '@/lib/utils/logger'
+
+// Web Crypto API está disponible globalmente en Node.js 15+ y Edge Runtime
+// No importar crypto de Node.js - usar Web Crypto API global
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error - crypto está disponible globalmente pero TypeScript puede no reconocerlo
+const webCrypto: Crypto = (typeof globalThis !== 'undefined' && globalThis.crypto && 'subtle' in globalThis.crypto)
+  ? globalThis.crypto
+  : (typeof crypto !== 'undefined' && 'subtle' in crypto)
+  ? crypto
+  : (() => {
+      throw new Error('Web Crypto API not available')
+    })()
 
 /**
  * Sanitizar HTML para prevenir XSS
@@ -29,9 +42,12 @@ export function sanitizeText(text: string): string {
 
 /**
  * Generar CSRF token
+ * Usa Web Crypto API para compatibilidad con Edge Runtime
  */
 export function generateCSRFToken(): string {
-  return crypto.randomBytes(32).toString('hex')
+  const array = new Uint8Array(32)
+  webCrypto.getRandomValues(array)
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('')
 }
 
 /**
@@ -43,49 +59,98 @@ export function validateCSRFToken(token: string, sessionToken: string): boolean 
 
 /**
  * Genera una clave segura a partir de una contraseña usando PBKDF2
+ * Usa Web Crypto API para compatibilidad con Edge Runtime
  * 
  * @param password - Contraseña base para derivar la clave
- * @param salt - Salt aleatorio para evitar rainbow tables
- * @returns Buffer con la clave derivada de 32 bytes (256 bits)
+ * @param salt - Salt aleatorio (Uint8Array) para evitar rainbow tables
+ * @returns Uint8Array con la clave derivada de 32 bytes (256 bits)
  * 
  * @example
  * ```ts
- * const salt = crypto.randomBytes(16)
- * const key = deriveKey('myPassword', salt)
+ * const salt = new Uint8Array(16)
+ * crypto.getRandomValues(salt)
+ * const key = await deriveKey('myPassword', salt)
  * ```
  */
-function deriveKey(password: string, salt: Buffer): Buffer {
-  return crypto.pbkdf2Sync(password, salt, 100000, 32, 'sha256')
+async function deriveKey(password: string, salt: Uint8Array): Promise<CryptoKey> {
+  // Convertir password a ArrayBuffer
+  const encoder = new TextEncoder()
+  const passwordKey = await webCrypto.subtle.importKey(
+    'raw',
+    encoder.encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits', 'deriveKey']
+  )
+  
+  // Derivar clave usando PBKDF2
+  const derivedKey = await webCrypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt: salt,
+      iterations: 100000,
+      hash: 'SHA-256',
+    },
+    passwordKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  )
+  
+  return derivedKey
 }
 
 /**
- * Encripta un string usando AES-256-GCM (más seguro que createCipher)
+ * Encripta un string usando AES-256-GCM
+ * Usa Web Crypto API para compatibilidad con Edge Runtime
  * 
  * @param data - Datos a encriptar
  * @param key - Clave de encriptación (default: ENCRYPTION_KEY env var)
- * @returns String encriptado en formato: salt:iv:authTag:encrypted
+ * @returns String encriptado en formato: salt:iv:encrypted (base64)
  * 
  * @example
  * ```ts
- * const encrypted = encryptData('datos sensibles', 'mi-clave-secreta')
- * // Resultado: "abc123...:def456...:789xyz...:encrypted_data..."
+ * const encrypted = await encryptData('datos sensibles', 'mi-clave-secreta')
+ * // Resultado: "abc123...:def456...:encrypted_data_base64..."
  * ```
  */
-export function encryptData(data: string, key: string = process.env.ENCRYPTION_KEY || 'default'): string {
+export async function encryptData(data: string, key?: string): Promise<string> {
+  const encryptionKey = key || (typeof process !== 'undefined' && process.env?.ENCRYPTION_KEY) || 'default'
   try {
-    const algorithm = 'aes-256-gcm'
-    const iv = crypto.randomBytes(16)
-    const salt = crypto.randomBytes(16)
-    const derivedKey = deriveKey(key, salt)
+    // Generar salt e IV aleatorios
+    const salt = new Uint8Array(16)
+    const iv = new Uint8Array(12) // 12 bytes para AES-GCM
+    webCrypto.getRandomValues(salt)
+    webCrypto.getRandomValues(iv)
     
-    const cipher = crypto.createCipheriv(algorithm, derivedKey, iv)
-    let encrypted = cipher.update(data, 'utf8', 'hex')
-    encrypted += cipher.final('hex')
+    // Derivar clave
+    const derivedKey = await deriveKey(encryptionKey, salt)
     
-    const authTag = cipher.getAuthTag()
+    // Convertir datos a ArrayBuffer
+    const encoder = new TextEncoder()
+    const dataBuffer = encoder.encode(data)
     
-    // Formato: salt:iv:authTag:encrypted
-    return `${salt.toString('hex')}:${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`
+    // Encriptar usando AES-GCM
+    const encrypted = await webCrypto.subtle.encrypt(
+      {
+        name: 'AES-GCM',
+        iv: iv,
+      },
+      derivedKey,
+      dataBuffer
+    )
+    
+    // Convertir a base64 para almacenamiento
+    const encryptedArray = new Uint8Array(encrypted)
+    const encryptedBase64 = btoa(String.fromCharCode(...encryptedArray))
+    
+    // Convertir salt e IV a hex para compatibilidad con formato anterior
+    const saltHex = Array.from(salt, byte => byte.toString(16).padStart(2, '0')).join('')
+    const ivHex = Array.from(iv, byte => byte.toString(16).padStart(2, '0')).join('')
+    
+    // Formato: salt:iv:encrypted (base64)
+    // Nota: En formato nuevo no incluimos authTag por separado ya que AES-GCM lo incluye en el ciphertext
+    return `${saltHex}:${ivHex}:${encryptedBase64}`
   } catch (error) {
     logger.error('Security', 'Encryption error', error instanceof Error ? error : new Error(String(error)))
     return data
@@ -93,48 +158,101 @@ export function encryptData(data: string, key: string = process.env.ENCRYPTION_K
 }
 
 /**
- * Desencriptar string usando AES-256-GCM (formato nuevo) o AES-256-CBC (formato antiguo para compatibilidad)
- * Soporta dos formatos:
- * - Nuevo: salt:iv:authTag:encrypted (AES-256-GCM)
- * - Antiguo: encrypted (AES-256-CBC, formato hexadecimal simple)
+ * Desencriptar string usando AES-256-GCM (Web Crypto API)
+ * Soporta múltiples formatos para compatibilidad:
+ * - Formato nuevo (Web Crypto): salt:iv:encrypted (base64)
+ * - Formato intermedio (Node.js crypto): salt:iv:authTag:encrypted (hex)
+ * - Formato antiguo (legacy): encrypted (hex, AES-256-CBC) - requiere Node.js crypto
+ * 
+ * @param encrypted - String encriptado
+ * @param key - Clave de encriptación (default: ENCRYPTION_KEY env var)
+ * @returns String desencriptado
  */
-export function decryptData(encrypted: string, key: string = process.env.ENCRYPTION_KEY || 'default'): string {
+export async function decryptData(encrypted: string, key?: string): Promise<string> {
+  const encryptionKey = key || (typeof process !== 'undefined' && process.env?.ENCRYPTION_KEY) || 'default'
   try {
     const parts = encrypted.split(':')
     
-    // Formato nuevo: salt:iv:authTag:encrypted (AES-256-GCM)
-    if (parts.length === 4) {
-      const [saltHex, ivHex, authTagHex, encryptedData] = parts
-      const salt = Buffer.from(saltHex, 'hex')
-      const iv = Buffer.from(ivHex, 'hex')
-      const authTag = Buffer.from(authTagHex, 'hex')
-      const derivedKey = deriveKey(key, salt)
+    // Formato nuevo (Web Crypto API): salt:iv:encrypted (base64)
+    if (parts.length === 3) {
+      const [saltHex, ivHex, encryptedBase64] = parts
       
-      const algorithm = 'aes-256-gcm'
-      const decipher = crypto.createDecipheriv(algorithm, derivedKey, iv)
-      decipher.setAuthTag(authTag)
+      // Convertir hex a Uint8Array
+      const salt = new Uint8Array(saltHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)))
+      const iv = new Uint8Array(ivHex.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)))
       
-      let decrypted = decipher.update(encryptedData, 'hex', 'utf8')
-      decrypted += decipher.final('utf8')
+      // Convertir base64 a ArrayBuffer
+      const encryptedArray = Uint8Array.from(atob(encryptedBase64), c => c.charCodeAt(0))
       
-      return decrypted
+      // Derivar clave
+      const derivedKey = await deriveKey(encryptionKey, salt)
+      
+      // Desencriptar
+      const decrypted = await webCrypto.subtle.decrypt(
+        {
+          name: 'AES-GCM',
+          iv: iv,
+        },
+        derivedKey,
+        encryptedArray
+      )
+      
+      // Convertir a string
+      const decoder = new TextDecoder()
+      return decoder.decode(decrypted)
     }
     
-    // Formato antiguo: simple string hexadecimal (AES-256-CBC)
-    // Compatibilidad hacia atrás para datos encriptados con createCipher
-    // NOTA: createDecipher está deprecado pero necesario para desencriptar datos antiguos
+    // Formato intermedio (Node.js crypto legacy): salt:iv:authTag:encrypted (hex)
+    // Intentar desencriptar con Node.js crypto si está disponible (para compatibilidad)
+    if (parts.length === 4) {
+      try {
+        // Solo intentar si estamos en Node.js (no en Edge Runtime)
+        if (typeof process !== 'undefined' && process.versions?.node) {
+          const nodeCrypto = await import('crypto')
+          const [saltHex, ivHex, authTagHex, encryptedData] = parts
+          const salt = Buffer.from(saltHex, 'hex')
+          const iv = Buffer.from(ivHex, 'hex')
+          const authTag = Buffer.from(authTagHex, 'hex')
+          
+          // Usar PBKDF2 de Node.js para compatibilidad
+          const derivedKey = nodeCrypto.default.pbkdf2Sync(encryptionKey, salt, 100000, 32, 'sha256')
+          
+          const decipher = nodeCrypto.default.createDecipheriv('aes-256-gcm', derivedKey, iv)
+          decipher.setAuthTag(authTag)
+          
+          let decrypted = decipher.update(encryptedData, 'hex', 'utf8')
+          decrypted += decipher.final('utf8')
+          
+          return decrypted
+        } else {
+          throw new Error('Legacy format requires Node.js runtime')
+        }
+      } catch (legacyError) {
+        logger.warn('Security', 'Legacy decryption failed (Node.js format)', {
+          error: legacyError instanceof Error ? legacyError.message : String(legacyError),
+        })
+        throw legacyError
+      }
+    }
+    
+    // Formato antiguo (muy legacy): simple string hexadecimal (AES-256-CBC)
+    // Solo funciona en Node.js runtime
     if (parts.length === 1 && /^[0-9a-f]+$/i.test(encrypted)) {
       try {
-        // createDecipher está deprecado pero necesario para compatibilidad
-        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-        // @ts-ignore - createDecipher deprecated
-        const decipher = crypto.createDecipher('aes-256-cbc', key)
-        let decrypted = decipher.update(encrypted, 'hex', 'utf8')
-        decrypted += decipher.final('utf8')
-        return decrypted
+        if (typeof process !== 'undefined' && process.versions?.node) {
+          const nodeCrypto = await import('crypto')
+          // createDecipher está deprecado pero necesario para compatibilidad
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore - createDecipher deprecated
+          const decipher = nodeCrypto.default.createDecipher('aes-256-cbc', encryptionKey)
+          let decrypted = decipher.update(encrypted, 'hex', 'utf8')
+          decrypted += decipher.final('utf8')
+          return decrypted
+        } else {
+          throw new Error('Very legacy format requires Node.js runtime')
+        }
       } catch (legacyError) {
-        // Si falla el formato antiguo, registrar el error y lanzarlo
-        logger.warn('Security', 'Legacy decryption failed', {
+        logger.warn('Security', 'Very legacy decryption failed', {
           error: legacyError instanceof Error ? legacyError.message : String(legacyError),
           encryptedLength: encrypted.length,
         })
@@ -143,7 +261,7 @@ export function decryptData(encrypted: string, key: string = process.env.ENCRYPT
     }
     
     // Formato no reconocido
-    throw new Error(`Invalid encrypted data format: expected 4 colon-separated parts (new format) or hex string (legacy format), got ${parts.length} parts`)
+    throw new Error(`Invalid encrypted data format: expected 3 parts (Web Crypto), 4 parts (Node.js legacy), or hex string (very legacy), got ${parts.length} parts`)
   } catch (error) {
     logger.error('Security', 'Decryption error', error instanceof Error ? error : new Error(String(error)))
     return ''
@@ -152,16 +270,24 @@ export function decryptData(encrypted: string, key: string = process.env.ENCRYPT
 
 /**
  * Hash SHA256
+ * Usa Web Crypto API para compatibilidad con Edge Runtime
  */
-export function hashSHA256(data: string): string {
-  return crypto.createHash('sha256').update(data).digest('hex')
+export async function hashSHA256(data: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const dataBuffer = encoder.encode(data)
+  const hashBuffer = await webCrypto.subtle.digest('SHA-256', dataBuffer)
+  const hashArray = new Uint8Array(hashBuffer)
+  return Array.from(hashArray, byte => byte.toString(16).padStart(2, '0')).join('')
 }
 
 /**
  * Generar token aleatorio seguro
+ * Usa Web Crypto API para compatibilidad con Edge Runtime
  */
 export function generateSecureToken(length: number = 32): string {
-  return crypto.randomBytes(length).toString('hex')
+  const array = new Uint8Array(length)
+  webCrypto.getRandomValues(array)
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('')
 }
 
 /**
@@ -236,4 +362,41 @@ export function isStrongPassword(password: string): {
 export function isValidEmail(email: string): boolean {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
   return emailRegex.test(email)
+}
+
+/**
+ * Sanitizar string para uso en emails (escapar HTML)
+ * Previene XSS en templates de email
+ */
+export function sanitizeForEmail(input: string | number): string {
+  const str = String(input)
+  // Escapar HTML
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
+}
+
+/**
+ * Sanitizar datos para logging (remover información sensible)
+ */
+export function sanitizeForLogging(data: Record<string, unknown>): Record<string, unknown> {
+  const sensitiveKeys = ['password', 'token', 'api_key', 'secret', 'key', 'authorization', 'cookie']
+  const sanitized: Record<string, unknown> = {}
+  
+  for (const key in data) {
+    const lowerKey = key.toLowerCase()
+    if (sensitiveKeys.some(sk => lowerKey.includes(sk))) {
+      sanitized[key] = '[REDACTED]'
+    } else if (typeof data[key] === 'object' && data[key] !== null && !Array.isArray(data[key])) {
+      sanitized[key] = sanitizeForLogging(data[key] as Record<string, unknown>)
+    } else {
+      sanitized[key] = data[key]
+    }
+  }
+  
+  return sanitized
 }

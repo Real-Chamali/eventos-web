@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
+import { sanitizeForLogging } from '@/lib/utils/security'
+import { getUserFromSession, checkAdmin, checkRateLimit } from '@/lib/api/middleware'
 
 /**
  * GET /api/admin/debug-role - Debug endpoint para verificar roles
@@ -12,32 +14,56 @@ import { logger } from '@/lib/utils/logger'
  * Uso: Solo para debugging durante desarrollo
  */
 export async function GET() {
-  try {
-    const supabase = await createClient()
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
+  // BLOQUEAR COMPLETAMENTE EN PRODUCCIÓN
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
 
-    if (!user) {
+  // Verificar feature flag adicional
+  if (process.env.ENABLE_DEBUG_ENDPOINTS !== 'true') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
+  try {
+    // Usar función centralizada para obtener usuario de sesión
+    const { user, error: authError } = await getUserFromSession()
+
+    if (!user || authError) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Verificar que sea admin
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle()
+    // Verificar que sea admin usando checkAdmin para consistencia
+    const isAdmin = await checkAdmin(user.id)
 
-    if (profile?.role !== 'admin') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    if (!isAdmin) {
+      logger.warn('API /admin/debug-role', 'Non-admin attempted access', sanitizeForLogging({
+        userId: user.id,
+      }))
+      const response = NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      response.headers.set('X-Content-Type-Options', 'nosniff')
+      return response
     }
+
+    // Rate limiting agresivo: 1 request por hora
+    if (!checkRateLimit(`debug-${user.id}`, 1, 3600000)) {
+      const response = NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+      response.headers.set('X-Content-Type-Options', 'nosniff')
+      return response
+    }
+
+          // Logging de acceso
+          logger.warn('API /admin/debug-role', 'Debug endpoint accessed', sanitizeForLogging({
+            userId: user.id,
+            timestamp: new Date().toISOString(),
+          }))
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      return NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+      const response = NextResponse.json({ error: 'Server configuration error' }, { status: 500 })
+      response.headers.set('X-Content-Type-Options', 'nosniff')
+      return response
     }
 
     const adminClient = createAdminClient(supabaseUrl, supabaseServiceKey, {
@@ -83,8 +109,13 @@ export async function GET() {
       })),
     })
   } catch (error) {
-    logger.error('API /admin/debug-role', 'Error', error as Error)
-    return NextResponse.json({ error: 'Internal server error', details: error instanceof Error ? error.message : String(error) }, { status: 500 })
+    logger.error('API /admin/debug-role', 'Error', error as Error, sanitizeForLogging({}))
+    const response = NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    )
+    response.headers.set('X-Content-Type-Options', 'nosniff')
+    return response
   }
 }
 

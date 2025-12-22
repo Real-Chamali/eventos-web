@@ -19,6 +19,7 @@ import {
 } from '@/lib/utils/quote-history'
 import { logger } from '@/lib/utils/logger'
 import { z } from 'zod'
+import { sanitizeForLogging } from '@/lib/utils/security'
 
 // Validation schemas
 const CompareVersionSchema = z.object({
@@ -96,17 +97,18 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Default: get full history summary
     const history = await getQuoteHistorySummary(quoteId)
 
-    logger.info('api/quotes/history', 'Quote history retrieved', {
+    // Sanitizar datos antes de loguear
+    logger.info('api/quotes/history', 'Quote history retrieved', sanitizeForLogging({
       quoteId,
       userId: user.id,
       totalVersions: history.total_versions,
-    })
+    }))
 
     return successResponse(history, 'Quote history retrieved successfully')
   } catch (error) {
-    logger.error('api/quotes/history', 'Error retrieving quote history', error instanceof Error ? error : new Error(String(error)), {
+    logger.error('api/quotes/history', 'Error retrieving quote history', error instanceof Error ? error : new Error(String(error)), sanitizeForLogging({
       request: request.url,
-    })
+    }))
     return errorResponse(
       'Failed to retrieve quote history',
       500,
@@ -183,13 +185,14 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     // Get comparison
     const comparison = await compareQuoteVersions(quoteId, version1, version2)
 
-    logger.info('api/quotes/history', 'Quote versions compared', {
+    // Sanitizar datos antes de loguear
+    logger.info('api/quotes/history', 'Quote versions compared', sanitizeForLogging({
       quoteId,
       userId: user.id,
       version1,
       version2,
       changedFields: comparison.filter((c) => c.changed).length,
-    })
+    }))
 
     return successResponse(
       comparison,
@@ -197,9 +200,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       200
     )
   } catch (error) {
-    logger.error('api/quotes/history', 'Error comparing quote versions', error instanceof Error ? error : new Error(String(error)), {
+    logger.error('api/quotes/history', 'Error comparing quote versions', error instanceof Error ? error : new Error(String(error)), sanitizeForLogging({
       request: request.url,
-    })
+    }))
     return errorResponse(
       'Failed to compare quote versions',
       500,

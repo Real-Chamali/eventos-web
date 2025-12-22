@@ -159,26 +159,42 @@ WHERE proname IN ('get_total_paid', 'get_balance_due');
 
 ### 2.2 Agregar Variables de Entorno
 
+⚠️ **IMPORTANTE DE SEGURIDAD**: Los secrets de Supabase **NO** deben estar hardcodeados en `vercel.json` ni en ningún archivo del repositorio. Deben configurarse exclusivamente en Vercel Dashboard.
+
 1. Ve a tu proyecto en Vercel
 2. Ve a **Settings** → **Environment Variables**
 3. Agrega estas variables (marca todas para Production, Preview y Development):
 
-#### Variables Obligatorias:
+#### Variables Obligatorias (CRÍTICAS):
 
 ```
 NEXT_PUBLIC_SUPABASE_URL
 ```
-**Valor:** `https://nmcrmgdnpzrrklpcgyzn.supabase.co`
+**Valor:** `[OBTENER DE SUPABASE DASHBOARD -> Settings -> API]`
+⚠️ **IMPORTANTE**: Esta URL es pública y puede estar en el código, pero es mejor usar variables de entorno.
+- **Cómo obtener**: Supabase Dashboard → Settings → API → Project URL
 
 ```
 NEXT_PUBLIC_SUPABASE_ANON_KEY
 ```
-**Valor:** `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tY3JtZ2RucHpycmtscGNneXpuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUxNTE5NzIsImV4cCI6MjA4MDcyNzk3Mn0.fZ_1rRr6PK3HSzqZFtXOx6jpAxAhGPC9qz-cTxWr2PE`
+**Valor:** `[OBTENER DE SUPABASE DASHBOARD -> Settings -> API -> anon/public key]`
+⚠️ **IMPORTANTE**: Esta key es pública pero debe estar en variables de entorno, **NUNCA hardcodeada**.
+- **Cómo obtener**: Supabase Dashboard → Settings → API → anon/public key
+- **Seguridad**: Aunque es pública, debe estar en variables de entorno para facilitar rotación
 
 ```
 SUPABASE_SERVICE_ROLE_KEY
 ```
-**Valor:** `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5tY3JtZ2RucHpycmtscGNneXpuIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NTE1MTk3MiwiZXhwIjoyMDgwNzI3OTcyfQ.5B95jmZmS-DYZ8PsR1psPitb814gtzT1x9nhVUHTeTs`
+**Valor:** `[OBTENER DE SUPABASE DASHBOARD -> Settings -> API -> service_role key]`
+🔒 **CRÍTICO**: Esta key tiene acceso TOTAL a la base de datos. 
+- **Cómo obtener**: Supabase Dashboard → Settings → API → service_role key
+- ⚠️ **NUNCA** compartir públicamente
+- ⚠️ **NUNCA** commitear al repositorio
+- ⚠️ **NUNCA** exponer en el frontend
+- ⚠️ **NUNCA** hardcodear en `vercel.json` o cualquier archivo
+- ✅ Solo usar en server-side (API routes, server components)
+- ✅ Rotar periódicamente
+- ✅ Configurar solo en Vercel Dashboard → Environment Variables
 
 #### Variables Recomendadas:
 
@@ -208,6 +224,28 @@ NEXT_PUBLIC_SENTRY_DSN
 ENCRYPTION_KEY
 ```
 **Valor:** Genera uno nuevo con: `openssl rand -base64 32`
+
+#### Variables para Rate Limiting Distribuido (Opcional pero Recomendado):
+
+```
+UPSTASH_REDIS_REST_URL
+```
+**Valor:** `[OBTENER DE UPSTASH DASHBOARD]`
+- **Cómo obtener**: 
+  1. Crear cuenta en [Upstash](https://upstash.com) (gratis hasta 10K comandos/día)
+  2. Crear una nueva base de datos Redis
+  3. Copiar la "REST URL" desde el dashboard
+- **Beneficios**: Rate limiting distribuido que funciona correctamente en entornos serverless
+- **Sin esta variable**: El sistema usará rate limiting en memoria (funciona pero no es distribuido)
+
+```
+UPSTASH_REDIS_REST_TOKEN
+```
+**Valor:** `[OBTENER DE UPSTASH DASHBOARD]`
+- **Cómo obtener**: 
+  1. En el dashboard de Upstash, en tu base de datos Redis
+  2. Copiar el "REST TOKEN" (token de autenticación)
+- ⚠️ **IMPORTANTE**: No compartir públicamente ni commitear al repositorio
 
 ### 2.3 Importante
 
@@ -305,7 +343,39 @@ Si configuraste Sentry:
 1. Verifica que `NEXT_PUBLIC_SENTRY_DSN` esté en variables de entorno
 2. Los errores se reportarán automáticamente a Sentry
 
-### 5.3 Configurar Analytics
+### 5.3 Configurar Rate Limiting Distribuido con Upstash (Recomendado)
+
+El sistema ya tiene soporte para rate limiting distribuido usando Upstash Redis. Para habilitarlo:
+
+1. **Crear cuenta en Upstash**:
+   - Ve a [https://upstash.com](https://upstash.com)
+   - Crea una cuenta (gratis hasta 10K comandos/día)
+   - Crea una nueva base de datos Redis
+
+2. **Obtener credenciales**:
+   - En el dashboard de Upstash, selecciona tu base de datos
+   - Copia la "REST URL" y el "REST TOKEN"
+
+3. **Configurar en Vercel**:
+   - Ve a Vercel Dashboard → Settings → Environment Variables
+   - Agrega `UPSTASH_REDIS_REST_URL` con la REST URL
+   - Agrega `UPSTASH_REDIS_REST_TOKEN` con el REST TOKEN
+   - Marca ambas para Production, Preview y Development
+
+4. **Verificar funcionamiento**:
+   - El sistema automáticamente usará Upstash si las variables están configuradas
+   - Si Upstash falla, automáticamente hace fallback a rate limiting en memoria
+   - Revisa los logs para confirmar que está usando Redis
+
+**Beneficios**:
+- ✅ Rate limiting distribuido que funciona correctamente en múltiples instancias serverless
+- ✅ Persistencia entre reinicios
+- ✅ Mejor para aplicaciones con alto tráfico
+- ✅ Tier gratuito suficiente para la mayoría de aplicaciones pequeñas/medianas
+
+**Sin Upstash**: El sistema funciona con rate limiting en memoria, pero no es distribuido (cada instancia serverless tiene su propio contador).
+
+### 5.4 Configurar Analytics
 
 Si quieres Google Analytics:
 

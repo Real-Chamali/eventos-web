@@ -17,7 +17,9 @@ import {
   checkRateLimit,
   handleAPIError,
 } from '@/lib/api/middleware'
+import { getAuthenticatedUser, checkApiKeyPermissions } from '@/lib/api/authHelper'
 import { logger } from '@/lib/utils/logger'
+import { sanitizeForLogging } from '@/lib/utils/security'
 
 /**
  * GET /api/finance
@@ -29,19 +31,24 @@ export async function GET(request: NextRequest) {
     const methodError = validateMethod(request, ['GET', 'OPTIONS'])
     if (methodError) return methodError
 
-    const { user, error: authError } = await verifyAuth(request)
-    if (!user || authError) {
-      return errorResponse('Unauthorized', 401)
+    const auth = await getAuthenticatedUser(request)
+    if (auth.error || !auth.userId) {
+      return errorResponse(auth.error || 'Unauthorized', 401)
+    }
+    
+    // Verificar permisos si es API key
+    if (auth.isApiKey && !checkApiKeyPermissions(auth, 'admin')) {
+      return errorResponse('Insufficient permissions. Required: admin', 403)
     }
 
-    // Check admin role
-    const isAdmin = await checkAdmin(user.id)
+    // Check admin role (para JWT también)
+    const isAdmin = await checkAdmin(auth.userId)
     if (!isAdmin) {
       return errorResponse('Forbidden - Admin access required', 403)
     }
 
     // Rate limiting
-    if (!checkRateLimit(`finance-get-${user.id}`, 30, 60000)) {
+    if (!checkRateLimit(`finance-get-${auth.userId}`, 30, 60000)) {
       return errorResponse('Too many requests', 429)
     }
 
@@ -91,12 +98,14 @@ export async function GET(request: NextRequest) {
     summary.total_income = parseFloat((summary.total_income || 0).toFixed(2))
     summary.total_expense = parseFloat((summary.total_expense || 0).toFixed(2))
 
-    await auditAPIAction(user.id, 'READ', 'finance_entries', undefined, undefined, undefined, request)
+    await auditAPIAction(auth.userId, 'READ', 'finance_entries', undefined, undefined, undefined, request)
 
-    logger.info('API', 'Finance data retrieved', {
-      userId: user.id,
+    // Sanitizar datos antes de loguear
+    logger.info('API', 'Finance data retrieved', sanitizeForLogging({
+      userId: auth.userId,
       entries: data?.length,
-    })
+      isApiKey: auth.isApiKey,
+    }))
 
     return successResponse(
       {

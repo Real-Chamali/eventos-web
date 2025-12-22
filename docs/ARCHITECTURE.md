@@ -139,6 +139,60 @@ Rate limiter en memoria para proteger endpoints.
 
 ---
 
+## ADR-011: Runtime Configuration
+
+### Decisión
+- **Middleware**: Edge Runtime (por defecto en Next.js)
+- **API Routes**: Node.js Runtime (por defecto, sin configuración explícita)
+
+### Contexto
+- Next.js middleware siempre corre en Edge Runtime para mejor performance
+- API routes usan Node.js runtime por defecto para compatibilidad con librerías Node.js
+- Migración a Web Crypto API permite compatibilidad con Edge Runtime si es necesario en el futuro
+
+### Configuración Actual
+
+#### Middleware (`middleware.ts`)
+- **Runtime**: Edge Runtime (automático, no requiere configuración)
+- **Ubicación**: Raíz del proyecto
+- **Funcionalidad**: Manejo de sesiones de Supabase, autenticación, redirecciones
+
+#### API Routes (`app/api/**/route.ts`)
+- **Runtime**: Node.js Runtime (por defecto)
+- **Total de rutas verificadas**: 14 rutas
+- **Configuración explícita**: Ninguna (todas usan defaults)
+- **Compatibilidad**: 
+  - ✅ Compatible con Node.js crypto (legacy, para desencriptación de datos antiguos)
+  - ✅ Compatible con Web Crypto API (nuevo, para Edge Runtime si se necesita)
+  - ✅ Todas las funciones de seguridad migradas a Web Crypto API
+
+#### Funciones de Seguridad (`lib/utils/security.ts`)
+- **Compatibilidad**: Web Crypto API (Edge Runtime compatible)
+- **Fallback**: Node.js crypto para datos encriptados con formato legacy
+- **Funciones migradas**:
+  - `generateCSRFToken()` - Web Crypto API (sync)
+  - `generateSecureToken()` - Web Crypto API (sync)
+  - `hashSHA256()` - Web Crypto API (async)
+  - `encryptData()` - Web Crypto API (async)
+  - `decryptData()` - Web Crypto API (async) con fallback a Node.js crypto para legacy
+
+### Consecuencias
+- ✅ Middleware rápido (Edge Runtime)
+- ✅ API routes con acceso completo a ecosistema Node.js
+- ✅ Funciones de seguridad compatibles con ambos runtimes
+- ✅ Migración futura a Edge Runtime posible si se necesita
+- ⚠️ Si alguna ruta necesita Edge Runtime, debe verificar compatibilidad de dependencias
+
+### Notas Técnicas
+- **No se requiere configuración explícita** en las rutas API actuales
+- Si en el futuro se necesita Edge Runtime para alguna ruta, agregar:
+  ```typescript
+  export const runtime = 'edge'
+  ```
+- Las funciones de seguridad ya están preparadas para Edge Runtime gracias a la migración a Web Crypto API
+
+---
+
 ## ADR-009: Notificaciones y Feedback
 
 ### Decisión

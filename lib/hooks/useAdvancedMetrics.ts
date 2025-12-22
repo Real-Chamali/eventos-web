@@ -35,6 +35,7 @@ const fetcher = async (): Promise<AdvancedMetrics> => {
   }
   
   // Obtener cotizaciones de los últimos 12 meses
+  // Optimización: usar índices existentes (idx_quotes_vendor_created)
   const twelveMonthsAgo = new Date()
   twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12)
   
@@ -43,6 +44,7 @@ const fetcher = async (): Promise<AdvancedMetrics> => {
     .select('id, total_amount, status, created_at, client_id, updated_at')
     .eq('vendor_id', user.id)
     .gte('created_at', twelveMonthsAgo.toISOString())
+    // Usar índice compuesto vendor_id + created_at
     .order('created_at', { ascending: true })
   
   if (quotesError) {
@@ -121,24 +123,38 @@ const fetcher = async (): Promise<AdvancedMetrics> => {
     }
   })
   
-  // Obtener nombres de clientes
+  // Obtener nombres de clientes en una sola query (optimización N+1)
   const clientIds = Array.from(clientSales.keys())
   if (clientIds.length > 0) {
-    const { data: clients } = await supabase
+    const { data: clients, error: clientsError } = await supabase
       .from('clients')
       .select('id, name')
       .in('id', clientIds)
     
-    clients?.forEach((client) => {
-      const sales = clientSales.get(client.id)
-      if (sales) {
-        sales.name = client.name || 'Cliente'
-      }
-    })
+    if (clientsError) {
+      logger.warn('useAdvancedMetrics', 'Error fetching clients', {
+        error: clientsError.message,
+      })
+    } else {
+      clients?.forEach((client) => {
+        const sales = clientSales.get(client.id)
+        if (sales) {
+          sales.name = client.name || 'Cliente'
+        }
+      })
+    }
   }
   
-  const topClient = Array.from(clientSales.values())
-    .sort((a, b) => b.total - a.total)[0] || null
+  const topClientEntry = Array.from(clientSales.values())
+    .sort((a, b) => b.total - a.total)[0]
+  
+  const topClient = topClientEntry
+    ? {
+        id: topClientEntry.id,
+        name: topClientEntry.name,
+        totalSales: topClientEntry.total,
+      }
+    : null
   
   // Calcular mejor mes
   const monthlySales = new Map<string, number>()

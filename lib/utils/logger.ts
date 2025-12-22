@@ -148,12 +148,24 @@ class Logger {
       return
     }
 
+    // Sanitizar datos antes de loguear
+    let sanitizedData = data
+    if (data) {
+      try {
+        const { sanitizeForLogging } = require('./security')
+        sanitizedData = sanitizeForLogging(data)
+      } catch {
+        // Si falla la sanitización, usar datos originales
+        sanitizedData = data
+      }
+    }
+
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
       context,
       message,
-      data,
+      data: sanitizedData,
       userId,
       requestId,
     }
