@@ -76,6 +76,45 @@ export async function PATCH(
 
     const { role } = bodyValidation.data
 
+    // Verificar que solo admin@chamali.com puede tener rol admin
+    if (role === 'admin') {
+      // Obtener el email del usuario objetivo
+      const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+      
+      if (!supabaseUrl || !supabaseServiceKey) {
+        logger.error('API /admin/users/[id]/role', 'Missing service role key', new Error('SUPABASE_SERVICE_ROLE_KEY not set'))
+        return NextResponse.json(
+          { error: 'Server configuration error' },
+          { status: 500 }
+        )
+      }
+      
+      const adminClient = createAdminClient(supabaseUrl, supabaseServiceKey, {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      })
+      
+      const { data: targetUser } = await adminClient.auth.admin.getUserById(id)
+      
+      if (!targetUser || targetUser.user?.email !== 'admin@chamali.com') {
+        const response = NextResponse.json(
+          { error: 'Solo admin@chamali.com puede tener rol de administrador' },
+          { status: 403 }
+        )
+        response.headers.set('X-Content-Type-Options', 'nosniff')
+        logger.warn('API /admin/users/[id]/role', 'Attempt to assign admin role to unauthorized user', sanitizeForLogging({
+          adminUserId: user.id,
+          targetUserId: id,
+          targetEmail: targetUser?.user?.email,
+        }))
+        return response
+      }
+    }
+
     // No permitir que un admin se quite su propio rol de admin
     if (id === user.id && role !== 'admin') {
       const response = NextResponse.json(

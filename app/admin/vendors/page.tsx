@@ -81,9 +81,17 @@ export default function AdminVendorsPage() {
   }
 
   const handleRoleChange = (vendor: Vendor) => {
-    setSelectedVendor(vendor)
-    setNewRole(vendor.role === 'admin' ? 'vendor' : 'admin')
-    setShowRoleDialog(true)
+    // Solo permitir cambiar roles de vendedores, no crear nuevos admins
+    if (vendor.role === 'admin') {
+      // Si es admin, solo puede cambiar a vendor
+      setSelectedVendor(vendor)
+      setNewRole('vendor')
+      setShowRoleDialog(true)
+    } else {
+      // Si es vendor, no puede cambiar a admin (solo admin@chamali.com puede ser admin)
+      toastError('Solo admin@chamali.com puede tener rol de administrador')
+      return
+    }
   }
 
   const confirmRoleChange = async () => {
