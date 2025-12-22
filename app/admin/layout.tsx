@@ -9,16 +9,37 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  let supabase
+  let user
+  
+  try {
+    supabase = await createClient()
+    const {
+      data: { user: authUser },
+      error: authError,
+    } = await supabase.auth.getUser()
 
-  if (!user) {
+    if (authError) {
+      logger.error('AdminLayout', 'Error getting user', authError as Error)
+      redirect('/login')
+    }
+
+    user = authUser
+
+    if (!user) {
+      redirect('/login')
+    }
+  } catch (error) {
+    logger.error('AdminLayout', 'Error initializing Supabase client', error as Error)
+    // Redirigir a login en caso de error para evitar errores 5xx
     redirect('/login')
   }
 
   let userRole = 'vendor'
+
+  if (!user || !supabase) {
+    redirect('/login')
+  }
 
   try {
     // Usar el cliente admin para obtener el perfil sin problemas de RLS

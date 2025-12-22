@@ -7,7 +7,13 @@ export default async function Home() {
     const supabase = await createClient()
     const {
       data: { user },
+      error: authError,
     } = await supabase.auth.getUser()
+
+    if (authError) {
+      logger.error('Home', 'Error getting user', authError as Error)
+      redirect('/login')
+    }
 
     if (!user) {
       redirect('/login')
