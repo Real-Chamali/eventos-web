@@ -42,7 +42,7 @@ const fetcher = async (): Promise<RevenueTrendsData> => {
     .from('quotes')
     .select('total_amount, status, created_at')
     .eq('vendor_id', user.id)
-    .in('status', ['APPROVED', 'confirmed'])
+    .eq('status', 'APPROVED')
     .gte('created_at', twoYearsAgo.toISOString())
     .order('created_at', { ascending: true })
   

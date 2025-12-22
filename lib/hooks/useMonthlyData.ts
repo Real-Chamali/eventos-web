@@ -30,7 +30,7 @@ const fetcher = async (): Promise<MonthlyData[]> => {
     .from('quotes')
     .select('total_amount, status, created_at')
     .eq('vendor_id', user.id)
-    .in('status', ['APPROVED', 'confirmed'])
+    .eq('status', 'APPROVED')
     .gte('created_at', sixMonthsAgo.toISOString())
     .order('created_at', { ascending: true })
   

@@ -28,7 +28,7 @@ const fetcher = async (): Promise<ServicePerformance[]> => {
     .from('quotes')
     .select('id, status')
     .eq('vendor_id', user.id)
-    .in('status', ['APPROVED', 'confirmed'])
+    .eq('status', 'APPROVED')
   
   if (quotesError) {
     logger.error('useServicePerformance', 'Error fetching quotes', quotesError as Error)
