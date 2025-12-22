@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
   
   // Headers para manejar cookies de Cloudflare y WebSockets
   async headers() {
-    return [
+    const headers = [
       {
         source: '/:path*',
         headers: [
@@ -30,7 +30,34 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-    ];
+    ]
+
+    // Agregar headers CORS para desarrollo si es necesario
+    if (process.env.NODE_ENV === 'development') {
+      headers.push({
+        source: '/api/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization, x-api-key',
+          },
+          {
+            key: 'Access-Control-Allow-Credentials',
+            value: 'true',
+          },
+        ],
+      })
+    }
+
+    return headers
   },
 };
 

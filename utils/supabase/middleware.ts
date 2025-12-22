@@ -33,11 +33,15 @@ export async function updateSession(request: NextRequest) {
             const cookieOptions: CookieOptions = {
               ...options,
               // Asegurar SameSite para evitar problemas con Cloudflare y CORS
-              sameSite: options?.sameSite || 'lax',
+              // Usar 'none' en producción si hay problemas de CORS, 'lax' por defecto
+              sameSite: options?.sameSite || (process.env.NODE_ENV === 'production' ? 'lax' : 'lax'),
               // Asegurar Secure en producción (HTTPS)
               secure: options?.secure ?? (process.env.NODE_ENV === 'production'),
               // Las cookies de Supabase necesitan ser accesibles desde JavaScript
               // No usar httpOnly para cookies de autenticación de Supabase
+              // Asegurar que el dominio sea correcto
+              domain: options?.domain,
+              path: options?.path || '/',
             }
             supabaseResponse.cookies.set(name, value, cookieOptions)
           })

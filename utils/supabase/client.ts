@@ -30,7 +30,20 @@ NOTA: Obtén tus credenciales en https://app.supabase.com -> Tu Proyecto -> Sett
 
   return createBrowserClient(
     supabaseUrl,
-    supabaseAnonKey
+    supabaseAnonKey,
+    {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+        flowType: 'pkce',
+      },
+      global: {
+        headers: {
+          'x-client-info': 'eventos-web',
+        },
+      },
+    }
   )
 }
 
