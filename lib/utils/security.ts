@@ -19,6 +19,29 @@ const webCrypto: Crypto = (typeof globalThis !== 'undefined' && globalThis.crypt
     })()
 
 /**
+ * Helper para importar crypto de Node.js solo cuando sea necesario
+ * Esto evita que Next.js lo detecte en tiempo de build para Edge Runtime
+ */
+async function getNodeCrypto(): Promise<any> {
+  // Verificar si estamos en Node.js runtime
+  const isNodeRuntime = typeof process !== 'undefined' 
+    && typeof process.env !== 'undefined'
+    && typeof Buffer !== 'undefined'
+  
+  if (!isNodeRuntime) {
+    return null
+  }
+  
+  try {
+    // Usar Function constructor para evitar detección en tiempo de build
+    const importFunc = new Function('specifier', 'return import(specifier)')
+    return await importFunc('crypto')
+  } catch {
+    return null
+  }
+}
+
+/**
  * Sanitizar HTML para prevenir XSS
  */
 export function sanitizeHTML(dirty: string): string {
@@ -202,29 +225,30 @@ export async function decryptData(encrypted: string, key?: string): Promise<stri
     
     // Formato intermedio (Node.js crypto legacy): salt:iv:authTag:encrypted (hex)
     // Intentar desencriptar con Node.js crypto si está disponible (para compatibilidad)
+    // NOTA: Este formato solo funciona en Node.js runtime, no en Edge Runtime
     if (parts.length === 4) {
       try {
-        // Solo intentar si estamos en Node.js (no en Edge Runtime)
-        if (typeof process !== 'undefined' && process.versions?.node) {
-          const nodeCrypto = await import('crypto')
-          const [saltHex, ivHex, authTagHex, encryptedData] = parts
-          const salt = Buffer.from(saltHex, 'hex')
-          const iv = Buffer.from(ivHex, 'hex')
-          const authTag = Buffer.from(authTagHex, 'hex')
-          
-          // Usar PBKDF2 de Node.js para compatibilidad
-          const derivedKey = nodeCrypto.default.pbkdf2Sync(encryptionKey, salt, 100000, 32, 'sha256')
-          
-          const decipher = nodeCrypto.default.createDecipheriv('aes-256-gcm', derivedKey, iv)
-          decipher.setAuthTag(authTag)
-          
-          let decrypted = decipher.update(encryptedData, 'hex', 'utf8')
-          decrypted += decipher.final('utf8')
-          
-          return decrypted
-        } else {
+        // Intentar obtener crypto de Node.js solo si estamos en Node.js runtime
+        const nodeCrypto = await getNodeCrypto()
+        
+        if (!nodeCrypto || !nodeCrypto.default) {
           throw new Error('Legacy format requires Node.js runtime')
         }
+        const [saltHex, ivHex, authTagHex, encryptedData] = parts
+        const salt = Buffer.from(saltHex, 'hex')
+        const iv = Buffer.from(ivHex, 'hex')
+        const authTag = Buffer.from(authTagHex, 'hex')
+        
+        // Usar PBKDF2 de Node.js para compatibilidad
+        const derivedKey = nodeCrypto.default.pbkdf2Sync(encryptionKey, salt, 100000, 32, 'sha256')
+        
+        const decipher = nodeCrypto.default.createDecipheriv('aes-256-gcm', derivedKey, iv)
+        decipher.setAuthTag(authTag)
+        
+        let decrypted = decipher.update(encryptedData, 'hex', 'utf8')
+        decrypted += decipher.final('utf8')
+        
+        return decrypted
       } catch (legacyError) {
         logger.warn('Security', 'Legacy decryption failed (Node.js format)', {
           error: legacyError instanceof Error ? legacyError.message : String(legacyError),
@@ -235,20 +259,22 @@ export async function decryptData(encrypted: string, key?: string): Promise<stri
     
     // Formato antiguo (muy legacy): simple string hexadecimal (AES-256-CBC)
     // Solo funciona en Node.js runtime
+    // NOTA: Este formato solo funciona en Node.js runtime, no en Edge Runtime
     if (parts.length === 1 && /^[0-9a-f]+$/i.test(encrypted)) {
       try {
-        if (typeof process !== 'undefined' && process.versions?.node) {
-          const nodeCrypto = await import('crypto')
-          // createDecipher está deprecado pero necesario para compatibilidad
-          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-          // @ts-ignore - createDecipher deprecated
-          const decipher = nodeCrypto.default.createDecipher('aes-256-cbc', encryptionKey)
-          let decrypted = decipher.update(encrypted, 'hex', 'utf8')
-          decrypted += decipher.final('utf8')
-          return decrypted
-        } else {
+        // Intentar obtener crypto de Node.js solo si estamos en Node.js runtime
+        const nodeCrypto = await getNodeCrypto()
+        
+        if (!nodeCrypto || !nodeCrypto.default) {
           throw new Error('Very legacy format requires Node.js runtime')
         }
+        // createDecipher está deprecado pero necesario para compatibilidad
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore - createDecipher deprecated
+        const decipher = nodeCrypto.default.createDecipher('aes-256-cbc', encryptionKey)
+        let decrypted = decipher.update(encrypted, 'hex', 'utf8')
+        decrypted += decipher.final('utf8')
+        return decrypted
       } catch (legacyError) {
         logger.warn('Security', 'Very legacy decryption failed', {
           error: legacyError instanceof Error ? legacyError.message : String(legacyError),
