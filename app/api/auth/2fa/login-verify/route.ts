@@ -23,10 +23,22 @@ export async function POST(request: NextRequest) {
     // Obtener usuario por email usando admin client
     const supabaseAdmin = createAdminClient()
     
-    // Buscar usuario por email en auth.users
-    const { data: { user }, error: userError } = await supabaseAdmin.auth.admin.getUserByEmail(email)
+    // Buscar usuario por email en auth.users usando listUsers
+    // Nota: listUsers no tiene filtro directo, así que listamos y filtramos
+    const { data: { users }, error: userError } = await supabaseAdmin.auth.admin.listUsers()
 
-    if (userError || !user) {
+    if (userError) {
+      logger.warn('API /auth/2fa/login-verify', 'Error listing users', { email, error: userError })
+      return NextResponse.json(
+        { error: 'Invalid credentials' },
+        { status: 401 }
+      )
+    }
+
+    // Filtrar por email
+    const user = users?.find((u) => u.email?.toLowerCase() === email.toLowerCase())
+
+    if (!user) {
       logger.warn('API /auth/2fa/login-verify', 'User not found', { email })
       return NextResponse.json(
         { error: 'Invalid credentials' },

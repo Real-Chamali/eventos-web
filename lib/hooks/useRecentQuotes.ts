@@ -48,10 +48,16 @@ const fetcher = async (): Promise<Quote[]> => {
     // Extraer cliente (puede ser array o objeto)
     const client = quote.client ? (Array.isArray(quote.client) ? quote.client[0] : quote.client) : null
     return {
-      ...quote,
+      id: quote.id,
+      client_id: '',
+      vendor_id: '',
+      total_price: quote.total_amount || 0,
+      total_amount: quote.total_amount || 0,
+      status: quote.status,
+      created_at: quote.created_at,
       client_name: client?.name || 'Cliente sin nombre',
-    }
-  }) as Quote[]
+    } as Quote
+  })
 }
 
 export function useRecentQuotes() {

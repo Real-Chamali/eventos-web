@@ -60,7 +60,6 @@ export function DashboardServicePerformance() {
                 data={chartData} 
                 type="bar" 
                 height={300}
-                horizontal={true}
               />
             </div>
             

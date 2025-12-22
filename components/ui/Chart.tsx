@@ -4,8 +4,8 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, R
 
 interface ChartData {
   name: string
-  value: number
-  [key: string]: string | number
+  value?: number
+  [key: string]: string | number | undefined
 }
 
 interface ChartProps {
@@ -14,6 +14,8 @@ interface ChartProps {
   dataKey?: string
   height?: number
   showLegend?: boolean
+  // Para múltiples series, pasar un array de dataKeys
+  dataKeys?: string[]
 }
 
 export default function Chart({
@@ -22,9 +24,20 @@ export default function Chart({
   dataKey = 'value',
   height = 300,
   showLegend = false,
+  dataKeys,
 }: ChartProps) {
   const ChartComponent = type === 'bar' ? BarChart : LineChart
   const DataComponent = type === 'bar' ? Bar : Line
+
+  // Si hay múltiples dataKeys, usar esos; si no, usar el dataKey único
+  const keysToRender = dataKeys && dataKeys.length > 0 ? dataKeys : [dataKey]
+
+  // Colores para múltiples series
+  const colors = [
+    { fill: 'url(#gradient1)', stroke: '#6366f1' },
+    { fill: 'url(#gradient2)', stroke: '#8b5cf6' },
+    { fill: 'url(#gradient3)', stroke: '#ec4899' },
+  ]
 
   return (
     <ResponsiveContainer width="100%" height={height}>
@@ -57,17 +70,31 @@ export default function Chart({
           }}
         />
         {showLegend && <Legend />}
-        <DataComponent
-          dataKey={dataKey}
-          fill="url(#gradient)"
-          stroke="#6366f1"
-          strokeWidth={2}
-          {...(type === 'bar' && { radius: 8 })}
-        />
+        {keysToRender.map((key, index) => {
+          const color = colors[index % colors.length]
+          return (
+            <DataComponent
+              key={key}
+              dataKey={key}
+              fill={color.fill}
+              stroke={color.stroke}
+              strokeWidth={2}
+              {...(type === 'bar' && { radius: 8 })}
+            />
+          )
+        })}
         <defs>
-          <linearGradient id="gradient" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id="gradient1" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#6366f1" stopOpacity={0.8} />
             <stop offset="100%" stopColor="#818cf8" stopOpacity={0.4} />
+          </linearGradient>
+          <linearGradient id="gradient2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.8} />
+            <stop offset="100%" stopColor="#a78bfa" stopOpacity={0.4} />
+          </linearGradient>
+          <linearGradient id="gradient3" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#ec4899" stopOpacity={0.8} />
+            <stop offset="100%" stopColor="#f472b6" stopOpacity={0.4} />
           </linearGradient>
         </defs>
       </ChartComponent>

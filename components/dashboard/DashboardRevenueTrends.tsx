@@ -116,6 +116,7 @@ export function DashboardRevenueTrends() {
               type="line" 
               height={300}
               showLegend={true}
+              dataKeys={['Año Actual', 'Año Anterior']}
             />
           </div>
         ) : (

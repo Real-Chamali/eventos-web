@@ -196,7 +196,8 @@ export default function QuoteDetailPage() {
         }
       } catch (notificationError) {
         // No fallar si hay error en notificaciones
-        logger.warn('QuoteDetailPage', 'Error creating notifications', notificationError as Error, {
+        logger.warn('QuoteDetailPage', 'Error creating notifications', {
+          error: notificationError instanceof Error ? notificationError.message : String(notificationError),
           quoteId,
           eventId: event.id,
         })

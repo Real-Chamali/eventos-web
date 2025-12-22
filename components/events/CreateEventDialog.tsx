@@ -384,7 +384,8 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
           })
         } catch (notificationError) {
           // No fallar si hay error en notificaciones
-          logger.warn('CreateEventDialog', 'Error creating notifications', notificationError as Error, {
+          logger.warn('CreateEventDialog', 'Error creating notifications', {
+            error: notificationError instanceof Error ? notificationError.message : String(notificationError),
             eventId: event?.id,
             quoteId: quote.id,
           })

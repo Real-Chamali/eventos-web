@@ -190,7 +190,8 @@ export async function POST(request: NextRequest) {
       }
     } catch (notificationError) {
       // No fallar si hay error en notificaciones
-      logger.warn('API', 'Error creating notifications for quote', notificationError as Error, {
+      logger.warn('API', 'Error creating notifications for quote', {
+        error: notificationError instanceof Error ? notificationError.message : String(notificationError),
         quoteId: data.id,
       })
     }

@@ -97,7 +97,7 @@ export function DashboardRecentQuotes() {
           </div>
         ) : (
           <div className="space-y-3">
-            {quotes.map((quote) => (
+            {formattedQuotes.map((quote) => (
               <Link
                 key={quote.id}
                 href={`/dashboard/quotes/${quote.id}`}
