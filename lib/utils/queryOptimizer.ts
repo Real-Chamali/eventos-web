@@ -3,18 +3,16 @@
  * Incluye helpers para usar índices correctamente y evitar queries innecesarias
  */
 
-import { PostgrestQueryBuilder } from '@supabase/postgrest-js'
-
 /**
  * Optimizar query para usar índices de fecha
  * Asegura que las queries de fecha usen los índices correctos
  */
-export function optimizeDateQuery<T>(
-  query: PostgrestQueryBuilder<T>,
+export function optimizeDateQuery(
+  query: any,
   dateField: string,
   startDate?: Date,
   endDate?: Date
-): PostgrestQueryBuilder<T> {
+): any {
   if (startDate) {
     query = query.gte(dateField, startDate.toISOString())
   }
@@ -30,11 +28,11 @@ export function optimizeDateQuery<T>(
  * Optimizar query para usar índices de vendor_id
  * Asegura que las queries filtradas por vendor usen el índice compuesto
  */
-export function optimizeVendorQuery<T>(
-  query: PostgrestQueryBuilder<T>,
+export function optimizeVendorQuery(
+  query: any,
   vendorId: string,
   orderBy: string = 'created_at'
-): PostgrestQueryBuilder<T> {
+): any {
   query = query.eq('vendor_id', vendorId)
   // Usar índice compuesto vendor_id + created_at
   query = query.order(orderBy, { ascending: false })
@@ -45,10 +43,10 @@ export function optimizeVendorQuery<T>(
  * Limitar campos seleccionados para reducir transferencia de datos
  * Solo selecciona los campos necesarios
  */
-export function selectOnlyNeededFields<T>(
-  query: PostgrestQueryBuilder<T>,
+export function selectOnlyNeededFields(
+  query: any,
   fields: string[]
-): PostgrestQueryBuilder<T> {
+): any {
   return query.select(fields.join(', '))
 }
 
