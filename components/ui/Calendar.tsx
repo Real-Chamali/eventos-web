@@ -145,7 +145,7 @@ export default function Calendar() {
         id: string
         event_date: string
         status: string
-        client?: Array<{ name?: string }> | { name?: string } | null
+        clients?: Array<{ name?: string }> | { name?: string } | null
       }
 
       // Procesar cotizaciones con event_date
