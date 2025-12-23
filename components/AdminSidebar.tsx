@@ -33,7 +33,6 @@ export default function AdminSidebar() {
     { href: '/admin/services', label: 'Gestión de Servicios', icon: Settings },
     { href: '/admin/vendors', label: 'Gestión de Personal', icon: Users },
     { href: '/admin/finance', label: 'Finanzas', icon: DollarSign },
-    { href: '/admin/finance-advanced', label: 'Finanzas Avanzadas', icon: TrendingUp },
     { href: '/admin/events', label: 'Eventos', icon: Calendar },
     { href: '/admin/users', label: 'Gestión de Usuarios', icon: Shield },
   ]

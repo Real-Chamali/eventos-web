@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
@@ -49,6 +49,17 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils/cn'
 
+// Helper para ejecutar trabajo pesado sin bloquear la UI
+const runInBackground = (callback: () => void | Promise<void>) => {
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    // Usar requestIdleCallback si está disponible (mejor rendimiento)
+    ;(window as any).requestIdleCallback(callback, { timeout: 1000 })
+  } else {
+    // Fallback a setTimeout para navegadores que no soportan requestIdleCallback
+    setTimeout(callback, 0)
+  }
+}
+
 export default function AdvancedFinancePage() {
   const [loading, setLoading] = useState(true)
   const [executiveSummary, setExecutiveSummary] = useState<ExecutiveFinancialSummary | null>(null)
@@ -59,13 +70,14 @@ export default function AdvancedFinancePage() {
   const [clientProfitability, setClientProfitability] = useState<ClientProfitability[]>([])
   const [profitabilityAnalysis, setProfitabilityAnalysis] = useState<ProfitabilityAnalysis | null>(null)
   const [selectedPeriod, setSelectedPeriod] = useState<'30' | '60' | '90'>('90')
+  const [isExporting, setIsExporting] = useState(false)
   const { success: toastSuccess, error: toastError } = useToast()
 
   useEffect(() => {
     loadAllData()
   }, [selectedPeriod])
 
-  const loadAllData = async () => {
+  const loadAllData = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -100,37 +112,63 @@ export default function AdvancedFinancePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedPeriod, toastError])
 
-  const handleExport = async (exportFormat: 'pdf' | 'excel' | 'csv') => {
-    try {
-      const { exportToCSV, exportToExcel, exportToPDF, downloadCSV } = await import('@/lib/utils/exportFinancialReports')
-      
-      const exportData = {
-        executiveSummary,
-        monthlyComparison,
-        serviceProfitability,
-        clientProfitability,
-        cashFlowProjection,
-        profitabilityAnalysis,
+  // Memoizar datos de exportación para evitar recálculos
+  const exportData = useMemo(() => ({
+    executiveSummary,
+    monthlyComparison,
+    serviceProfitability,
+    clientProfitability,
+    cashFlowProjection,
+    profitabilityAnalysis,
+  }), [executiveSummary, monthlyComparison, serviceProfitability, clientProfitability, cashFlowProjection, profitabilityAnalysis])
+
+  // Optimizar handleExport: mover trabajo pesado fuera del event handler
+  const handleExport = useCallback(async (exportFormat: 'pdf' | 'excel' | 'csv') => {
+    if (isExporting) return // Prevenir múltiples exportaciones simultáneas
+    
+    setIsExporting(true)
+    
+    // Usar setTimeout para mover el trabajo pesado fuera del event handler
+    // Esto permite que React actualice la UI antes de procesar
+    setTimeout(async () => {
+      try {
+        const { exportToCSV, exportToExcel, exportToPDF, downloadCSV } = await import('@/lib/utils/exportFinancialReports')
+        
+        // Procesar exportación en el siguiente tick del event loop
+        if (exportFormat === 'csv') {
+          runInBackground(() => {
+            const csvContent = exportToCSV(exportData)
+            downloadCSV(csvContent, `reporte-financiero-${format(new Date(), 'yyyy-MM-dd')}.csv`)
+            toastSuccess('Reporte CSV descargado exitosamente')
+            setIsExporting(false)
+          })
+        } else if (exportFormat === 'excel') {
+          runInBackground(() => {
+            exportToExcel(exportData)
+            toastSuccess('Reporte Excel descargado exitosamente')
+            setIsExporting(false)
+          })
+        } else if (exportFormat === 'pdf') {
+          runInBackground(async () => {
+            await exportToPDF(exportData)
+            toastSuccess('Reporte PDF descargado exitosamente')
+            setIsExporting(false)
+          })
+        }
+      } catch (error) {
+        logger.error('AdvancedFinancePage', 'Error exporting report', error instanceof Error ? error : new Error(String(error)))
+        toastError('Error al exportar el reporte')
+        setIsExporting(false)
       }
-      
-      if (exportFormat === 'csv') {
-        const csvContent = exportToCSV(exportData)
-        downloadCSV(csvContent, `reporte-financiero-${format(new Date(), 'yyyy-MM-dd')}.csv`)
-        toastSuccess('Reporte CSV descargado exitosamente')
-      } else if (exportFormat === 'excel') {
-        exportToExcel(exportData)
-        toastSuccess('Reporte Excel descargado exitosamente')
-      } else if (exportFormat === 'pdf') {
-        await exportToPDF(exportData)
-        toastSuccess('Reporte PDF descargado exitosamente')
-      }
-    } catch (error) {
-      logger.error('AdvancedFinancePage', 'Error exporting report', error instanceof Error ? error : new Error(String(error)))
-      toastError('Error al exportar el reporte')
-    }
-  }
+    }, 0)
+  }, [exportData, isExporting, toastSuccess, toastError])
+
+  // Optimizar setSelectedPeriod para evitar re-renders innecesarios
+  const handlePeriodChange = useCallback((period: '30' | '60' | '90') => {
+    setSelectedPeriod(period)
+  }, [])
 
   if (loading) {
     return (
@@ -149,28 +187,34 @@ export default function AdvancedFinancePage() {
     )
   }
 
-  // Preparar datos para gráficos
-  const monthlyChartData = monthlyComparison.slice(0, 6).reverse().map((m) => ({
-    name: m.monthName,
-    Ventas: m.totalSales,
-    Utilidad: m.totalProfit,
-    'Cambio %': m.salesChangePercent,
-  }))
+  // Memoizar datos para gráficos para evitar recálculos innecesarios
+  const monthlyChartData = useMemo(() => 
+    monthlyComparison.slice(0, 6).reverse().map((m) => ({
+      name: m.monthName,
+      Ventas: m.totalSales,
+      Utilidad: m.totalProfit,
+      'Cambio %': m.salesChangePercent,
+    })), [monthlyComparison]
+  )
 
-  const cashFlowChartData = cashFlowProjection.slice(0, 30).map((cf) => ({
-    name: format(new Date(cf.date), 'dd MMM', { locale: es }),
-    Entrada: cf.totalInflow,
-    Salida: cf.totalOutflow,
-    Neto: cf.netFlow,
-    Balance: cf.cumulativeBalance,
-  }))
+  const cashFlowChartData = useMemo(() => 
+    cashFlowProjection.slice(0, 30).map((cf) => ({
+      name: format(new Date(cf.date), 'dd MMM', { locale: es }),
+      Entrada: cf.totalInflow,
+      Salida: cf.totalOutflow,
+      Neto: cf.netFlow,
+      Balance: cf.cumulativeBalance,
+    })), [cashFlowProjection]
+  )
 
-  const serviceProfitChartData = serviceProfitability.slice(0, 10).map((s) => ({
-    name: s.serviceName.length > 20 ? s.serviceName.substring(0, 20) + '...' : s.serviceName,
-    Utilidad: s.totalProfit,
-    Ventas: s.totalRevenue,
-    Margen: s.marginPercent,
-  }))
+  const serviceProfitChartData = useMemo(() => 
+    serviceProfitability.slice(0, 10).map((s) => ({
+      name: s.serviceName.length > 20 ? s.serviceName.substring(0, 20) + '...' : s.serviceName,
+      Utilidad: s.totalProfit,
+      Ventas: s.totalRevenue,
+      Margen: s.marginPercent,
+    })), [serviceProfitability]
+  )
 
   return (
     <div className="space-y-8 p-6 lg:p-8">
@@ -360,17 +404,32 @@ export default function AdvancedFinancePage() {
             <TabsTrigger value="reports">Reportes</TabsTrigger>
           </TabsList>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => handleExport('pdf')}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => handleExport('pdf')}
+              disabled={isExporting}
+            >
               <Download className="h-4 w-4 mr-2" />
-              PDF
+              {isExporting ? 'Exportando...' : 'PDF'}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => handleExport('excel')}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => handleExport('excel')}
+              disabled={isExporting}
+            >
               <Download className="h-4 w-4 mr-2" />
-              Excel
+              {isExporting ? 'Exportando...' : 'Excel'}
             </Button>
-            <Button variant="outline" size="sm" onClick={() => handleExport('csv')}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => handleExport('csv')}
+              disabled={isExporting}
+            >
               <Download className="h-4 w-4 mr-2" />
-              CSV
+              {isExporting ? 'Exportando...' : 'CSV'}
             </Button>
           </div>
         </div>
@@ -556,21 +615,24 @@ export default function AdvancedFinancePage() {
                   <Button
                     variant={selectedPeriod === '30' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setSelectedPeriod('30')}
+                    onClick={() => handlePeriodChange('30')}
+                    disabled={isExporting}
                   >
                     30 días
                   </Button>
                   <Button
                     variant={selectedPeriod === '60' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setSelectedPeriod('60')}
+                    onClick={() => handlePeriodChange('60')}
+                    disabled={isExporting}
                   >
                     60 días
                   </Button>
                   <Button
                     variant={selectedPeriod === '90' ? 'default' : 'outline'}
                     size="sm"
-                    onClick={() => setSelectedPeriod('90')}
+                    onClick={() => handlePeriodChange('90')}
+                    disabled={isExporting}
                   >
                     90 días
                   </Button>
@@ -926,6 +988,7 @@ export default function AdvancedFinancePage() {
                   variant="outline"
                   className="h-24 flex-col gap-2"
                   onClick={() => handleExport('pdf')}
+                  disabled={isExporting}
                 >
                   <FileText className="h-8 w-8 text-red-600" />
                   <span>Reporte PDF</span>
@@ -935,6 +998,7 @@ export default function AdvancedFinancePage() {
                   variant="outline"
                   className="h-24 flex-col gap-2"
                   onClick={() => handleExport('excel')}
+                  disabled={isExporting}
                 >
                   <BarChart3 className="h-8 w-8 text-green-600" />
                   <span>Reporte Excel</span>
@@ -944,6 +1008,7 @@ export default function AdvancedFinancePage() {
                   variant="outline"
                   className="h-24 flex-col gap-2"
                   onClick={() => handleExport('csv')}
+                  disabled={isExporting}
                 >
                   <Download className="h-8 w-8 text-blue-600" />
                   <span>Reporte CSV</span>

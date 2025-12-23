@@ -15,6 +15,7 @@ import type {
 
 /**
  * Exporta reporte financiero a CSV
+ * Optimizado para evitar bloqueos de UI
  */
 export function exportToCSV(data: {
   executiveSummary?: ExecutiveFinancialSummary | null
@@ -25,11 +26,27 @@ export function exportToCSV(data: {
   profitabilityAnalysis?: ProfitabilityAnalysis | null
 }): string {
   try {
-    const csvRows: string[] = []
+    // Usar array con capacidad estimada para mejor rendimiento
+    const estimatedSize = 
+      (data.executiveSummary ? 15 : 0) +
+      (data.monthlyComparison?.length || 0) * 2 +
+      (data.serviceProfitability?.length || 0) * 2 +
+      (data.clientProfitability?.length || 0) * 2 +
+      (data.cashFlowProjection?.length || 0) * 2 +
+      (data.profitabilityAnalysis ? 15 : 0) +
+      10 // headers y separadores
     
-    // Header
+    const csvRows: string[] = []
+    csvRows.length = estimatedSize
+    
+    // Header - usar toLocaleDateString de forma más eficiente
+    const dateStr = new Date().toLocaleDateString('es-MX', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    })
     csvRows.push('REPORTE FINANCIERO')
-    csvRows.push(`Fecha: ${new Date().toLocaleDateString('es-MX')}`)
+    csvRows.push(`Fecha: ${dateStr}`)
     csvRows.push('')
     
     // Resumen Ejecutivo
@@ -50,51 +67,52 @@ export function exportToCSV(data: {
       csvRows.push('')
     }
     
-    // Comparativa Mensual
+    // Comparativa Mensual - optimizar con join
     if (data.monthlyComparison && data.monthlyComparison.length > 0) {
       csvRows.push('COMPARATIVA MENSUAL')
       csvRows.push('Mes,Cotizaciones,Ventas,Utilidad,Clientes,Cambio Ventas %,Cambio Utilidad %,Margen %')
-      data.monthlyComparison.forEach((month) => {
-        csvRows.push(
-          `${month.monthName},${month.confirmedQuotes},${month.totalSales},${month.totalProfit},${month.uniqueClients},${month.salesChangePercent.toFixed(2)},${month.profitChangePercent.toFixed(2)},${month.marginPercent.toFixed(2)}`
-        )
+      // Pre-calcular valores para evitar múltiples toFixed
+      const monthlyRows = data.monthlyComparison.map((month) => {
+        const salesChange = month.salesChangePercent.toFixed(2)
+        const profitChange = month.profitChangePercent.toFixed(2)
+        const margin = month.marginPercent.toFixed(2)
+        return `${month.monthName},${month.confirmedQuotes},${month.totalSales},${month.totalProfit},${month.uniqueClients},${salesChange},${profitChange},${margin}`
       })
+      csvRows.push(...monthlyRows)
       csvRows.push('')
     }
     
-    // Rentabilidad por Servicio
+    // Rentabilidad por Servicio - optimizar con map
     if (data.serviceProfitability && data.serviceProfitability.length > 0) {
       csvRows.push('RENTABILIDAD POR SERVICIO')
       csvRows.push('Servicio,Precio Base,Costo,Utilidad Unitaria,Margen %,Veces Vendido,Cantidad Total,Ingresos Totales,Utilidad Total')
-      data.serviceProfitability.forEach((service) => {
-        csvRows.push(
-          `${service.serviceName},${service.basePrice},${service.costPrice},${service.unitProfit},${service.marginPercent.toFixed(2)},${service.timesSold},${service.totalQuantitySold},${service.totalRevenue},${service.totalProfit}`
-        )
+      const serviceRows = data.serviceProfitability.map((service) => {
+        const margin = service.marginPercent.toFixed(2)
+        return `${service.serviceName},${service.basePrice},${service.costPrice},${service.unitProfit},${margin},${service.timesSold},${service.totalQuantitySold},${service.totalRevenue},${service.totalProfit}`
       })
+      csvRows.push(...serviceRows)
       csvRows.push('')
     }
     
-    // Rentabilidad por Cliente
+    // Rentabilidad por Cliente - optimizar con map
     if (data.clientProfitability && data.clientProfitability.length > 0) {
       csvRows.push('RENTABILIDAD POR CLIENTE')
       csvRows.push('Cliente,Email,Cotizaciones Totales,Cotizaciones Confirmadas,Ventas Totales,Utilidad Total,Ticket Promedio,Pagado,Pendiente')
-      data.clientProfitability.forEach((client) => {
-        csvRows.push(
-          `${client.clientName},${client.email || ''},${client.totalQuotes},${client.confirmedQuotes},${client.totalSales},${client.totalProfit},${client.averageQuoteValue},${client.totalPaid},${client.totalPending}`
-        )
+      const clientRows = data.clientProfitability.map((client) => {
+        return `${client.clientName},${client.email || ''},${client.totalQuotes},${client.confirmedQuotes},${client.totalSales},${client.totalProfit},${client.averageQuoteValue},${client.totalPaid},${client.totalPending}`
       })
+      csvRows.push(...clientRows)
       csvRows.push('')
     }
     
-    // Proyección de Flujo de Caja
+    // Proyección de Flujo de Caja - optimizar con map
     if (data.cashFlowProjection && data.cashFlowProjection.length > 0) {
       csvRows.push('PROYECCIÓN DE FLUJO DE EFECTIVO')
       csvRows.push('Fecha,Tipo Día,Depósitos Recibidos,Pagos Recibidos,Total Entrada,Pagos por Vencer,Depósitos por Vencer,Total Salida,Flujo Neto,Balance Acumulado')
-      data.cashFlowProjection.forEach((cf) => {
-        csvRows.push(
-          `${cf.date},${cf.dayType},${cf.depositsReceived},${cf.paymentsReceived},${cf.totalInflow},${cf.paymentsDue},${cf.depositsDue},${cf.totalOutflow},${cf.netFlow},${cf.cumulativeBalance}`
-        )
+      const cashFlowRows = data.cashFlowProjection.map((cf) => {
+        return `${cf.date},${cf.dayType},${cf.depositsReceived},${cf.paymentsReceived},${cf.totalInflow},${cf.paymentsDue},${cf.depositsDue},${cf.totalOutflow},${cf.netFlow},${cf.cumulativeBalance}`
       })
+      csvRows.push(...cashFlowRows)
       csvRows.push('')
     }
     
@@ -119,7 +137,8 @@ export function exportToCSV(data: {
       }
     }
     
-    return csvRows.join('\n')
+    // Usar join con capacidad pre-calculada para mejor rendimiento
+    return csvRows.filter(Boolean).join('\n')
   } catch (error) {
     logger.error('exportFinancialReports', 'Error exporting to CSV', error as Error)
     throw error

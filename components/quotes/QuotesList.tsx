@@ -7,6 +7,7 @@
 
 import { useEffect, useRef, useMemo } from 'react'
 import { useInfiniteQuotes } from '@/lib/hooks/useInfiniteQuotes'
+import { useIsAdmin } from '@/lib/hooks'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import Badge from '@/components/ui/Badge'
@@ -16,7 +17,22 @@ import Link from 'next/link'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import EmptyState from '@/components/ui/EmptyState'
-import { FileText } from 'lucide-react'
+import { FileText, Edit, Trash2 } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/AlertDialog'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/utils/supabase/client'
+import { useToast } from '@/lib/hooks'
+import { logger } from '@/lib/utils/logger'
 
 function getStatusBadge(status: string) {
   switch (status) {
@@ -39,8 +55,34 @@ interface QuotesListProps {
 
 export function QuotesList({ searchTerm = '', statusFilter = 'all' }: QuotesListProps = {}) {
   const { quotes, isLoading, isLoadingMore, isReachingEnd, loadMore, error } = useInfiniteQuotes()
+  const { isAdmin } = useIsAdmin()
+  const router = useRouter()
+  const supabase = createClient()
+  const { success: toastSuccess, error: toastError } = useToast()
   const loadMoreRef = useRef<HTMLDivElement>(null)
   const observerRef = useRef<IntersectionObserver | null>(null)
+
+  const handleDeleteQuote = async (quoteId: string) => {
+    if (!isAdmin) {
+      toastError('Solo los administradores pueden eliminar cotizaciones')
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('quotes')
+        .delete()
+        .eq('id', quoteId)
+
+      if (error) throw error
+
+      toastSuccess('Cotización eliminada exitosamente')
+      router.refresh()
+    } catch (err) {
+      logger.error('QuotesList', 'Error deleting quote', err as Error)
+      toastError('Error al eliminar la cotización')
+    }
+  }
   
   // Filtrar cotizaciones localmente
   const filteredQuotes = useMemo(() => {
@@ -161,11 +203,50 @@ export function QuotesList({ searchTerm = '', statusFilter = 'all' }: QuotesList
                   {format(new Date(quote.created_at), "d 'de' MMMM, yyyy", { locale: es })}
                 </TableCell>
                 <TableCell className="text-right">
-                  <Link href={`/dashboard/quotes/${quote.id}`}>
-                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                      Ver detalles
-                    </Button>
-                  </Link>
+                  <div className="flex items-center justify-end gap-2">
+                    <Link href={`/dashboard/quotes/${quote.id}`}>
+                      <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                        Ver detalles
+                      </Button>
+                    </Link>
+                    {isAdmin && (
+                      <>
+                        <Link href={`/dashboard/quotes/${quote.id}/edit`}>
+                          <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>¿Eliminar cotización?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta acción eliminará permanentemente la cotización. Esta acción no se puede deshacer.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteQuote(quote.id)}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Eliminar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </>
+                    )}
+                  </div>
                 </TableCell>
               </TableRow>
             ))}

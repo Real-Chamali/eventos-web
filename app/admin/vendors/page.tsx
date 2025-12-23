@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import Badge from '@/components/ui/Badge'
 import Skeleton from '@/components/ui/Skeleton'
 import SearchInput from '@/components/ui/SearchInput'
-import { Users, Filter, Mail, Phone, TrendingUp, FileText, Shield, Crown, Edit2, Trash2, RefreshCw } from 'lucide-react'
+import { Users, Filter, Mail, Phone, TrendingUp, FileText, Shield, Crown, Edit2, Trash2, RefreshCw, Lock } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import {
   Dialog,
@@ -50,9 +50,13 @@ export default function AdminVendorsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'vendor'>('all')
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
-  const [newRole, setNewRole] = useState<'admin' | 'vendor'>('vendor')
-  const [showRoleDialog, setShowRoleDialog] = useState(false)
+  const [showEditDialog, setShowEditDialog] = useState(false)
   const [updating, setUpdating] = useState(false)
+  const [editForm, setEditForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+  })
   const { success: toastSuccess, error: toastError } = useToast()
 
   useEffect(() => {
@@ -122,46 +126,66 @@ export default function AdminVendorsPage() {
     }
   }
 
-  const handleRoleChange = (vendor: Vendor) => {
-    // Solo permitir cambiar roles de vendedores, no crear nuevos admins
-    if (vendor.role === 'admin') {
-      // Si es admin, solo puede cambiar a vendor
-      setSelectedVendor(vendor)
-      setNewRole('vendor')
-      setShowRoleDialog(true)
-    } else {
-      // Si es vendor, no puede cambiar a admin (solo admin@chamali.com puede ser admin)
-      toastError('Solo admin@chamali.com puede tener rol de administrador')
-      return
-    }
+  const handleEditUser = (vendor: Vendor) => {
+    setSelectedVendor(vendor)
+    setEditForm({
+      name: vendor.full_name || vendor.raw_user_meta_data?.name || '',
+      email: vendor.email,
+      password: '',
+    })
+    setShowEditDialog(true)
   }
 
-  const confirmRoleChange = async () => {
+  const handleUpdateUser = async () => {
     if (!selectedVendor) return
 
     try {
       setUpdating(true)
-      const response = await fetch(`/api/admin/users/${selectedVendor.id}/role`, {
+      
+      // Preparar datos para actualizar (solo enviar campos que han cambiado)
+      const updates: { name?: string; email?: string; password?: string } = {}
+      
+      const currentName = selectedVendor.full_name || selectedVendor.raw_user_meta_data?.name || ''
+      if (editForm.name !== currentName) {
+        updates.name = editForm.name
+      }
+      
+      if (editForm.email !== selectedVendor.email) {
+        updates.email = editForm.email
+      }
+      
+      if (editForm.password && editForm.password.length > 0) {
+        updates.password = editForm.password
+      }
+
+      // Si no hay cambios, no hacer nada
+      if (Object.keys(updates).length === 0) {
+        toastError('No hay cambios para guardar')
+        return
+      }
+
+      const response = await fetch(`/api/admin/users/${selectedVendor.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ role: newRole }),
+        body: JSON.stringify(updates),
       })
 
       const data = await response.json()
 
       if (!response.ok) {
-        throw new Error(data.error || 'Error al actualizar el rol')
+        throw new Error(data.error || 'Error al actualizar el usuario')
       }
 
-      toastSuccess(`Rol actualizado a ${newRole === 'admin' ? 'Administrador' : 'Vendedor'}`)
-      setShowRoleDialog(false)
+      toastSuccess('Usuario actualizado exitosamente')
+      setShowEditDialog(false)
       setSelectedVendor(null)
+      setEditForm({ name: '', email: '', password: '' })
       loadVendors()
     } catch (error) {
-      logger.error('AdminVendorsPage', 'Error updating role', error as Error)
-      toastError(error instanceof Error ? error.message : 'Error al actualizar el rol')
+      logger.error('AdminVendorsPage', 'Error updating user', error as Error)
+      toastError(error instanceof Error ? error.message : 'Error al actualizar el usuario')
     } finally {
       setUpdating(false)
     }
@@ -450,12 +474,12 @@ export default function AdminVendorsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleRoleChange(vendor)}
+                          onClick={() => handleEditUser(vendor)}
                           className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                          title="Cambiar rol"
+                          title="Editar usuario"
                         >
-                          <Shield className="h-4 w-4 mr-2" />
-                          Cambiar Rol
+                          <Edit2 className="h-4 w-4 mr-2" />
+                          Editar
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -467,18 +491,18 @@ export default function AdminVendorsPage() {
         </CardContent>
       </Card>
 
-      {/* Dialog para cambiar rol */}
-      <Dialog open={showRoleDialog} onOpenChange={setShowRoleDialog}>
+      {/* Dialog para editar usuario */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold flex items-center gap-2">
-              <Shield className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              Cambiar Rol de Usuario
+              <Edit2 className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              Editar Usuario
             </DialogTitle>
             <DialogDescription>
               {selectedVendor && (
                 <>
-                  Estás a punto de cambiar el rol de{' '}
+                  Edita la información de{' '}
                   <span className="font-semibold">{selectedVendor.full_name || selectedVendor.email}</span>
                 </>
               )}
@@ -487,46 +511,66 @@ export default function AdminVendorsPage() {
           <div className="space-y-4 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Nuevo Rol
+                Nombre Completo
               </label>
-              <Select value={newRole} onValueChange={(value) => setNewRole(value as 'admin' | 'vendor')}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">
-                    <div className="flex items-center gap-2">
-                      <Crown className="h-4 w-4 text-purple-600" />
-                      Administrador
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="vendor">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-emerald-600" />
-                      Vendedor
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <input
+                type="text"
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Nombre completo"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="email@ejemplo.com"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Nueva Contraseña (opcional)
+              </label>
+              <div className="relative">
+                <input
+                  type="password"
+                  value={editForm.password}
+                  onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Dejar vacío para no cambiar"
+                />
+                <Lock className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Mínimo 6 caracteres. Dejar vacío si no deseas cambiar la contraseña.
+              </p>
             </div>
             {selectedVendor && (
-              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800">
-                <p className="text-sm text-amber-800 dark:text-amber-200">
-                  <strong>Nota:</strong> Al cambiar el rol, el usuario perderá o ganará permisos
-                  inmediatamente. Los administradores tienen acceso completo al sistema.
+              <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
+                <p className="text-sm text-blue-800 dark:text-blue-200">
+                  <strong>Nota:</strong> Solo el administrador puede editar usuarios. Los cambios se aplicarán inmediatamente.
                 </p>
               </div>
             )}
             <div className="flex justify-end gap-3 pt-4">
-              <Button variant="ghost" onClick={() => setShowRoleDialog(false)} disabled={updating}>
+              <Button variant="ghost" onClick={() => {
+                setShowEditDialog(false)
+                setEditForm({ name: '', email: '', password: '' })
+              }} disabled={updating}>
                 Cancelar
               </Button>
               <Button
-                onClick={confirmRoleChange}
+                onClick={handleUpdateUser}
                 disabled={updating}
-                className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700"
+                className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700"
               >
-                {updating ? 'Actualizando...' : 'Confirmar Cambio'}
+                {updating ? 'Actualizando...' : 'Guardar Cambios'}
               </Button>
             </div>
           </div>

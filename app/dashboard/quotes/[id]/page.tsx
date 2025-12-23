@@ -32,7 +32,7 @@ import {
   TableRow,
 } from '@/components/ui/Table'
 import Skeleton from '@/components/ui/Skeleton'
-import { Download, Edit, ArrowLeft, CheckCircle2, Mail, User, Sparkles, FileText, DollarSign } from 'lucide-react'
+import { Download, Edit, ArrowLeft, CheckCircle2, Mail, User, Sparkles, FileText, DollarSign, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import PaymentsList from '@/components/payments/PaymentsList'
 import QuotePriceControl from '@/components/admin/QuotePriceControl'
@@ -243,6 +243,29 @@ export default function QuoteDetailPage() {
       toastError('Error al cerrar la venta')
     } finally {
       setClosing(false)
+    }
+  }
+
+  const handleDeleteQuote = async () => {
+    if (!isAdmin) {
+      toastError('Solo los administradores pueden eliminar cotizaciones')
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('quotes')
+        .delete()
+        .eq('id', quoteId)
+
+      if (error) throw error
+
+      toastSuccess('Cotización eliminada exitosamente')
+      router.push('/dashboard/quotes')
+      router.refresh()
+    } catch (err) {
+      logger.error('QuoteDetailPage', 'Error deleting quote', err as Error)
+      toastError('Error al eliminar la cotización')
     }
   }
 
@@ -512,12 +535,12 @@ export default function QuoteDetailPage() {
             </CardContent>
           </Card>
 
-          {/* Premium Actions Card */}
-          {quote.status === 'draft' && isAdmin && (
+          {/* Premium Actions Card - Admin puede editar/borrar cualquier cotización */}
+          {isAdmin && (
             <Card variant="elevated" className="overflow-hidden">
               <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-xl">Acciones</CardTitle>
+                  <CardTitle className="text-xl">Acciones de Administrador</CardTitle>
                   <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg">
                     <Sparkles className="h-5 w-5 text-white" />
                   </div>
@@ -530,29 +553,56 @@ export default function QuoteDetailPage() {
                     Editar Cotización
                   </Button>
                 </Link>
+                {quote.status === 'draft' && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="premium" className="w-full gap-2" size="lg">
+                        <CheckCircle2 className="h-5 w-5" />
+                        Cerrar Venta
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>¿Confirmar cierre de venta?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta acción convertirá la cotización en un evento confirmado y registrará
+                          el ingreso en el sistema financiero. Esta acción no se puede deshacer.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={handleCloseSale}
+                          disabled={closing}
+                          variant="destructive"
+                        >
+                          {closing ? 'Cerrando...' : 'Confirmar Cierre'}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )}
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button variant="premium" className="w-full gap-2" size="lg">
-                      <CheckCircle2 className="h-5 w-5" />
-                      Cerrar Venta
+                    <Button variant="outline" className="w-full gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20">
+                      <Trash2 className="h-4 w-4" />
+                      Eliminar Cotización
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>¿Confirmar cierre de venta?</AlertDialogTitle>
+                      <AlertDialogTitle>¿Eliminar cotización?</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Esta acción convertirá la cotización en un evento confirmado y registrará
-                        el ingreso en el sistema financiero. Esta acción no se puede deshacer.
+                        Esta acción eliminará permanentemente la cotización. Esta acción no se puede deshacer.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancelar</AlertDialogCancel>
                       <AlertDialogAction
-                        onClick={handleCloseSale}
-                        disabled={closing}
+                        onClick={handleDeleteQuote}
                         variant="destructive"
                       >
-                        {closing ? 'Cerrando...' : 'Confirmar Cierre'}
+                        Eliminar
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
