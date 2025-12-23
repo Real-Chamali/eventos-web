@@ -26,8 +26,9 @@ import {
 import Input from '@/components/ui/Input'
 import Textarea from '@/components/ui/Textarea'
 import Button from '@/components/ui/Button'
-import { DollarSign, CreditCard, Wallet, Building2, FileText, Receipt } from 'lucide-react'
+import { DollarSign, CreditCard, Wallet, Building2, FileText, Receipt, Calendar, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
+import { useEffect } from 'react'
 
 const paymentSchema = z.object({
   amount: z.number().min(0.01, 'El monto debe ser mayor a 0'),
@@ -35,6 +36,8 @@ const paymentSchema = z.object({
   payment_method: z.enum(['cash', 'transfer', 'card', 'check', 'other']),
   reference_number: z.string().optional(),
   notes: z.string().optional(),
+  is_deposit: z.boolean().default(false),
+  due_date: z.string().optional(),
 })
 
 type PaymentFormData = z.infer<typeof paymentSchema>
@@ -56,11 +59,21 @@ export default function RegisterPaymentDialog({
 }: RegisterPaymentDialogProps) {
   const [open, setOpen] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [requiredDeposit, setRequiredDeposit] = useState(0)
   const { refresh } = usePartialPayments(quoteId)
   const { success: toastSuccess, error: toastError } = useToast()
   const supabase = createClient()
 
   const balanceDue = Math.max(totalPrice - currentPaid, 0)
+
+  // Calcular anticipo requerido cuando se abre el diálogo
+  useEffect(() => {
+    if (open) {
+      import('@/lib/utils/paymentIntelligence').then(({ calculateRequiredDeposit }) => {
+        calculateRequiredDeposit(quoteId, 30).then(setRequiredDeposit).catch(() => {})
+      })
+    }
+  }, [open, quoteId])
 
   const {
     register,
@@ -70,13 +83,15 @@ export default function RegisterPaymentDialog({
     setValue,
     watch,
   } = useForm<PaymentFormData>({
-    resolver: zodResolver(paymentSchema),
+    resolver: zodResolver(paymentSchema) as any,
     defaultValues: {
       amount: balanceDue,
       payment_date: format(new Date(), 'yyyy-MM-dd'),
       payment_method: 'cash',
       reference_number: '',
       notes: '',
+      is_deposit: false,
+      due_date: '',
     },
   })
 
@@ -109,6 +124,8 @@ export default function RegisterPaymentDialog({
         payment_method: data.payment_method,
         reference_number: data.reference_number || null,
         notes: data.notes || null,
+        is_deposit: data.is_deposit || false,
+        due_date: data.due_date || null,
         created_by: user.id,
       })
 
@@ -293,6 +310,50 @@ export default function RegisterPaymentDialog({
               />
             </div>
           )}
+
+          {/* Anticipo */}
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="is_deposit"
+              {...register('is_deposit')}
+              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <label htmlFor="is_deposit" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              Marcar como anticipo
+            </label>
+          </div>
+          {requiredDeposit > 0 && (
+            <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    Anticipo requerido: {new Intl.NumberFormat('es-MX', {
+                      style: 'currency',
+                      currency: 'MXN',
+                    }).format(requiredDeposit)}
+                  </p>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    Se recomienda recibir al menos el 30% como anticipo antes de confirmar el evento.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Fecha límite */}
+          <div>
+            <Input
+              type="date"
+              label="Fecha Límite de Pago (Opcional)"
+              {...register('due_date')}
+              error={errors.due_date?.message}
+            />
+            <p className="mt-1.5 text-xs text-gray-500 dark:text-gray-400">
+              Establece una fecha límite para recibir este pago. Se enviarán recordatorios automáticos.
+            </p>
+          </div>
 
           {/* Notas */}
           <div>

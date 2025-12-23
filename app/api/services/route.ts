@@ -16,7 +16,7 @@ import {
   successResponse,
   auditAPIAction,
   validateMethod,
-  checkRateLimit,
+  checkRateLimitAsync,
   handleAPIError,
 } from '@/lib/api/middleware'
 import { getAuthenticatedUser, checkApiKeyPermissions } from '@/lib/api/authHelper'
@@ -48,8 +48,9 @@ export async function GET(request: NextRequest) {
       return errorResponse('Insufficient permissions. Required: read', 403)
     }
 
-    // Rate limiting
-    if (!checkRateLimit(`service-get-${auth.userId}`, 100, 60000)) {
+    // Rate limiting distribuido (Upstash Redis si está configurado)
+    const rateLimitAllowed = await checkRateLimitAsync(`service-get-${auth.userId}`, 100, 60000)
+    if (!rateLimitAllowed) {
       return errorResponse('Too many requests', 429)
     }
 
@@ -103,8 +104,9 @@ export async function POST(request: NextRequest) {
       return errorResponse('Forbidden - Admin access required', 403)
     }
 
-    // Rate limiting (stricter for write operations)
-    if (!checkRateLimit(`service-post-${auth.userId}`, 10, 60000)) {
+    // Rate limiting distribuido (stricter for write operations)
+    const rateLimitAllowed = await checkRateLimitAsync(`service-post-${auth.userId}`, 10, 60000)
+    if (!rateLimitAllowed) {
       return errorResponse('Too many requests', 429)
     }
 

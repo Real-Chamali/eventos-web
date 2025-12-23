@@ -7,6 +7,7 @@ import { CreateQuoteSchema } from '@/lib/validations/schemas'
 import { useToast, useDebounce, useOptimisticMutation, useQuotes, useInfiniteQuotes } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 import { createAuditLog } from '@/lib/utils/audit'
+import { createNotification } from '@/lib/utils/notifications'
 import type { Quote } from '@/types'
 import PageHeader from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
@@ -20,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
-import { Plus, X, ArrowLeft, User, ShoppingCart, DollarSign, CheckCircle2, Sparkles } from 'lucide-react'
+import { Plus, X, ArrowLeft, User, ShoppingCart, DollarSign, CheckCircle2, Sparkles, AlertTriangle, TrendingUp, TrendingDown } from 'lucide-react'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
 
@@ -34,6 +35,7 @@ interface Service {
   id: string
   name: string
   base_price: number
+  cost_price?: number | null
 }
 
 interface QuoteService {
@@ -87,7 +89,7 @@ export default function NewQuotePage() {
       try {
         const { data, error } = await supabase
           .from('services')
-          .select('*')
+          .select('id, name, base_price, cost_price')
           .order('name')
         
         if (cancelled) return
@@ -187,26 +189,73 @@ export default function NewQuotePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedSearchClient, supabase])
 
-  const addService = useCallback(() => {
+  const addService = useCallback(async () => {
     if (services.length > 0) {
-      setQuoteServices((prev) => [
-        ...prev,
-        {
-          service_id: services[0].id,
-          quantity: 1,
-          final_price: services[0].base_price,
-        },
-      ])
+      const service = services[0]
+      try {
+        // Calcular precio inteligente con reglas automáticas
+        const { calculateIntelligentPrice } = await import('@/lib/utils/intelligentPricing')
+        const intelligentPrice = await calculateIntelligentPrice(service.id, 1)
+        
+        setQuoteServices((prev) => [
+          ...prev,
+          {
+            service_id: service.id,
+            quantity: 1,
+            final_price: intelligentPrice > 0 ? intelligentPrice : service.base_price,
+          },
+        ])
+      } catch (error) {
+        // Fallback a precio base si hay error
+        logger.warn('NewQuotePage', 'Error calculating intelligent price, using base price', { error: error instanceof Error ? error.message : String(error) })
+        setQuoteServices((prev) => [
+          ...prev,
+          {
+            service_id: service.id,
+            quantity: 1,
+            final_price: service.base_price,
+          },
+        ])
+      }
     }
   }, [services])
 
-  const updateService = useCallback((index: number, field: keyof QuoteService, value: number | string) => {
+  const updateService = useCallback(async (index: number, field: keyof QuoteService, value: number | string) => {
     setQuoteServices((prev) => {
       const updated = [...prev]
+      const service = services.find(s => s.id === updated[index].service_id)
       
       if (field === 'quantity') {
         const v = Number(value) || 1
         updated[index] = { ...updated[index], quantity: Math.max(1, v) }
+        
+        // Recalcular precio inteligente cuando cambia la cantidad
+        if (service) {
+          import('@/lib/utils/intelligentPricing').then(({ calculateIntelligentPrice }) => {
+            calculateIntelligentPrice(service.id, v).then(intelligentPrice => {
+              if (intelligentPrice > 0) {
+                setQuoteServices(current => {
+                  const newServices = [...current]
+                  if (newServices[index]) {
+                    newServices[index] = { ...newServices[index], final_price: intelligentPrice }
+                  }
+                  return newServices
+                })
+              }
+            }).catch(() => {
+              // Fallback: usar precio base * cantidad
+              if (service) {
+                setQuoteServices(current => {
+                  const newServices = [...current]
+                  if (newServices[index]) {
+                    newServices[index] = { ...newServices[index], final_price: service.base_price * v }
+                  }
+                  return newServices
+                })
+              }
+            })
+          })
+        }
       } else if (field === 'final_price') {
         const v = Number(value) || 0
         updated[index] = { ...updated[index], final_price: Math.max(0, v) }
@@ -216,7 +265,7 @@ export default function NewQuotePage() {
       
       return updated
     })
-  }, [])
+  }, [services])
 
   const removeService = useCallback((index: number) => {
     setQuoteServices((prev) => prev.filter((_, i) => i !== index))
@@ -225,6 +274,46 @@ export default function NewQuotePage() {
   const total = useMemo(() => {
     return quoteServices.reduce((sum, qs) => sum + (qs.final_price * qs.quantity), 0)
   }, [quoteServices])
+
+  // Calcular margen y validaciones
+  const marginAnalysis = useMemo(() => {
+    let totalCost = 0
+    let totalRevenue = 0
+    const warnings: string[] = []
+    const errors: string[] = []
+
+    quoteServices.forEach((qs) => {
+      const service = services.find(s => s.id === qs.service_id)
+      if (service) {
+        const cost = (service.cost_price || 0) * qs.quantity
+        const revenue = qs.final_price * qs.quantity
+        totalCost += cost
+        totalRevenue += revenue
+
+        if (service.cost_price && service.cost_price > 0) {
+          const margin = ((qs.final_price - service.cost_price) / qs.final_price) * 100
+          if (margin < 0) {
+            errors.push(`⚠️ PÉRDIDA en ${service.name}: El precio es menor al costo`)
+          } else if (margin < 10) {
+            warnings.push(`Margen bajo en ${service.name}: ${margin.toFixed(1)}%`)
+          }
+        }
+      }
+    })
+
+    const totalMargin = totalRevenue > 0 ? ((totalRevenue - totalCost) / totalRevenue) * 100 : 0
+    const hasLoss = errors.length > 0 || (totalCost > 0 && totalRevenue < totalCost)
+
+    return {
+      totalCost,
+      totalRevenue,
+      totalMargin,
+      warnings,
+      errors,
+      hasLoss,
+      isValid: !hasLoss,
+    }
+  }, [quoteServices, services])
 
   const saveDraft = async () => {
     setErrors({})
@@ -238,6 +327,19 @@ export default function NewQuotePage() {
     if (quoteServices.length === 0) {
       setErrors({ services: 'Por favor agrega al menos un servicio' })
       toastError('Por favor agrega al menos un servicio')
+      return
+    }
+
+    // Validar margen antes de guardar
+    if (marginAnalysis.hasLoss) {
+      toastError('No se puede guardar: hay servicios con pérdida. Revisa los precios.')
+      setErrors({ margin: marginAnalysis.errors.join('; ') })
+      return
+    }
+
+    if (marginAnalysis.warnings.length > 0 && marginAnalysis.totalMargin < 5) {
+      toastError('Margen muy bajo. Revisa los precios antes de continuar.')
+      setErrors({ margin: marginAnalysis.warnings.join('; ') })
       return
     }
 
@@ -348,6 +450,41 @@ export default function NewQuotePage() {
               total_price: total,
             },
           })
+
+          // Crear notificaciones
+          try {
+            // Notificar al vendedor
+            await createNotification({
+              userId: user.id,
+              type: 'quote',
+              title: 'Cotización creada',
+              message: `Has creado una nueva cotización #${quote.id.slice(0, 8)}`,
+              metadata: {
+                quote_id: quote.id,
+                link: `/dashboard/quotes/${quote.id}`,
+              },
+            })
+
+            // Notificar al cliente si existe
+            if (selectedClient?.id) {
+              await createNotification({
+                userId: selectedClient.id,
+                type: 'quote',
+                title: 'Nueva cotización recibida',
+                message: `Has recibido una nueva cotización`,
+                metadata: {
+                  quote_id: quote.id,
+                  link: `/dashboard/quotes/${quote.id}`,
+                },
+              })
+            }
+          } catch (notificationError) {
+            // No fallar si hay error en notificaciones
+            logger.warn('NewQuotePage', 'Error creating notifications', {
+              error: notificationError instanceof Error ? notificationError.message : String(notificationError),
+              quoteId: quote.id,
+            })
+          }
 
           // Revalidar el cache para obtener todas las quotes actualizadas
           await refreshQuotes()
@@ -650,7 +787,7 @@ export default function NewQuotePage() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="p-6">
+            <CardContent className="p-6 space-y-4">
               <div className="flex justify-between items-center">
                 <span className="text-lg font-semibold text-gray-900 dark:text-white">Total:</span>
                 <span className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
@@ -661,6 +798,79 @@ export default function NewQuotePage() {
                   }).format(total)}
                 </span>
               </div>
+
+              {/* Análisis de Margen */}
+              {marginAnalysis.totalCost > 0 && (
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-800 space-y-2">
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Costo Total:</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {new Intl.NumberFormat('es-MX', {
+                        style: 'currency',
+                        currency: 'MXN',
+                        minimumFractionDigits: 2,
+                      }).format(marginAnalysis.totalCost)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-sm">
+                    <span className="text-gray-600 dark:text-gray-400">Utilidad:</span>
+                    <span className={cn(
+                      "font-medium flex items-center gap-1",
+                      marginAnalysis.totalMargin >= 20 
+                        ? "text-green-600 dark:text-green-400"
+                        : marginAnalysis.totalMargin >= 10
+                        ? "text-amber-600 dark:text-amber-400"
+                        : marginAnalysis.totalMargin >= 0
+                        ? "text-orange-600 dark:text-orange-400"
+                        : "text-red-600 dark:text-red-400"
+                    )}>
+                      {marginAnalysis.totalMargin >= 0 ? (
+                        <TrendingUp className="h-4 w-4" />
+                      ) : (
+                        <TrendingDown className="h-4 w-4" />
+                      )}
+                      {marginAnalysis.totalMargin.toFixed(1)}%
+                    </span>
+                  </div>
+                  
+                  {/* Alertas de margen */}
+                  {marginAnalysis.errors.length > 0 && (
+                    <div className="mt-3 p-3 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-red-900 dark:text-red-200 mb-1">
+                            ⚠️ Advertencias de Pérdida
+                          </p>
+                          <ul className="text-xs text-red-700 dark:text-red-300 space-y-1">
+                            {marginAnalysis.errors.map((error, idx) => (
+                              <li key={idx}>• {error}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {marginAnalysis.warnings.length > 0 && marginAnalysis.errors.length === 0 && (
+                    <div className="mt-3 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900">
+                      <div className="flex items-start gap-2">
+                        <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-1">
+                            ⚠️ Márgenes Bajos
+                          </p>
+                          <ul className="text-xs text-amber-700 dark:text-amber-300 space-y-1">
+                            {marginAnalysis.warnings.map((warning, idx) => (
+                              <li key={idx}>• {warning}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
 

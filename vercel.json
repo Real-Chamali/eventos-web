@@ -2,12 +2,6 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
-  "env": {
-    "NEXT_PUBLIC_SENTRY_DSN": "https://66e295a3c88588a96d03742182952e8b@o4510508203704320.ingest.us.sentry.io/4510508220088320",
-    "NEXT_PUBLIC_APP_VERSION": "1.0.0",
-    "NEXT_PUBLIC_APP_URL": "https://eventos-web.vercel.app",
-    "NODE_ENV": "production"
-  },
   "installCommand": "npm install",
   "framework": "nextjs"
 }

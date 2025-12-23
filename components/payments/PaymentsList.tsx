@@ -8,12 +8,13 @@ import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
 import EmptyState from '@/components/ui/EmptyState'
 import RegisterPaymentDialog from './RegisterPaymentDialog'
-import { DollarSign, Wallet, Building2, CreditCard, FileText, Receipt, Trash2, Calendar } from 'lucide-react'
+import { DollarSign, Wallet, Building2, CreditCard, FileText, Receipt, Trash2, Calendar, AlertTriangle, Clock } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
+import { cn } from '@/lib/utils/cn'
 import { useState } from 'react'
 import {
   AlertDialog,
@@ -149,7 +150,7 @@ export default function PaymentsList({ quoteId, totalPrice }: PaymentsListProps)
         <CardContent className="p-0">
           {/* Resumen Premium */}
           <div className="p-6 border-b border-gray-200 dark:border-gray-800">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="text-center p-4 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/30 dark:to-purple-950/30">
                 <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1">Total Pagado</p>
                 <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
@@ -157,6 +158,21 @@ export default function PaymentsList({ quoteId, totalPrice }: PaymentsListProps)
                     style: 'currency',
                     currency: 'MXN',
                   }).format(summary.total_paid)}
+                </p>
+              </div>
+              <div className="text-center p-4 rounded-xl bg-gradient-to-br from-violet-50 to-purple-50 dark:from-violet-950/30 dark:to-purple-950/30 border-2 border-violet-200 dark:border-violet-800">
+                <p className="text-xs font-medium text-gray-600 dark:text-gray-400 mb-1 flex items-center justify-center gap-1">
+                  <DollarSign className="h-3 w-3" />
+                  Anticipos
+                </p>
+                <p className="text-2xl font-bold text-violet-600 dark:text-violet-400">
+                  {new Intl.NumberFormat('es-MX', {
+                    style: 'currency',
+                    currency: 'MXN',
+                  }).format(payments.filter(p => p.is_deposit).reduce((sum, p) => sum + p.amount, 0))}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  {payments.filter(p => p.is_deposit).length} {payments.filter(p => p.is_deposit).length === 1 ? 'anticipo' : 'anticipos'}
                 </p>
               </div>
               <div className="text-center p-4 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30">
@@ -200,6 +216,8 @@ export default function PaymentsList({ quoteId, totalPrice }: PaymentsListProps)
                   <TableHead>Fecha</TableHead>
                   <TableHead>Método</TableHead>
                   <TableHead>Monto</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Vencimiento</TableHead>
                   <TableHead>Referencia</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
@@ -230,6 +248,35 @@ export default function PaymentsList({ quoteId, totalPrice }: PaymentsListProps)
                           currency: 'MXN',
                         }).format(payment.amount)}
                       </span>
+                    </TableCell>
+                    <TableCell>
+                      {payment.is_deposit ? (
+                        <Badge variant="success" size="sm">Anticipo</Badge>
+                      ) : (
+                        <Badge variant="info" size="sm">Pago</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {payment.due_date ? (
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                          <span className={cn(
+                            "text-sm font-medium",
+                            new Date(payment.due_date) < new Date()
+                              ? "text-red-600 dark:text-red-400"
+                              : new Date(payment.due_date) <= new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+                              ? "text-amber-600 dark:text-amber-400"
+                              : "text-gray-600 dark:text-gray-400"
+                          )}>
+                            {format(new Date(payment.due_date), "dd MMM yyyy", { locale: es })}
+                            {new Date(payment.due_date) < new Date() && (
+                              <AlertTriangle className="h-3 w-3 inline ml-1" />
+                            )}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400 dark:text-gray-500">-</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {payment.reference_number ? (

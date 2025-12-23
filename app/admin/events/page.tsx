@@ -9,17 +9,37 @@ import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
 import SearchInput from '@/components/ui/SearchInput'
-import { Calendar, Filter, Eye } from 'lucide-react'
+import { Calendar, Filter, Eye, Plus, Edit, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import EmptyState from '@/components/ui/EmptyState'
+import CreateEventDialog from '@/components/events/CreateEventDialog'
+import EditEventDialog from '@/components/events/EditEventDialog'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/Dialog'
 
 export default function AdminEventsPage() {
-  const { events, loading, error } = useAdminEvents()
+  const { events, loading, error, refetch } = useAdminEvents()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'confirmed' | 'cancelled'>('all')
-  const { error: toastError } = useToast()
+  const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [selectedEvent, setSelectedEvent] = useState<{
+    id: string
+    quote_id: string
+    start_date: string
+    end_date: string | null
+    status: string
+  } | null>(null)
+  const [eventToDelete, setEventToDelete] = useState<string | null>(null)
+  const { error: toastError, success: toastSuccess } = useToast()
 
   // Mostrar error si hay
   if (error) {
@@ -62,12 +82,59 @@ export default function AdminEventsPage() {
     { value: 'cancelled' as const, label: 'Cancelados' },
   ]
 
+  const handleEdit = (event: typeof events[0]) => {
+    setSelectedEvent({
+      id: event.id,
+      quote_id: event.quote_id,
+      start_date: event.start_date,
+      end_date: event.end_date,
+      status: event.status,
+    })
+    setEditDialogOpen(true)
+  }
+
+  const handleDeleteClick = (eventId: string) => {
+    setEventToDelete(eventId)
+    setDeleteConfirmOpen(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!eventToDelete) return
+
+    try {
+      const { createClient } = await import('@/utils/supabase/client')
+      const supabase = createClient()
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', eventToDelete)
+
+      if (error) throw error
+
+      toastSuccess('Evento eliminado exitosamente')
+      refetch?.()
+      setDeleteConfirmOpen(false)
+      setEventToDelete(null)
+    } catch (error) {
+      toastError('Error al eliminar el evento: ' + (error instanceof Error ? error.message : String(error)))
+    }
+  }
+
   return (
     <div className="space-y-8 p-6 lg:p-8">
-      <PageHeader
-        title="Eventos"
-        description="Gestiona todos los eventos del sistema"
-      />
+      <div className="flex items-center justify-between">
+        <PageHeader
+          title="Eventos"
+          description="Gestiona todos los eventos del sistema"
+        />
+        <Button
+          onClick={() => setCreateDialogOpen(true)}
+          className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg hover:shadow-xl"
+        >
+          <Plus className="h-5 w-5 mr-2" />
+          Crear Evento
+        </Button>
+      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -234,18 +301,42 @@ export default function AdminEventsPage() {
                           style: 'currency',
                           currency: 'MXN',
                           minimumFractionDigits: 2,
-                        }).format(event.quote?.total_price || 0)}
+                        }).format(
+                          (event.quote as any)?.total_amount || 
+                          (event.quote as any)?.total_price || 
+                          0
+                        )}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      {event.quote_id && (
-                        <Link href={`/dashboard/quotes/${event.quote_id}`}>
-                          <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                            <Eye className="h-4 w-4 mr-2" />
-                            Ver
-                          </Button>
-                        </Link>
-                      )}
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEdit(event)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                          title="Editar evento"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteClick(event.id)}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                          title="Eliminar evento"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        {event.quote_id && (
+                          <Link href={`/dashboard/quotes/${event.quote_id}`}>
+                            <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                              <Eye className="h-4 w-4 mr-2" />
+                              Ver
+                            </Button>
+                          </Link>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -254,6 +345,58 @@ export default function AdminEventsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Diálogo de Crear Evento */}
+      <CreateEventDialog
+        open={createDialogOpen}
+        onClose={() => setCreateDialogOpen(false)}
+        onSuccess={() => {
+          refetch?.()
+        }}
+      />
+
+      {/* Diálogo de Editar Evento */}
+      <EditEventDialog
+        open={editDialogOpen}
+        onClose={() => {
+          setEditDialogOpen(false)
+          setSelectedEvent(null)
+        }}
+        onSuccess={() => {
+          refetch?.()
+          setSelectedEvent(null)
+        }}
+        event={selectedEvent}
+      />
+
+      {/* Diálogo de Confirmación para Borrar */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold text-red-600 dark:text-red-400">
+              Confirmar Eliminación
+            </DialogTitle>
+            <DialogDescription>
+              ¿Estás seguro de que deseas eliminar este evento? Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button variant="ghost" onClick={() => {
+              setDeleteConfirmOpen(false)
+              setEventToDelete(null)
+            }}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700 text-white"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Eliminar
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

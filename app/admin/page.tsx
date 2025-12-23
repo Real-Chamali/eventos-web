@@ -1,23 +1,16 @@
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
-import StatsCard from '@/components/ui/StatsCard'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
-import Chart from '@/components/ui/Chart'
 import Link from 'next/link'
 import Button from '@/components/ui/Button'
-import {
-  DollarSign,
-  TrendingUp,
-  FileText,
-  Calendar,
-  Settings,
-  ArrowRight,
-  Shield,
-  Sparkles,
-} from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
+import Chart from '@/components/ui/Chart'
+import StatsCard from '@/components/ui/StatsCard'
 import Badge from '@/components/ui/Badge'
+import { ArrowRight, BarChart3, Shield, DollarSign, TrendingUp, Calendar, Settings, Sparkles, FileText } from 'lucide-react'
 
 export default async function AdminPage() {
+  // Redirigir al dashboard del dueño
+  redirect('/admin/dashboard')
   const supabase = await createClient()
   const {
     data: { user },
@@ -31,7 +24,7 @@ export default async function AdminPage() {
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')
-    .eq('id', user.id)
+    .eq('id', user?.id || '')
     .maybeSingle()
 
   if (profile?.role !== 'admin') {

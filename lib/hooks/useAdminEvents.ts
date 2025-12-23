@@ -70,7 +70,8 @@ export function useAdminEvents() {
     events: data || [],
     loading: isLoading,
     error: error as Error | null,
-    refresh: mutate,
+    refetch: mutate,
+    refresh: mutate, // Alias para compatibilidad
   }
 }
 

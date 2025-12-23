@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import Badge from '@/components/ui/Badge'
 import Skeleton from '@/components/ui/Skeleton'
 import SearchInput from '@/components/ui/SearchInput'
-import { Users, Filter, Mail, Phone, TrendingUp, FileText, Shield, Crown, Edit2, Trash2 } from 'lucide-react'
+import { Users, Filter, Mail, Phone, TrendingUp, FileText, Shield, Crown, Edit2, Trash2, RefreshCw } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import {
   Dialog,
@@ -60,21 +60,63 @@ export default function AdminVendorsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Función para recargar manualmente
+  const handleRefresh = () => {
+    loadVendors()
+  }
+
   const loadVendors = async () => {
     try {
       setLoading(true)
       
-      // Obtener vendedores desde la API
-      const response = await fetch('/api/admin/vendors')
+      // Obtener vendedores desde la API con cache-busting
+      const response = await fetch('/api/admin/vendors', {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      })
+      
       if (!response.ok) {
-        throw new Error('Error al obtener vendedores')
+        const errorData = await response.json().catch(() => ({ error: 'Error desconocido' }))
+        const errorMessage = errorData.error || `Error ${response.status}: ${response.statusText}`
+        logger.error('AdminVendorsPage', 'Error loading vendors', new Error(errorMessage), {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+        })
+        toastError(`Error al cargar los vendedores: ${errorMessage}`)
+        setVendors([])
+        return
       }
       
-      const { data } = await response.json()
-      setVendors(data || [])
+      const result = await response.json()
+      
+      // Validar que la respuesta tenga la estructura esperada
+      if (!result || typeof result !== 'object') {
+        logger.error('AdminVendorsPage', 'Invalid response structure', new Error('Server response is not an object'), { result })
+        throw new Error('Respuesta inválida del servidor')
+      }
+      
+      const { data } = result
+      
+      // Asegurar que data sea un array
+      if (!Array.isArray(data)) {
+        logger.warn('AdminVendorsPage', 'Data is not an array', { data, result })
+        setVendors([])
+        return
+      }
+      
+      logger.info('AdminVendorsPage', 'Vendors loaded successfully', {
+        count: data.length,
+      })
+      
+      setVendors(data)
     } catch (error) {
       logger.error('AdminVendorsPage', 'Error loading vendors', error as Error)
-      toastError('Error al cargar los vendedores')
+      const errorMessage = error instanceof Error ? error.message : 'Error desconocido'
+      toastError(`Error al cargar los vendedores: ${errorMessage}`)
+      setVendors([])
     } finally {
       setLoading(false)
     }
@@ -160,6 +202,15 @@ export default function AdminVendorsPage() {
             </div>
           </div>
         </div>
+        <Button
+          variant="outline"
+          onClick={handleRefresh}
+          disabled={loading}
+          className="gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          {loading ? 'Cargando...' : 'Recargar'}
+        </Button>
       </div>
 
       {/* Stats Grid */}

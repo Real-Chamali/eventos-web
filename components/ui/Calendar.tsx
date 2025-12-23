@@ -4,12 +4,13 @@ import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths, startOfWeek, endOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils/cn'
 import Badge from './Badge'
 import Skeleton from './Skeleton'
 import Button from './Button'
+import { getAvailabilityColor, getAvailabilityLabel, type AvailabilityStatus } from '@/lib/utils/calendarIntelligence'
 
 interface EventDate {
   date: string
@@ -19,13 +20,17 @@ interface EventDate {
     client_name: string
     status: string
   }>
+  availability_status?: 'AVAILABLE' | 'RESERVED' | 'CONFIRMED' | 'CANCELLED'
 }
+
+type CalendarView = 'month' | 'week' | 'day'
 
 export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date())
   const [events, setEvents] = useState<EventDate[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [view, setView] = useState<CalendarView>('month')
   const supabase = createClient()
 
   useEffect(() => {
@@ -50,7 +55,7 @@ export default function Calendar() {
     try {
       setLoading(true)
       
-      // Obtener eventos con fechas desde la tabla events
+      // Obtener eventos reales con relaciones correctas desde la tabla events
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
         .select(`
@@ -59,116 +64,137 @@ export default function Calendar() {
           end_date,
           status,
           quote_id,
-          quote:quotes (
+          quote:quotes!inner (
+            id,
             client_id,
-            clients (
+            status,
+            clients!inner (
+              id,
               name
             )
           )
         `)
+        .not('start_date', 'is', null)
         .order('start_date', { ascending: true })
 
-      // También obtener cotizaciones confirmadas con event_date
-      const { data: quotesData, error: quotesError } = await supabase
-        .from('quotes')
-        .select(`
-          id,
-          event_date,
-          status,
-          client_id,
-          clients (
-            name
-          )
-        `)
-        .eq('status', 'APPROVED')
-        .not('event_date', 'is', null)
-
-      if (eventsError && quotesError) {
-        logger.error('Calendar', 'Error loading events', eventsError instanceof Error ? eventsError : new Error(String(eventsError)), {
-          quotesError: quotesError instanceof Error ? quotesError.message : String(quotesError)
-        })
-        return
+      if (eventsError) {
+        logger.error('Calendar', 'Error loading events', eventsError instanceof Error ? eventsError : new Error(String(eventsError)))
+        // Continuar aunque haya error para mostrar lo que se pueda
       }
 
-      // Combinar y procesar eventos
+      // Combinar y procesar eventos con disponibilidad real
       const eventMap = new Map<string, EventDate>()
 
-      // Tipos para datos de Supabase (pueden venir como array o objeto)
+      // Tipos para datos de Supabase con relaciones correctas (pueden venir como array o objeto)
+      type SupabaseClient = {
+        id: string
+        name: string
+      }
+      
+      type SupabaseQuote = {
+        id: string
+        client_id: string
+        status: string
+        clients: SupabaseClient | SupabaseClient[] | null
+      }
+      
       type SupabaseEvent = {
         id: string
         start_date: string
         end_date?: string | null
         status: string
-        quote?: Array<{
-          clients?: Array<{ name?: string }> | { name?: string } | null
-        }> | {
-          clients?: Array<{ name?: string }> | { name?: string } | null
-        } | null
+        quote_id: string
+        quote: SupabaseQuote | SupabaseQuote[] | null
       }
 
-      // Procesar eventos de la tabla events
-      if (eventsData) {
-        eventsData.forEach((event: SupabaseEvent) => {
-          // Extraer datos del evento (quote puede ser array o objeto)
+      // Procesar eventos de la tabla events (datos reales con relaciones)
+      if (eventsData && eventsData.length > 0) {
+        // Obtener disponibilidad para cada fecha usando la función SQL
+        const dateAvailabilityMap = new Map<string, AvailabilityStatus>()
+        
+        for (const eventRaw of eventsData) {
+          // Manejar relaciones que pueden venir como array o objeto
+          const event = eventRaw as SupabaseEvent
           const quote = Array.isArray(event.quote) ? event.quote[0] : event.quote
-          const client = quote?.clients ? (Array.isArray(quote.clients) ? quote.clients[0] : quote.clients) : null
-          const startDate = event.start_date
-          const endDate = event.end_date || event.start_date
+          const client = quote?.clients 
+            ? (Array.isArray(quote.clients) ? quote.clients[0] : quote.clients)
+            : null
           
-          // Agregar todas las fechas del rango
-          const start = new Date(startDate)
-          const end = new Date(endDate)
-          const days = eachDayOfInterval({ start, end })
+          const startDate = event.start_date.split('T')[0] // Solo la fecha sin hora
+          const endDate = event.end_date ? event.end_date.split('T')[0] : startDate
           
-          days.forEach(day => {
-            const dateKey = format(day, 'yyyy-MM-dd')
-            if (!eventMap.has(dateKey)) {
-              eventMap.set(dateKey, {
-                date: dateKey,
-                count: 0,
-                events: []
+          // Obtener disponibilidad real usando la función SQL
+          try {
+            const { getDateAvailability } = await import('@/lib/utils/calendarIntelligence')
+            const availability = await getDateAvailability(startDate, endDate)
+            
+            // Agregar todas las fechas del rango con disponibilidad real
+            const start = new Date(startDate)
+            const end = new Date(endDate)
+            const days = eachDayOfInterval({ start, end })
+            
+            days.forEach(day => {
+              const dateKey = format(day, 'yyyy-MM-dd')
+              if (!dateAvailabilityMap.has(dateKey)) {
+                dateAvailabilityMap.set(dateKey, availability)
+              }
+              
+              if (!eventMap.has(dateKey)) {
+                eventMap.set(dateKey, {
+                  date: dateKey,
+                  count: 0,
+                  events: [],
+                  availability_status: availability
+                })
+              }
+              const eventDate = eventMap.get(dateKey)!
+              eventDate.count++
+              eventDate.events.push({
+                id: event.id,
+                client_name: client?.name || 'Sin cliente',
+                status: event.status
               })
-            }
-            const eventDate = eventMap.get(dateKey)!
-            eventDate.count++
-            eventDate.events.push({
-              id: event.id,
-              client_name: client?.name || 'Sin cliente',
-              status: event.status
+              // Actualizar estado de disponibilidad basado en eventos confirmados
+              if (event.status === 'CONFIRMED') {
+                eventDate.availability_status = 'CONFIRMED'
+              } else if (event.status === 'LOGISTICS' && eventDate.availability_status !== 'CONFIRMED') {
+                eventDate.availability_status = 'RESERVED'
+              }
             })
-          })
-        })
-      }
-
-      // Tipo para cotizaciones de Supabase
-      type SupabaseQuote = {
-        id: string
-        event_date: string
-        status: string
-        clients?: Array<{ name?: string }> | { name?: string } | null
-      }
-
-      // Procesar cotizaciones con event_date
-      if (quotesData) {
-        quotesData.forEach((quote: SupabaseQuote) => {
-          // Extraer cliente (puede ser array o objeto)
-          const client = quote.clients ? (Array.isArray(quote.clients) ? quote.clients[0] : quote.clients) : null
-          const dateKey = quote.event_date
-          if (!eventMap.has(dateKey)) {
-            eventMap.set(dateKey, {
-              date: dateKey,
-              count: 0,
-              events: []
+          } catch (availError) {
+            logger.error('Calendar', 'Error getting availability', availError instanceof Error ? availError : new Error(String(availError)))
+            // Fallback: procesar sin disponibilidad pero con relaciones correctas
+            const start = new Date(startDate)
+            const end = new Date(endDate)
+            const days = eachDayOfInterval({ start, end })
+            
+            days.forEach(day => {
+              const dateKey = format(day, 'yyyy-MM-dd')
+              if (!eventMap.has(dateKey)) {
+                eventMap.set(dateKey, {
+                  date: dateKey,
+                  count: 0,
+                  events: []
+                })
+              }
+              const eventDate = eventMap.get(dateKey)!
+              eventDate.count++
+              eventDate.events.push({
+                id: event.id,
+                client_name: client?.name || 'Sin cliente',
+                status: event.status
+              })
+              // Determinar disponibilidad basado en estado del evento
+              if (event.status === 'CONFIRMED') {
+                eventDate.availability_status = 'CONFIRMED'
+              } else if (event.status === 'LOGISTICS' || event.status === 'IN_PROGRESS') {
+                eventDate.availability_status = 'RESERVED'
+              } else if (event.status === 'CANCELLED' || event.status === 'NO_SHOW') {
+                eventDate.availability_status = 'CANCELLED'
+              }
             })
           }
-          const eventDate = eventMap.get(dateKey)!
-          eventDate.count++
-          eventDate.events.push({
-            id: quote.id,
-            client_name: client?.name || 'Sin cliente',
-            status: quote.status
-          })
-        })
+        }
       }
 
       setEvents(Array.from(eventMap.values()))
@@ -233,12 +259,41 @@ export default function Calendar() {
           </div>
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-              {format(currentDate, 'MMMM yyyy', { locale: es })}
+              {view === 'month' && format(currentDate, 'MMMM yyyy', { locale: es })}
+              {view === 'week' && `Semana del ${format(startOfWeek(currentDate, { weekStartsOn: 1 }), 'd MMM', { locale: es })}`}
+              {view === 'day' && format(currentDate, 'EEEE, d MMMM yyyy', { locale: es })}
             </h3>
             <p className="text-xs text-gray-500 dark:text-gray-400">Calendario de eventos</p>
           </div>
         </div>
         <div className="flex items-center space-x-2">
+          {/* Selector de vista */}
+          <div className="flex items-center gap-1 rounded-lg border border-gray-200 dark:border-gray-800 p-1">
+            <Button
+              variant={view === 'month' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setView('month')}
+              className="h-8 px-3 text-xs"
+            >
+              Mes
+            </Button>
+            <Button
+              variant={view === 'week' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setView('week')}
+              className="h-8 px-3 text-xs"
+            >
+              Semana
+            </Button>
+            <Button
+              variant={view === 'day' ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setView('day')}
+              className="h-8 px-3 text-xs"
+            >
+              Día
+            </Button>
+          </div>
           <Button
             variant="ghost"
             size="sm"
@@ -264,8 +319,10 @@ export default function Calendar() {
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Días de la semana - Premium styling */}
-          <div className="grid grid-cols-7 gap-2 mb-2">
+          {view === 'month' && (
+            <>
+              {/* Días de la semana - Premium styling */}
+              <div className="grid grid-cols-7 gap-2 mb-2">
             {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day) => (
               <div
                 key={day}
@@ -284,10 +341,32 @@ export default function Calendar() {
               const dayEvents = getEventsForDate(day)
               const isSelected = selectedDate && isSameDay(day, selectedDate)
 
+              // Determinar estado de disponibilidad real
+              const availabilityStatus: AvailabilityStatus = dayEvents?.availability_status || 
+                (dayEvents?.events.some(e => e.status === 'CONFIRMED') ? 'CONFIRMED' : 
+                 dayEvents?.events.some(e => e.status === 'LOGISTICS' || e.status === 'IN_PROGRESS') ? 'RESERVED' : 
+                 dayEvents?.events.some(e => e.status === 'CANCELLED' || e.status === 'NO_SHOW') ? 'CANCELLED' : 
+                 'AVAILABLE')
+              
+              // Determinar si está bloqueado (confirmado o reservado)
+              const isBlocked = availabilityStatus === 'CONFIRMED' || availabilityStatus === 'RESERVED'
+              const isConfirmed = availabilityStatus === 'CONFIRMED'
+              const isReserved = availabilityStatus === 'RESERVED'
+              const isCancelled = availabilityStatus === 'CANCELLED'
+              
+              // Colores según estado real
+              const getBlockedColor = () => {
+                if (isConfirmed) return 'bg-blue-100 dark:bg-blue-950/40 border-2 border-blue-300 dark:border-blue-700'
+                if (isReserved) return 'bg-yellow-100 dark:bg-yellow-950/40 border-2 border-yellow-300 dark:border-yellow-700'
+                if (isCancelled) return 'bg-gray-100 dark:bg-gray-800/40 border border-gray-300 dark:border-gray-700 opacity-50'
+                return ''
+              }
+
               return (
                 <button
                   key={index}
                   onClick={() => setSelectedDate(day)}
+                  disabled={isBlocked && !isCurrentMonth}
                   className={cn(
                     'group relative h-20 rounded-xl text-sm font-medium transition-all duration-200',
                     'hover:bg-gray-50 dark:hover:bg-gray-800/50',
@@ -295,33 +374,219 @@ export default function Calendar() {
                     !isCurrentMonth && 'text-gray-300 dark:text-gray-600 opacity-50',
                     isCurrentDay && 'ring-2 ring-indigo-500 ring-offset-2 bg-indigo-50 dark:bg-indigo-950/20',
                     isSelected && !isCurrentDay && 'bg-indigo-50 dark:bg-indigo-950/20',
-                    dayEvents && dayEvents.count > 0 && 'bg-emerald-50 dark:bg-emerald-950/20 hover:bg-emerald-100 dark:hover:bg-emerald-950/30'
+                    // Bloqueo visual basado en estado real
+                    isBlocked && isCurrentMonth && getBlockedColor(),
+                    isBlocked && !isCurrentMonth && 'opacity-30 cursor-not-allowed',
+                    isCancelled && 'line-through'
                   )}
+                  title={
+                    dayEvents && dayEvents.count > 0
+                      ? `${dayEvents.count} evento(s) - ${getAvailabilityLabel(availabilityStatus)}`
+                      : 'Disponible'
+                  }
                 >
                   <span className={cn(
                     'block pt-2 pb-1 px-2',
                     isCurrentDay && 'font-bold text-indigo-600 dark:text-indigo-400',
-                    !isCurrentMonth && 'opacity-50'
+                    !isCurrentMonth && 'opacity-50',
+                    isBlocked && isCurrentMonth && (isConfirmed ? 'text-blue-700 dark:text-blue-300' : 'text-yellow-700 dark:text-yellow-300')
                   )}>
                     {format(day, 'd')}
                   </span>
                   {dayEvents && dayEvents.count > 0 && (
                     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center space-x-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400"></span>
-                      {dayEvents.count > 1 && (
-                        <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                          {dayEvents.count}
-                        </span>
-                      )}
+                      {(() => {
+                        const colorClass = getAvailabilityColor(availabilityStatus)
+                        return (
+                          <>
+                            <span className={cn(
+                              "h-2 w-2 rounded-full",
+                              isConfirmed ? "bg-blue-600 dark:bg-blue-400" :
+                              isReserved ? "bg-yellow-600 dark:bg-yellow-400" :
+                              isCancelled ? "bg-gray-400 dark:bg-gray-600" :
+                              "bg-green-600 dark:bg-green-400"
+                            )}></span>
+                            {dayEvents.count > 1 && (
+                              <span className={cn(
+                                "text-xs font-semibold px-1 rounded",
+                                isConfirmed ? "text-blue-700 dark:text-blue-300" :
+                                isReserved ? "text-yellow-700 dark:text-yellow-300" :
+                                "text-gray-700 dark:text-gray-300"
+                              )}>
+                                {dayEvents.count}
+                              </span>
+                            )}
+                            {isConfirmed && (
+                              <span className="text-xs" title="Bloqueado - Confirmado">🔒</span>
+                            )}
+                            {isReserved && !isConfirmed && (
+                              <span className="text-xs" title="Reservado">⚠️</span>
+                            )}
+                          </>
+                        )
+                      })()}
+                    </div>
+                  )}
+                  {!dayEvents && isCurrentMonth && (
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2">
+                      <span className="h-1 w-1 rounded-full bg-green-400 dark:bg-green-500 opacity-50"></span>
                     </div>
                   )}
                 </button>
               )
             })}
           </div>
+            </>
+          )}
 
-          {/* Eventos del día seleccionado - Premium card */}
-          {selectedDate && selectedDateEvents && (
+          {view === 'week' && (
+            <div className="space-y-2">
+              {/* Header de días de la semana */}
+              <div className="grid grid-cols-7 gap-2 mb-2">
+                {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((day, idx) => {
+                  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 })
+                  const dayDate = addDays(weekStart, idx)
+                  const dayEvents = getEventsForDate(dayDate)
+                  const availabilityStatus: AvailabilityStatus = dayEvents?.availability_status || 
+                    (dayEvents?.events.some(e => e.status === 'CONFIRMED') ? 'CONFIRMED' : 
+                     dayEvents?.events.some(e => e.status === 'LOGISTICS' || e.status === 'IN_PROGRESS') ? 'RESERVED' : 
+                     dayEvents?.events.some(e => e.status === 'CANCELLED' || e.status === 'NO_SHOW') ? 'CANCELLED' : 
+                     'AVAILABLE')
+                  const isBlocked = availabilityStatus === 'CONFIRMED' || availabilityStatus === 'RESERVED'
+                  const isConfirmed = availabilityStatus === 'CONFIRMED'
+                  
+                  return (
+                    <div 
+                      key={day} 
+                      className={cn(
+                        "text-center p-3 rounded-xl border-2 transition-all",
+                        isBlocked && isConfirmed ? "bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700" :
+                        isBlocked ? "bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-700" :
+                        "bg-gray-50 dark:bg-gray-800/50 border-gray-200 dark:border-gray-700"
+                      )}
+                    >
+                      <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">
+                        {day}
+                      </div>
+                      <div className={cn(
+                        "text-sm font-bold mb-2",
+                        isConfirmed ? "text-blue-700 dark:text-blue-300" :
+                        isBlocked ? "text-yellow-700 dark:text-yellow-300" :
+                        "text-gray-900 dark:text-white"
+                      )}>
+                        {format(dayDate, 'd')}
+                        {isConfirmed && <span className="ml-1 text-xs">🔒</span>}
+                        {isBlocked && !isConfirmed && <span className="ml-1 text-xs">⚠️</span>}
+                      </div>
+                      {dayEvents && dayEvents.count > 0 ? (
+                        <div className="mt-2 space-y-1">
+                          {dayEvents.events.slice(0, 3).map((event) => (
+                            <div
+                              key={event.id}
+                              className={cn(
+                                "text-xs p-1.5 rounded truncate font-medium",
+                                event.status === 'CONFIRMED' ? "bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800" :
+                                event.status === 'LOGISTICS' || event.status === 'IN_PROGRESS' ? "bg-yellow-100 dark:bg-yellow-950/40 text-yellow-700 dark:text-yellow-300 border border-yellow-200 dark:border-yellow-800" :
+                                "bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                              )}
+                            >
+                              {event.client_name}
+                            </div>
+                          ))}
+                          {dayEvents.count > 3 && (
+                            <div className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                              +{dayEvents.count - 3} más
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="text-xs text-green-600 dark:text-green-400 mt-2 font-medium">
+                          Disponible
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {view === 'day' && (
+            <div className="space-y-4">
+              {(() => {
+                const dayEvents = getEventsForDate(currentDate)
+                const availabilityStatus: AvailabilityStatus = dayEvents?.availability_status || 
+                  (dayEvents?.events.some(e => e.status === 'CONFIRMED') ? 'CONFIRMED' : 
+                   dayEvents?.events.some(e => e.status === 'LOGISTICS' || e.status === 'IN_PROGRESS') ? 'RESERVED' : 
+                   dayEvents?.events.some(e => e.status === 'CANCELLED' || e.status === 'NO_SHOW') ? 'CANCELLED' : 
+                   'AVAILABLE')
+                const isBlocked = availabilityStatus === 'CONFIRMED' || availabilityStatus === 'RESERVED'
+                const isConfirmed = availabilityStatus === 'CONFIRMED'
+                
+                return (
+                  <>
+                    <div className={cn(
+                      "text-center p-6 rounded-xl border-2",
+                      isConfirmed ? "bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700" :
+                      isBlocked ? "bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-700" :
+                      "bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border border-indigo-200 dark:border-indigo-800"
+                    )}>
+                      <h3 className="text-2xl font-bold mb-2 flex items-center justify-center gap-2">
+                        <span className={isConfirmed ? "text-blue-700 dark:text-blue-300" : isBlocked ? "text-yellow-700 dark:text-yellow-300" : "text-gray-900 dark:text-white"}>
+                          {format(currentDate, 'EEEE, d', { locale: es })}
+                        </span>
+                        {isConfirmed && <span>🔒</span>}
+                        {isBlocked && !isConfirmed && <span>⚠️</span>}
+                      </h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        {format(currentDate, 'MMMM yyyy', { locale: es })}
+                      </p>
+                      <Badge variant={isConfirmed ? 'error' : isBlocked ? 'warning' : 'success'} size="sm">
+                        {getAvailabilityLabel(availabilityStatus)}
+                      </Badge>
+                    </div>
+                    {dayEvents && dayEvents.count > 0 ? (
+                      <div className="space-y-2">
+                        {dayEvents.events.map((event) => (
+                          <div
+                            key={event.id}
+                            className={cn(
+                              "p-4 rounded-xl border-2",
+                              event.status === 'CONFIRMED' ? "bg-blue-50 dark:bg-blue-950/30 border-blue-300 dark:border-blue-700" :
+                              event.status === 'LOGISTICS' || event.status === 'IN_PROGRESS' ? "bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-700" :
+                              "bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                            )}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="font-semibold text-gray-900 dark:text-white">{event.client_name}</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">{event.status}</p>
+                              </div>
+                              <Badge variant={
+                                event.status === 'CONFIRMED' ? 'error' :
+                                event.status === 'LOGISTICS' || event.status === 'IN_PROGRESS' ? 'warning' : 'info'
+                              }>
+                                {getAvailabilityLabel(event.status as AvailabilityStatus)}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center p-8 rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                        <p className="text-green-700 dark:text-green-300 font-medium">
+                          ✅ Día disponible - No hay eventos programados
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )
+              })()}
+            </div>
+          )}
+
+          {/* Eventos del día seleccionado - Premium card (solo para vista mensual) */}
+          {view === 'month' && selectedDate && selectedDateEvents && (
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800">
               <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-4 flex items-center space-x-2">
                 <CalendarIcon className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
@@ -341,7 +606,15 @@ export default function Calendar() {
                         {event.status}
                       </p>
                     </div>
-                    <Badge variant="success">Confirmado</Badge>
+                    <Badge variant={
+                      event.status === 'CONFIRMED' ? 'success' :
+                      event.status === 'LOGISTICS' ? 'warning' :
+                      event.status === 'CANCELLED' ? 'error' : 'info'
+                    }>
+                      {event.status === 'CONFIRMED' ? 'Confirmado' :
+                       event.status === 'LOGISTICS' ? 'Apartado' :
+                       event.status === 'CANCELLED' ? 'Cancelado' : event.status}
+                    </Badge>
                   </div>
                 ))}
               </div>
@@ -349,6 +622,14 @@ export default function Calendar() {
           )}
 
           {selectedDate && !selectedDateEvents && (
+            <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800 text-center">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No hay eventos programados para esta fecha
+              </p>
+            </div>
+          )}
+
+          {view === 'month' && selectedDate && !selectedDateEvents && (
             <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-800 text-center">
               <p className="text-sm text-gray-500 dark:text-gray-400">
                 No hay eventos programados para esta fecha

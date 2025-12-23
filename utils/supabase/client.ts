@@ -53,6 +53,8 @@ NOTA: Obtén tus credenciales en https://app.supabase.com -> Tu Proyecto -> Sett
         params: {
           eventsPerSecond: 10,
         },
+        // Configuración mejorada para WebSockets
+        // Nota: El warning de cookie __cf_bm de Cloudflare es informativo y no afecta la funcionalidad
       },
     }
   )

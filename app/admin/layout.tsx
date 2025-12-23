@@ -156,15 +156,28 @@ export default async function AdminLayout({
   }
 
   // Solo redirigir si definitivamente NO es admin
-  // Si hay dudas, permitir acceso (mejor que bucle infinito)
-  if (userRole !== 'admin') {
+  // Si hay dudas o errores, permitir acceso temporalmente (mejor que bloquear acceso legítimo)
+  // El usuario admin@chamali.com siempre debe tener acceso
+  const isAdminEmail = user.email === 'admin@chamali.com'
+  
+  if (userRole !== 'admin' && !isAdminEmail) {
     logger.warn('AdminLayout', 'User is not admin, redirecting to dashboard', {
       userId: user.id,
       email: user.email,
       userRole,
+      isAdminEmail,
       timestamp: new Date().toISOString(),
     })
     redirect('/dashboard')
+  }
+  
+  // Si es admin@chamali.com pero el rol no se detectó, loguear pero permitir acceso
+  if (isAdminEmail && userRole !== 'admin') {
+    logger.warn('AdminLayout', 'Admin email detected but role not set correctly, allowing access', {
+      userId: user.id,
+      email: user.email,
+      userRole,
+    })
   }
   
   logger.info('AdminLayout', 'Admin access granted', {

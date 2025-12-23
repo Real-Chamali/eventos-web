@@ -14,7 +14,7 @@ import { es } from 'date-fns/locale'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
 import { logger } from '@/lib/utils/logger'
-import { useToast } from '@/lib/hooks'
+import { useToast, useIsAdmin } from '@/lib/hooks'
 import CreateEventDialog from '@/components/events/CreateEventDialog'
 import EditEventDialog from '@/components/events/EditEventDialog'
 import {
@@ -77,6 +77,7 @@ export default function EventsPage() {
   const [eventToDelete, setEventToDelete] = useState<string | null>(null)
   const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
+  const { isAdmin } = useIsAdmin()
 
   useEffect(() => {
     loadEvents()
@@ -547,24 +548,28 @@ export default function EventsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEdit(event)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                            title="Editar evento"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteClick(event.id)}
-                            className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
-                            title="Eliminar evento"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {isAdmin && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEdit(event)}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                                title="Editar evento"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteClick(event.id)}
+                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                title="Eliminar evento"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                           <Link href={`/dashboard/events/${event.id}`}>
                             <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                               Ver detalles
@@ -591,22 +596,25 @@ export default function EventsPage() {
         }}
       />
 
-      {/* Diálogo de Editar Evento */}
-      <EditEventDialog
-        open={editDialogOpen}
-        onClose={() => {
-          setEditDialogOpen(false)
-          setSelectedEvent(null)
-        }}
-        onSuccess={() => {
-          loadEvents()
-          setSelectedEvent(null)
-        }}
-        event={selectedEvent}
-      />
+      {/* Diálogo de Editar Evento - Solo para admin */}
+      {isAdmin && (
+        <EditEventDialog
+          open={editDialogOpen}
+          onClose={() => {
+            setEditDialogOpen(false)
+            setSelectedEvent(null)
+          }}
+          onSuccess={() => {
+            loadEvents()
+            setSelectedEvent(null)
+          }}
+          event={selectedEvent}
+        />
+      )}
 
-      {/* Diálogo de Confirmación para Borrar */}
-      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      {/* Diálogo de Confirmación para Borrar - Solo para admin */}
+      {isAdmin && (
+        <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-red-600 dark:text-red-400">
@@ -633,6 +641,7 @@ export default function EventsPage() {
           </div>
         </DialogContent>
       </Dialog>
+      )}
     </div>
   )
 }

@@ -15,6 +15,9 @@ export interface PartialPayment {
   payment_method: 'cash' | 'transfer' | 'card' | 'check' | 'other'
   reference_number?: string | null
   notes?: string | null
+  is_deposit?: boolean
+  due_date?: string | null
+  reminder_sent?: boolean
   created_by: string
   created_at: string
   updated_at?: string | null

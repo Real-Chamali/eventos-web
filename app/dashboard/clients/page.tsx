@@ -1,10 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { useClients } from '@/lib/hooks'
+import { useClients, useToast, useIsAdmin } from '@/lib/hooks'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
-import { useToast } from '@/lib/hooks'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import Button from '@/components/ui/Button'
@@ -41,6 +40,7 @@ export default function ClientsPage() {
   const [clientToDelete, setClientToDelete] = useState<string | null>(null)
   const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
+  const { isAdmin } = useIsAdmin()
 
   if (loading) {
     return (
@@ -244,27 +244,31 @@ export default function ClientsPage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                      <Link href={`/dashboard/clients/${client.id}`}>
-                        <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                          Ver detalles
-                        </Button>
-                      </Link>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleEdit(client)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteClick(client.id)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <Link href={`/dashboard/clients/${client.id}`}>
+                          <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            Ver detalles
+                          </Button>
+                        </Link>
+                        {isAdmin && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEdit(client)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteClick(client.id)}
+                              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -275,21 +279,24 @@ export default function ClientsPage() {
         </CardContent>
       </Card>
 
-      {/* Edit Client Dialog */}
-      <EditClientDialog
-        open={editDialogOpen}
-        onClose={() => {
-          setEditDialogOpen(false)
-          setSelectedClient(null)
-        }}
-        onSuccess={() => {
-          refresh() // Recargar lista de clientes
-        }}
-        client={selectedClient}
-      />
+      {/* Edit Client Dialog - Solo para admin */}
+      {isAdmin && (
+        <EditClientDialog
+          open={editDialogOpen}
+          onClose={() => {
+            setEditDialogOpen(false)
+            setSelectedClient(null)
+          }}
+          onSuccess={() => {
+            refresh() // Recargar lista de clientes
+          }}
+          client={selectedClient}
+        />
+      )}
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      {/* Delete Confirmation Dialog - Solo para admin */}
+      {isAdmin && (
+        <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>¿Eliminar cliente?</DialogTitle>
@@ -311,6 +318,7 @@ export default function ClientsPage() {
           </div>
         </DialogContent>
       </Dialog>
+      )}
     </div>
   )
 }

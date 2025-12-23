@@ -75,8 +75,17 @@ const CACHE_TTL = 5 * 60 * 1000 // 5 minutos
  * Check if user has admin role
  * Incluye caché y manejo correcto de enum de PostgreSQL
  */
-export async function checkAdmin(userId: string): Promise<boolean> {
+export async function checkAdmin(userId: string, userEmail?: string | null): Promise<boolean> {
   try {
+    // Bypass para admin@chamali.com (siempre admin)
+    if (isAdminEmail(userEmail)) {
+      logger.info('Auth Middleware', 'Admin email detected, bypassing role check', {
+        userId,
+        email: userEmail,
+      })
+      return true
+    }
+
     // Verificar caché
     const cached = roleCache.get(userId)
     if (cached && cached.expires > Date.now()) {
@@ -149,6 +158,13 @@ export function clearRoleCache(userId?: string): void {
   } else {
     roleCache.clear()
   }
+}
+
+/**
+ * Verificar si el email es el admin principal (bypass de verificación de rol)
+ */
+export function isAdminEmail(email?: string | null): boolean {
+  return email === 'admin@chamali.com'
 }
 
 /**
@@ -225,7 +241,12 @@ export async function auditAPIAction(
  * Rate limiting
  * Importa desde rateLimit.ts para usar implementación distribuida
  */
-export { checkRateLimit, clearRateLimit } from '@/lib/api/rateLimit'
+export { 
+  checkRateLimit, 
+  checkRateLimitAsync, 
+  checkRateLimitDistributed,
+  clearRateLimit 
+} from '@/lib/api/rateLimit'
 
 /**
  * Handle API errors with proper logging

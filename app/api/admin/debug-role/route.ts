@@ -3,7 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
 import { sanitizeForLogging } from '@/lib/utils/security'
-import { getUserFromSession, checkAdmin, checkRateLimit } from '@/lib/api/middleware'
+import { getUserFromSession, checkAdmin, checkRateLimitAsync } from '@/lib/api/middleware'
 
 /**
  * GET /api/admin/debug-role - Debug endpoint para verificar roles
@@ -33,7 +33,7 @@ export async function GET() {
     }
 
     // Verificar que sea admin usando checkAdmin para consistencia
-    const isAdmin = await checkAdmin(user.id)
+    const isAdmin = await checkAdmin(user.id, user.email)
 
     if (!isAdmin) {
       logger.warn('API /admin/debug-role', 'Non-admin attempted access', sanitizeForLogging({
@@ -44,8 +44,9 @@ export async function GET() {
       return response
     }
 
-    // Rate limiting agresivo: 1 request por hora
-    if (!checkRateLimit(`debug-${user.id}`, 1, 3600000)) {
+    // Rate limiting agresivo: 1 request por hora (distribuido)
+    const rateLimitAllowed = await checkRateLimitAsync(`debug-${user.id}`, 1, 3600000)
+    if (!rateLimitAllowed) {
       const response = NextResponse.json({ error: 'Too many requests' }, { status: 429 })
       response.headers.set('X-Content-Type-Options', 'nosniff')
       return response

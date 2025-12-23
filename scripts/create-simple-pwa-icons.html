@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Generador de Iconos PWA</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 { color: #333; }
+    .instructions { 
+      background: #f0f9ff;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      border-left: 4px solid #6366f1;
+    }
+    canvas {
+      border: 2px dashed #ddd;
+      margin: 20px 0;
+      display: block;
+    }
+    button {
+      background: #6366f1;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 10px 5px;
+    }
+    button:hover { background: #4f46e5; }
+    .download-links {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f9fafb;
+      border-radius: 8px;
+    }
+    .download-links a {
+      display: inline-block;
+      margin: 5px;
+      padding: 8px 16px;
+      background: #10b981;
+      color: white;
+      text-decoration: none;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎨 Generador de Iconos PWA</h1>
+    
+    <div class="instructions">
+      <h3>Instrucciones:</h3>
+      <ol>
+        <li>Haz clic en "Generar Iconos" para crear iconos básicos</li>
+        <li>Los iconos se generarán con un gradiente y las letras "EC"</li>
+        <li>Descarga cada icono haciendo clic en los enlaces</li>
+        <li>Guarda los iconos en la carpeta <code>public/</code> de tu proyecto</li>
+        <li>Reemplaza estos iconos con tu logo real cuando lo tengas</li>
+      </ol>
+    </div>
+
+    <button onclick="generateAllIcons()">Generar Todos los Iconos</button>
+    <button onclick="previewIcon(192)">Vista Previa (192x192)</button>
+
+    <div id="preview"></div>
+    <div id="downloads" class="download-links"></div>
+  </div>
+
+  <script>
+    const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
+    const generatedIcons = {};
+
+    function createIcon(size) {
+      const canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+
+      // Gradiente de fondo
+      const gradient = ctx.createLinearGradient(0, 0, size, size);
+      gradient.addColorStop(0, '#6366f1');
+      gradient.addColorStop(1, '#8b5cf6');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, size, size);
+
+      // Círculo blanco
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, size * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Texto "EC"
+      ctx.fillStyle = 'white';
+      ctx.font = `bold ${size * 0.3}px Arial`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('EC', size / 2, size / 2);
+
+      return canvas;
+    }
+
+    function downloadIcon(size) {
+      if (!generatedIcons[size]) {
+        generatedIcons[size] = createIcon(size);
+      }
+      
+      const canvas = generatedIcons[size];
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `icon-${size}.png`;
+        a.click();
+        URL.revokeObjectURL(url);
+      });
+    }
+
+    function previewIcon(size) {
+      const canvas = createIcon(size);
+      const preview = document.getElementById('preview');
+      preview.innerHTML = `<h3>Vista Previa (${size}x${size}):</h3>`;
+      preview.appendChild(canvas);
+    }
+
+    function generateAllIcons() {
+      sizes.forEach(size => {
+        generatedIcons[size] = createIcon(size);
+      });
+
+      const downloads = document.getElementById('downloads');
+      downloads.innerHTML = '<h3>📥 Descargar Iconos:</h3>';
+      
+      sizes.forEach(size => {
+        const link = document.createElement('a');
+        link.href = '#';
+        link.textContent = `icon-${size}.png`;
+        link.onclick = (e) => {
+          e.preventDefault();
+          downloadIcon(size);
+        };
+        downloads.appendChild(link);
+      });
+
+      alert('✅ Iconos generados! Haz clic en cada enlace para descargarlos.');
+    }
+  </script>
+</body>
+</html>
+

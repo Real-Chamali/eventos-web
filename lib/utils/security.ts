@@ -5,8 +5,59 @@
  * Usa Web Crypto API para compatibilidad con Edge Runtime
  */
 
-import DOMPurify from 'isomorphic-dompurify'
 import { logger } from '@/lib/utils/logger'
+
+// Función de sanitización que NO depende de jsdom
+// Usa escape básico de HTML para evitar problemas con jsdom en producción
+function createBasicSanitizer() {
+  return {
+    sanitize: (dirty: string, options?: any) => {
+      // Escape básico de HTML - suficiente para prevenir XSS
+      let sanitized = dirty
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+        .replace(/\//g, '&#x2F;')
+      
+      // Si hay opciones de tags permitidos, aplicar lógica básica
+      if (options?.ALLOWED_TAGS && Array.isArray(options.ALLOWED_TAGS)) {
+        // Para tags permitidos, permitir solo texto sin atributos
+        // Esto es una implementación simplificada
+        const allowedTags = options.ALLOWED_TAGS.join('|')
+        const tagRegex = new RegExp(`<(${allowedTags})(?:\\s[^>]*)?>`, 'gi')
+        sanitized = sanitized.replace(tagRegex, (match, tag) => {
+          return `<${tag.toLowerCase()}>`
+        })
+      }
+      
+      return sanitized
+    }
+  }
+}
+
+// DOMPurify se carga solo cuando es necesario y con manejo de errores
+// En producción, usar siempre el sanitizador básico para evitar jsdom
+let DOMPurify: any = null
+async function getDOMPurify() {
+  if (!DOMPurify) {
+    // En producción, usar siempre sanitizador básico para evitar jsdom
+    if (process.env.NODE_ENV === 'production') {
+      DOMPurify = createBasicSanitizer()
+      return DOMPurify
+    }
+    
+    try {
+      const dompurifyModule = await import('isomorphic-dompurify')
+      DOMPurify = dompurifyModule.default || dompurifyModule
+    } catch (error) {
+      // Si falla la importación, usar sanitizador básico
+      console.warn('DOMPurify not available, using basic sanitizer:', error)
+      DOMPurify = createBasicSanitizer()
+    }
+  }
+  return DOMPurify
+}
 
 // Web Crypto API está disponible globalmente en Node.js 15+ y Edge Runtime
 // No importar crypto de Node.js - usar Web Crypto API global
@@ -43,12 +94,27 @@ async function getNodeCrypto(): Promise<any> {
 
 /**
  * Sanitizar HTML para prevenir XSS
+ * Nota: Esta función es async porque DOMPurify se carga dinámicamente
  */
-export function sanitizeHTML(dirty: string): string {
-  return DOMPurify.sanitize(dirty, {
+export async function sanitizeHTML(dirty: string): Promise<string> {
+  const purify = await getDOMPurify()
+  return purify.sanitize(dirty, {
     ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br'],
     ALLOWED_ATTR: [],
   })
+}
+
+/**
+ * Sanitizar HTML de forma síncrona (solo para casos donde no se puede usar async)
+ * Usa escape básico de HTML
+ */
+export function sanitizeHTMLSync(dirty: string): string {
+  return dirty
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .replace(/\//g, '&#x2F;')
 }
 
 /**

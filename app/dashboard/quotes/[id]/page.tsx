@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import confetti from 'canvas-confetti'
 import { logger } from '@/lib/utils/logger'
-import { useToast } from '@/lib/hooks'
+import { useToast, useIsAdmin } from '@/lib/hooks'
 import { exportQuoteToPDF } from '@/lib/utils/export'
 import PageHeader from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
@@ -35,6 +35,7 @@ import Skeleton from '@/components/ui/Skeleton'
 import { Download, Edit, ArrowLeft, CheckCircle2, Mail, User, Sparkles, FileText, DollarSign } from 'lucide-react'
 import Link from 'next/link'
 import PaymentsList from '@/components/payments/PaymentsList'
+import QuotePriceControl from '@/components/admin/QuotePriceControl'
 
 interface Quote {
   id: string
@@ -67,6 +68,7 @@ export default function QuoteDetailPage() {
   const [closing, setClosing] = useState(false)
   const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
+  const { isAdmin } = useIsAdmin()
 
   useEffect(() => {
     loadQuote()
@@ -511,7 +513,7 @@ export default function QuoteDetailPage() {
           </Card>
 
           {/* Premium Actions Card */}
-          {quote.status === 'draft' && (
+          {quote.status === 'draft' && isAdmin && (
             <Card variant="elevated" className="overflow-hidden">
               <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
                 <div className="flex items-center justify-between">
@@ -563,6 +565,11 @@ export default function QuoteDetailPage() {
 
       {/* Pagos Parciales Premium */}
       <PaymentsList quoteId={quote.id} totalPrice={quote.total_price} />
+
+      {/* Control de Precios (Solo Admin) */}
+      {isAdmin && (
+        <QuotePriceControl quoteId={quote.id} />
+      )}
 
       {/* Comments Section */}
       <Card variant="elevated" className="overflow-hidden">

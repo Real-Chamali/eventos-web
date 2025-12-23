@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { CreateQuoteSchema } from '@/lib/validations/schemas'
-import { useToast, useDebounce, useOptimisticMutation, useQuotes, useInfiniteQuotes } from '@/lib/hooks'
+import { useToast, useDebounce, useOptimisticMutation, useQuotes, useInfiniteQuotes, useIsAdmin } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 import { createAuditLog } from '@/lib/utils/audit'
 import type { Quote } from '@/types'
@@ -57,6 +57,7 @@ export default function EditQuotePage() {
   const params = useParams()
   const router = useRouter()
   const quoteId = params.id as string
+  const { isAdmin, loading: adminLoading } = useIsAdmin()
   const [quote, setQuote] = useState<Quote | null>(null)
   const [clients, setClients] = useState<Client[]>([])
   const [services, setServices] = useState<Service[]>([])
@@ -74,15 +75,23 @@ export default function EditQuotePage() {
   const debouncedSearchClient = useDebounce(searchClient, 300)
 
   useEffect(() => {
+    if (adminLoading) return
+    
+    if (!isAdmin) {
+      router.push('/dashboard/quotes')
+      return
+    }
+    
     loadQuote()
     loadServices()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quoteId])
+  }, [quoteId, isAdmin, adminLoading, router])
 
   useEffect(() => {
+    if (!isAdmin || adminLoading) return
     loadClients()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearchClient])
+  }, [debouncedSearchClient, isAdmin, adminLoading])
 
   const loadQuote = async () => {
     try {

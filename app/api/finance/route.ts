@@ -14,7 +14,7 @@ import {
   successResponse,
   auditAPIAction,
   validateMethod,
-  checkRateLimit,
+  checkRateLimitAsync,
   handleAPIError,
 } from '@/lib/api/middleware'
 import { getAuthenticatedUser, checkApiKeyPermissions } from '@/lib/api/authHelper'
@@ -47,8 +47,9 @@ export async function GET(request: NextRequest) {
       return errorResponse('Forbidden - Admin access required', 403)
     }
 
-    // Rate limiting
-    if (!checkRateLimit(`finance-get-${auth.userId}`, 30, 60000)) {
+    // Rate limiting distribuido (Upstash Redis si está configurado)
+    const rateLimitAllowed = await checkRateLimitAsync(`finance-get-${auth.userId}`, 30, 60000)
+    if (!rateLimitAllowed) {
       return errorResponse('Too many requests', 429)
     }
 

@@ -117,7 +117,8 @@ function checkRateLimitMemory(
 
 /**
  * Rate limiting simple (compatibilidad con código existente)
- * Usa la implementación distribuida internamente
+ * DEPRECATED: Usar checkRateLimitDistributed en su lugar
+ * Esta función es síncrona para compatibilidad, pero no es distribuida
  */
 export function checkRateLimit(
   key: string,
@@ -128,6 +129,18 @@ export function checkRateLimit(
   // En producción, esto debería ser async
   const now = Date.now()
   return checkRateLimitMemory(key, maxRequests, windowMs, now)
+}
+
+/**
+ * Rate limiting async (recomendado para producción)
+ * Usa Upstash Redis si está configurado, fallback a memoria
+ */
+export async function checkRateLimitAsync(
+  key: string,
+  maxRequests: number = 60,
+  windowMs: number = 60000
+): Promise<boolean> {
+  return await checkRateLimitDistributed(key, maxRequests, windowMs)
 }
 
 /**

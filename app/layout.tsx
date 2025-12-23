@@ -9,6 +9,7 @@ import { SWRProvider } from "@/components/providers/SWRProvider";
 import { AppProvider } from "@/contexts/AppContext";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import PreventFOUC from "@/components/PreventFOUC";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -17,12 +18,38 @@ const inter = Inter({
   preload: true,
   adjustFontFallback: true,
   fallback: ["system-ui", "arial"],
+  // Optimizar carga de fuente para evitar warnings de preload
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "Sistema de Eventos",
-  description: "Sistema de gestión de eventos y cotizaciones",
+  title: "Eventos CRM - Sistema de Gestión",
+  description: "Sistema completo de gestión de eventos, cotizaciones y clientes",
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
+  manifest: "/manifest.json",
+  themeColor: "#6366f1",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Eventos CRM",
+  },
+  viewport: {
+    width: "device-width",
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+    viewportFit: "cover",
+  },
+  icons: {
+    icon: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+  },
 };
 
 export default function RootLayout({
@@ -33,6 +60,14 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning>
       <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#6366f1" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="Eventos CRM" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="msapplication-TileColor" content="#6366f1" />
+        <meta name="msapplication-config" content="/browserconfig.xml" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -54,6 +89,19 @@ export default function RootLayout({
                     document.documentElement.style.opacity = '1';
                   }
                 } catch(e) {}
+                
+                // Registrar Service Worker
+                if ('serviceWorker' in navigator) {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js')
+                      .then(function(registration) {
+                        console.log('SW registered: ', registration);
+                      })
+                      .catch(function(registrationError) {
+                        console.log('SW registration failed: ', registrationError);
+                      });
+                  });
+                }
               })();
             `,
           }}
@@ -71,6 +119,7 @@ export default function RootLayout({
                   <SentryProvider>
                     {children}
                     <OnboardingTour />
+                    <InstallPrompt />
                   </SentryProvider>
                 </ToastProvider>
               </SWRProvider>

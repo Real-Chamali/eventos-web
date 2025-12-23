@@ -49,7 +49,7 @@ export function useAsync<T, E = string>(
  * Hook para autenticación del usuario
  */
 type MaybeUser = { id: string; email?: string } | null
-type MaybeProfile = { role?: string } | null
+type MaybeProfile = { role?: string | { value?: string } | unknown } | null
 
 export function useAuth() {
   const [user, setUser] = useState<MaybeUser>(null)
@@ -95,6 +95,55 @@ export function useCanAccess(permission: string) {
 
   const userPermissions = permissions[(profile?.role as string) || ''] || []
   return userPermissions.includes(permission)
+}
+
+/**
+ * Hook para verificar si el usuario actual es admin
+ */
+export function useIsAdmin() {
+  const { profile, loading: authLoading } = useAuth()
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (authLoading) {
+      setLoading(true)
+      return
+    }
+
+    if (!profile) {
+      setIsAdmin(false)
+      setLoading(false)
+      return
+    }
+
+    // Verificar si el email es admin@chamali.com (bypass)
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.email === 'admin@chamali.com') {
+        setIsAdmin(true)
+        setLoading(false)
+        return
+      }
+
+      // Verificar rol del perfil
+      let roleStr: string
+      const role = profile.role
+      if (typeof role === 'string') {
+        roleStr = role.trim().toLowerCase()
+      } else if (role && typeof role === 'object' && role !== null && 'value' in role) {
+        const roleValue = (role as { value?: unknown }).value
+        roleStr = String(roleValue || '').trim().toLowerCase()
+      } else {
+        roleStr = String(role || '').trim().toLowerCase()
+      }
+
+      setIsAdmin(roleStr === 'admin')
+      setLoading(false)
+    })
+  }, [profile, authLoading])
+
+  return { isAdmin, loading: loading || authLoading }
 }
 
 /**

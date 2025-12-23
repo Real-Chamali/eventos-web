@@ -47,7 +47,7 @@ export async function PATCH(
     }
 
     // Verificar que el usuario es admin usando checkAdmin
-    const isAdmin = await checkAdmin(user.id)
+    const isAdmin = await checkAdmin(user.id, user.email)
     if (!isAdmin) {
       logger.warn('API /admin/users/[id]/role', 'Non-admin attempted role update', sanitizeForLogging({
         userId: user.id,

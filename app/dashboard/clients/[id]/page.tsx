@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
-import { useToast } from '@/lib/hooks'
+import { useToast, useIsAdmin } from '@/lib/hooks'
 import PageHeader from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -44,6 +44,7 @@ export default function ClientDetailPage() {
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const supabase = createClient()
   const { error: toastError, success: toastSuccess } = useToast()
+  const { isAdmin } = useIsAdmin()
 
   useEffect(() => {
     loadClientData()
@@ -348,14 +349,16 @@ export default function ClientDetailPage() {
               <CardTitle className="text-xl">Acciones</CardTitle>
             </CardHeader>
             <CardContent className="p-6 space-y-3">
-              <Button
-                variant="premium"
-                className="w-full gap-2"
-                onClick={() => setEditDialogOpen(true)}
-              >
-                <Edit2 className="h-4 w-4" />
-                Editar Cliente
-              </Button>
+              {isAdmin && (
+                <Button
+                  variant="premium"
+                  className="w-full gap-2"
+                  onClick={() => setEditDialogOpen(true)}
+                >
+                  <Edit2 className="h-4 w-4" />
+                  Editar Cliente
+                </Button>
+              )}
               <Link href={`/dashboard/quotes/new?client_id=${clientId}`} className="block">
                 <Button variant="premium" className="w-full gap-2">
                   <Sparkles className="h-4 w-4" />
@@ -373,16 +376,18 @@ export default function ClientDetailPage() {
         </div>
       </div>
 
-      {/* Edit Client Dialog */}
-      <EditClientDialog
-        open={editDialogOpen}
-        onClose={() => setEditDialogOpen(false)}
-        onSuccess={() => {
-          loadClientData() // Recargar datos del cliente
-          toastSuccess('Cliente actualizado exitosamente')
-        }}
-        client={client}
-      />
+      {/* Edit Client Dialog - Solo para admin */}
+      {isAdmin && (
+        <EditClientDialog
+          open={editDialogOpen}
+          onClose={() => setEditDialogOpen(false)}
+          onSuccess={() => {
+            loadClientData() // Recargar datos del cliente
+            toastSuccess('Cliente actualizado exitosamente')
+          }}
+          client={client}
+        />
+      )}
     </div>
   )
 }

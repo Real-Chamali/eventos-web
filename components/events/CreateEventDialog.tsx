@@ -23,7 +23,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/Dialog'
-import { X, Plus, Trash2, Calendar, Clock, User, ShoppingCart } from 'lucide-react'
+import { X, Plus, Trash2, Calendar, Clock, User, ShoppingCart, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
@@ -75,6 +75,8 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
   const [newServicePrice, setNewServicePrice] = useState('')
   const [creatingService, setCreatingService] = useState(false)
   const [customTotal, setCustomTotal] = useState<number | null>(null)
+  const [dateConflicts, setDateConflicts] = useState<Array<{ eventId: string; quoteId: string; startDate: string; endDate: string; status: string; clientName: string }>>([])
+  const [checkingConflicts, setCheckingConflicts] = useState(false)
 
   const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
@@ -88,8 +90,33 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
       now.setHours(now.getHours() + 1)
       setEventDate(format(now, 'yyyy-MM-dd'))
       setEventTime(format(now, 'HH:mm'))
+      setDateConflicts([])
     }
   }, [open])
+
+  // Verificar conflictos cuando cambian las fechas
+  useEffect(() => {
+    if (eventDate && open) {
+      const checkConflicts = async () => {
+        setCheckingConflicts(true)
+        try {
+          const { checkDateConflicts } = await import('@/lib/utils/calendarIntelligence')
+          const endDate = eventEndDate || eventDate
+          const conflicts = await checkDateConflicts(eventDate, endDate)
+          setDateConflicts(conflicts)
+        } catch (error) {
+          logger.error('CreateEventDialog', 'Error checking conflicts', error instanceof Error ? error : new Error(String(error)))
+        } finally {
+          setCheckingConflicts(false)
+        }
+      }
+      
+      const timeoutId = setTimeout(checkConflicts, 500) // Debounce
+      return () => clearTimeout(timeoutId)
+    } else {
+      setDateConflicts([])
+    }
+  }, [eventDate, eventEndDate, open])
 
   const loadServices = async () => {
     try {
@@ -306,6 +333,28 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
       const endDateTime = eventEndDate && eventEndTime 
         ? new Date(`${eventEndDate}T${eventEndTime}`)
         : null
+
+      // Validar conflictos de fechas antes de crear
+      const { canCreateEvent } = await import('@/lib/utils/calendarIntelligence')
+      const validation = await canCreateEvent(
+        eventDate,
+        endDateTime ? format(endDateTime, 'yyyy-MM-dd') : eventDate
+      )
+      
+      if (!validation.canCreate) {
+        toastError(validation.message || 'No se puede crear el evento debido a conflictos de fechas')
+        setLoading(false)
+        return
+      }
+      
+      if (validation.conflicts.length > 0) {
+        // Mostrar advertencia pero permitir continuar
+        logger.warn('CreateEventDialog', 'Date conflicts detected', {
+          conflicts: validation.conflicts,
+          startDate: eventDate,
+          endDate: endDateTime ? format(endDateTime, 'yyyy-MM-dd') : eventDate,
+        })
+      }
 
       // 1. Crear cotización
       const finalTotal = customTotal !== null ? customTotal : total
@@ -776,6 +825,72 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
                   />
                 </div>
               </div>
+
+              {/* Alertas de Conflictos */}
+              {checkingConflicts && (
+                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="h-4 w-4 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin" />
+                  Verificando disponibilidad...
+                </div>
+              )}
+
+              {!checkingConflicts && dateConflicts.length > 0 && (
+                <div className={cn(
+                  "p-4 rounded-lg border",
+                  dateConflicts.some(c => c.status === 'CONFIRMED')
+                    ? "bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900"
+                    : "bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900"
+                )}>
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className={cn(
+                      "h-5 w-5 mt-0.5 flex-shrink-0",
+                      dateConflicts.some(c => c.status === 'CONFIRMED')
+                        ? "text-red-600 dark:text-red-400"
+                        : "text-amber-600 dark:text-amber-400"
+                    )} />
+                    <div className="flex-1">
+                      <p className={cn(
+                        "text-sm font-semibold mb-2",
+                        dateConflicts.some(c => c.status === 'CONFIRMED')
+                          ? "text-red-900 dark:text-red-200"
+                          : "text-amber-900 dark:text-amber-200"
+                      )}>
+                        {dateConflicts.some(c => c.status === 'CONFIRMED')
+                          ? '⚠️ No se puede crear el evento: hay eventos confirmados en estas fechas'
+                          : `⚠️ Advertencia: hay ${dateConflicts.length} evento(s) en este rango de fechas`}
+                      </p>
+                      <div className="space-y-2">
+                        {dateConflicts.map((conflict, idx) => (
+                          <div key={idx} className="text-xs bg-white/50 dark:bg-gray-900/50 p-2 rounded">
+                            <div className="flex items-center gap-2">
+                              <Badge 
+                                variant={conflict.status === 'CONFIRMED' ? 'error' : 'warning'} 
+                                size="sm"
+                              >
+                                {conflict.status === 'CONFIRMED' ? 'Confirmado' : conflict.status}
+                              </Badge>
+                              <span className="font-medium">{conflict.clientName}</span>
+                            </div>
+                            <p className="text-gray-600 dark:text-gray-400 mt-1">
+                              {format(new Date(conflict.startDate), "dd MMM yyyy", { locale: es })}
+                              {conflict.endDate !== conflict.startDate && 
+                                ` - ${format(new Date(conflict.endDate), "dd MMM yyyy", { locale: es })}`
+                              }
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {!checkingConflicts && dateConflicts.length === 0 && eventDate && (
+                <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Fechas disponibles
+                </div>
+              )}
             </CardContent>
           </Card>
 

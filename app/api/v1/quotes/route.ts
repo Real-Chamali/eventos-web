@@ -3,7 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { logger } from '@/lib/utils/logger'
 import { validateApiKey } from '@/lib/api/apiKeys'
 import { CreateQuoteV1Schema, PaginationSchema } from '@/lib/validations/v1Quotes'
-import { sanitizeHTML, sanitizeForLogging } from '@/lib/utils/security'
+import { sanitizeHTMLSync, sanitizeForLogging } from '@/lib/utils/security'
 import { checkAdmin } from '@/lib/api/middleware'
 
 // Constantes de validación
@@ -418,9 +418,9 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Sanitizar notes
+    // Sanitizar notes (usar versión síncrona para evitar problemas con jsdom)
     const sanitizedNotes = notes 
-      ? sanitizeHTML(notes).substring(0, 5000)
+      ? sanitizeHTMLSync(notes).substring(0, 5000)
       : null
 
     // Crear cotización usando función RPC para transacción atómica
