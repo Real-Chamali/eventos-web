@@ -26,6 +26,7 @@ import {
 import { X, Plus, Trash2, Calendar, Clock, User, ShoppingCart, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
+import { cn } from '@/lib/utils/cn'
 
 interface Client {
   id: string
