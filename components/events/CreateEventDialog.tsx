@@ -335,25 +335,32 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
         ? new Date(`${eventEndDate}T${eventEndTime}`)
         : null
 
-      // Validar conflictos de fechas antes de crear
-      const { canCreateEvent } = await import('@/lib/utils/calendarIntelligence')
-      const validation = await canCreateEvent(
-        eventDate,
-        endDateTime ? format(endDateTime, 'yyyy-MM-dd') : eventDate
-      )
-      
-      if (!validation.canCreate) {
-        toastError(validation.message || 'No se puede crear el evento debido a conflictos de fechas')
-        setLoading(false)
-        return
-      }
-      
-      if (validation.conflicts.length > 0) {
-        // Mostrar advertencia pero permitir continuar
-        logger.warn('CreateEventDialog', 'Date conflicts detected', {
-          conflicts: validation.conflicts,
-          startDate: eventDate,
-          endDate: endDateTime ? format(endDateTime, 'yyyy-MM-dd') : eventDate,
+      // Validar conflictos de fechas antes de crear (permitir continuar si hay errores)
+      try {
+        const { canCreateEvent } = await import('@/lib/utils/calendarIntelligence')
+        const validation = await canCreateEvent(
+          eventDate,
+          endDateTime ? format(endDateTime, 'yyyy-MM-dd') : eventDate
+        )
+        
+        if (!validation.canCreate) {
+          toastError(validation.message || 'No se puede crear el evento debido a conflictos de fechas')
+          setLoading(false)
+          return
+        }
+        
+        if (validation.conflicts.length > 0) {
+          // Mostrar advertencia pero permitir continuar
+          logger.warn('CreateEventDialog', 'Date conflicts detected', {
+            conflicts: validation.conflicts,
+            startDate: eventDate,
+            endDate: endDateTime ? format(endDateTime, 'yyyy-MM-dd') : eventDate,
+          })
+        }
+      } catch (conflictError) {
+        // Si hay error al verificar conflictos, permitir continuar pero loguear
+        logger.warn('CreateEventDialog', 'Error checking conflicts, allowing event creation', {
+          error: conflictError instanceof Error ? conflictError.message : String(conflictError),
         })
       }
 

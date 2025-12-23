@@ -17,7 +17,17 @@ const fetcher = async (_key: string): Promise<Quote[]> => {
     throw new Error('Unauthorized')
   }
   
-  const { data, error } = await supabase
+  // Verificar si el usuario es admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  
+  const isAdmin = profile?.role === 'admin'
+  
+  // Construir query - admins ven todas las cotizaciones, vendedores solo las suyas
+  let query = supabase
     .from('quotes')
     .select(`
       id,
@@ -25,12 +35,19 @@ const fetcher = async (_key: string): Promise<Quote[]> => {
       status,
       created_at,
       updated_at,
+      vendor_id,
       clients (
         name
       )
     `)
-    .eq('vendor_id', user.id)
     .order('created_at', { ascending: false })
+  
+  // Solo filtrar por vendor_id si NO es admin
+  if (!isAdmin) {
+    query = query.eq('vendor_id', user.id)
+  }
+  
+  const { data, error } = await query
   
   if (error) {
     logger.error('useQuotes', 'Error fetching quotes', error as Error)
