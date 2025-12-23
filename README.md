@@ -1,130 +1,177 @@
-# Sistema de Eventos - Gestión Completa de Cotizaciones
+# Supabase CLI
 
-Sistema web moderno de gestión de eventos y cotizaciones construido con **Next.js 16**, **React 19**, **TypeScript** y **Supabase**.
+[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
+](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
 
-## 🚀 Quick Start
+[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
 
-```bash
-npm install
-npm run dev
-```
+This repository contains all the functionality for Supabase CLI.
 
-Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
+- [x] Running Supabase locally
+- [x] Managing database migrations
+- [x] Creating and deploying Supabase Functions
+- [x] Generating types directly from your database schema
+- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
 
-## ✨ Características Principales
+## Getting started
 
-### 🔐 Seguridad
-- Autenticación JWT con Supabase
-- Row Level Security (RLS)
-- RBAC (Role-Based Access Control)
-- Validación con Zod
-- Rate limiting y CSRF protection
-- Encriptación de datos sensibles
+### Install the CLI
 
-### 📝 Gestión de Cotizaciones
-- Crear y editar cotizaciones
-- Exportar a PDF y CSV
-- Historial completo
-- Cierre de ventas automático
-
-### 💰 Control Financiero
-- Dashboard de ventas y comisiones
-- Reportes de ingresos/gastos
-- Cálculo automático de márgenes
-- Auditoría completa
-
-### 🎨 Interfaz Moderna
-- Dark mode automático
-- Responsive design
-- Loading skeletons
-- Toast notifications
-- Error handling global
-
-### 🧪 Testing Completo
-- Unit tests (Jest)
-- E2E tests (Playwright)
-- CI/CD con GitHub Actions
-- Coverage reporting
-
-### 🔍 Error Tracking
-- Sentry integrado (configurable)
-- Error tracking automático
-- Performance monitoring
-- User context tracking
-
-## 📦 Stack Tecnológico
-
-- **Frontend**: Next.js 16, React 19, TypeScript, Tailwind CSS
-- **Backend**: Supabase (PostgreSQL + Auth)
-- **Validación**: Zod, React Hook Form
-- **Testing**: Jest, Playwright
-- **Herramientas**: ESLint, Prettier, GitHub Actions
-
-## 📚 Documentación
-
-### Guías Principales
-- [**SETUP.md**](SETUP.md) - Configuración inicial y base de datos
-- [**GUIA_PRODUCCION.md**](GUIA_PRODUCCION.md) - Guía completa de despliegue a producción
-- [**RESUMEN_MIGRACIONES_Y_VARIABLES.md**](RESUMEN_MIGRACIONES_Y_VARIABLES.md) - Migraciones y variables de entorno
-
-### Documentación Técnica
-- [**docs/ARCHITECTURE.md**](docs/ARCHITECTURE.md) - Decisiones arquitectónicas (ADRs)
-- [**docs/CONTRIBUTING.md**](docs/CONTRIBUTING.md) - Guía de contribución
-- [**docs/TROUBLESHOOTING.md**](docs/TROUBLESHOOTING.md) - Solución de problemas
-- [**docs/API.md**](docs/API.md) - Documentación de API
-- [**docs/AUDIT_LOGS.md**](docs/AUDIT_LOGS.md) - Sistema de auditoría
-- [**docs/QUOTE_HISTORY.md**](docs/QUOTE_HISTORY.md) - Historial de cotizaciones
-- [**docs/SENTRY_SETUP.md**](docs/SENTRY_SETUP.md) - Configuración de Sentry
-
-## 🔧 Comandos
+Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
 
 ```bash
-# Desarrollo
-npm run dev              # Servidor dev
-npm run build            # Build producción
-npm start                # Iniciar servidor
-
-# Testing
-npm run test             # Tests unitarios
-npm run test:ui          # UI tests
-npm run test:coverage    # Cobertura
-npm run playwright       # Tests E2E
-npm run playwright:ui    # UI E2E
-
-# Herramientas
-npm run lint             # ESLint
+npm i supabase --save-dev
 ```
 
-## 📖 Configuración
+When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
 
-Ver [SETUP.md](SETUP.md) para:
-1. Crear proyecto en Supabase
-2. Configurar variables de entorno
-3. Crear tablas de base de datos
-4. Ejecutar SQL inicial
+```
+NODE_OPTIONS=--no-experimental-fetch yarn add supabase
+```
 
-## 🌐 Deployment
+> **Note**
+For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
 
-### Vercel (Recomendado)
+<details>
+  <summary><b>macOS</b></summary>
+
+  Available via [Homebrew](https://brew.sh). To install:
+
+  ```sh
+  brew install supabase/tap/supabase
+  ```
+
+  To install the beta release channel:
+  
+  ```sh
+  brew install supabase/tap/supabase-beta
+  brew link --overwrite supabase-beta
+  ```
+  
+  To upgrade:
+
+  ```sh
+  brew upgrade supabase
+  ```
+</details>
+
+<details>
+  <summary><b>Windows</b></summary>
+
+  Available via [Scoop](https://scoop.sh). To install:
+
+  ```powershell
+  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+  scoop install supabase
+  ```
+
+  To upgrade:
+
+  ```powershell
+  scoop update supabase
+  ```
+</details>
+
+<details>
+  <summary><b>Linux</b></summary>
+
+  Available via [Homebrew](https://brew.sh) and Linux packages.
+
+  #### via Homebrew
+
+  To install:
+
+  ```sh
+  brew install supabase/tap/supabase
+  ```
+
+  To upgrade:
+
+  ```sh
+  brew upgrade supabase
+  ```
+
+  #### via Linux packages
+
+  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
+
+  ```sh
+  sudo apk add --allow-untrusted <...>.apk
+  ```
+
+  ```sh
+  sudo dpkg -i <...>.deb
+  ```
+
+  ```sh
+  sudo rpm -i <...>.rpm
+  ```
+
+  ```sh
+  sudo pacman -U <...>.pkg.tar.zst
+  ```
+</details>
+
+<details>
+  <summary><b>Other Platforms</b></summary>
+
+  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
+
+  ```sh
+  go install github.com/supabase/cli@latest
+  ```
+
+  Add a symlink to the binary in `$PATH` for easier access:
+
+  ```sh
+  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
+  ```
+
+  This works on other non-standard Linux distros.
+</details>
+
+<details>
+  <summary><b>Community Maintained Packages</b></summary>
+
+  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
+  To install in your working directory:
+
+  ```bash
+  pkgx install supabase
+  ```
+
+  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
+</details>
+
+### Run the CLI
+
 ```bash
-vercel deploy
+supabase bootstrap
 ```
 
-### Docker
+Or using npx:
+
 ```bash
-docker build -t eventos-web .
-docker run -p 3000:3000 eventos-web
+npx supabase bootstrap
 ```
 
-## 📄 Licencia
+The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
 
-MIT
+## Docs
 
-## 🤝 Soporte
+Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
 
-- [Issues](https://github.com/tuusuario/eventos-web/issues)
-- [Discussions](https://github.com/tuusuario/eventos-web/discussions)
+## Breaking changes
 
----
+We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
 
-**Última actualización**: 8 de diciembre de 2025
+However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
+
+## Developing
+
+To run from source:
+
+```sh
+# Go >= 1.22
+go run . help
+```
