@@ -68,7 +68,7 @@ export default function QuoteDetailPage() {
   const [closing, setClosing] = useState(false)
   const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
-  const { isAdmin } = useIsAdmin()
+  const { isAdmin, loading: adminLoading } = useIsAdmin()
 
   useEffect(() => {
     loadQuote()
@@ -536,7 +536,7 @@ export default function QuoteDetailPage() {
           </Card>
 
           {/* Premium Actions Card - Admin puede editar/borrar cualquier cotización */}
-          {isAdmin && (
+          {!adminLoading && isAdmin && (
             <Card variant="elevated" className="overflow-hidden">
               <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
                 <div className="flex items-center justify-between">
@@ -617,7 +617,7 @@ export default function QuoteDetailPage() {
       <PaymentsList quoteId={quote.id} totalPrice={quote.total_price} />
 
       {/* Control de Precios (Solo Admin) */}
-      {isAdmin && (
+      {!adminLoading && isAdmin && (
         <QuotePriceControl quoteId={quote.id} />
       )}
 

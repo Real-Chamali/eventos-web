@@ -55,7 +55,7 @@ interface QuotesListProps {
 
 export function QuotesList({ searchTerm = '', statusFilter = 'all' }: QuotesListProps = {}) {
   const { quotes, isLoading, isLoadingMore, isReachingEnd, loadMore, error } = useInfiniteQuotes()
-  const { isAdmin } = useIsAdmin()
+  const { isAdmin, loading: adminLoading } = useIsAdmin()
   const router = useRouter()
   const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
@@ -209,7 +209,7 @@ export function QuotesList({ searchTerm = '', statusFilter = 'all' }: QuotesList
                         Ver detalles
                       </Button>
                     </Link>
-                    {isAdmin && (
+                    {!adminLoading && isAdmin && (
                       <>
                         <Link href={`/dashboard/quotes/${quote.id}/edit`}>
                           <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">

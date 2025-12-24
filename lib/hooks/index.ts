@@ -99,51 +99,128 @@ export function useCanAccess(permission: string) {
 
 /**
  * Hook para verificar si el usuario actual es admin
+ * Versión mejorada que obtiene el perfil directamente para evitar problemas con RLS
  */
 export function useIsAdmin() {
-  const { profile, loading: authLoading } = useAuth()
   const [isAdmin, setIsAdmin] = useState(false)
   const [loading, setLoading] = useState(true)
+  const supabase = createClient()
 
   useEffect(() => {
-    if (authLoading) {
-      setLoading(true)
-      return
+    let cancelled = false
+    let timeoutId: NodeJS.Timeout | null = null
+    
+    const checkAdminStatus = async () => {
+      try {
+        setLoading(true)
+        
+        // Timeout de seguridad: si después de 5 segundos no hay respuesta, asumir no admin
+        timeoutId = setTimeout(() => {
+          if (!cancelled) {
+            logger.warn('useIsAdmin', 'Timeout waiting for admin check, assuming not admin')
+            setIsAdmin(false)
+            setLoading(false)
+          }
+        }, 5000)
+        
+        // Obtener usuario autenticado
+        const { data: { user }, error: userError } = await supabase.auth.getUser()
+        
+        if (cancelled) return
+        
+        if (userError || !user) {
+          if (timeoutId) clearTimeout(timeoutId)
+          setIsAdmin(false)
+          setLoading(false)
+          return
+        }
+
+        // Bypass para admin@chamali.com
+        if (user.email === 'admin@chamali.com') {
+          if (timeoutId) clearTimeout(timeoutId)
+          setIsAdmin(true)
+          setLoading(false)
+          logger.debug('useIsAdmin', 'Admin email detected', { email: user.email })
+          return
+        }
+
+        // Obtener perfil directamente (intentar con el cliente normal primero)
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (cancelled) return
+
+        if (profileError) {
+          logger.warn('useIsAdmin', 'Error fetching profile', {
+            error: profileError.message,
+            code: profileError.code,
+            userId: user.id,
+          })
+          // Si hay error pero el email es admin@chamali.com, asumir admin
+          if (user.email === 'admin@chamali.com') {
+            if (timeoutId) clearTimeout(timeoutId)
+            setIsAdmin(true)
+            setLoading(false)
+            return
+          }
+        }
+
+        if (!profile || !profile.role) {
+          if (timeoutId) clearTimeout(timeoutId)
+          setIsAdmin(false)
+          setLoading(false)
+          return
+        }
+
+        // Manejar enum de PostgreSQL correctamente
+        let roleStr: string
+        const role = profile.role
+        if (typeof role === 'string') {
+          roleStr = role.trim().toLowerCase()
+        } else if (role && typeof role === 'object' && role !== null && 'value' in role) {
+          const roleValue = (role as { value?: unknown }).value
+          roleStr = String(roleValue || '').trim().toLowerCase()
+        } else {
+          roleStr = String(role || '').trim().toLowerCase()
+        }
+
+        const adminStatus = roleStr === 'admin'
+        if (timeoutId) clearTimeout(timeoutId)
+        setIsAdmin(adminStatus)
+        
+        logger.debug('useIsAdmin', 'Admin status determined', {
+          userId: user.id,
+          email: user.email,
+          roleStr,
+          isAdmin: adminStatus,
+        })
+      } catch (error) {
+        if (cancelled) return
+        if (timeoutId) clearTimeout(timeoutId)
+        logger.error('useIsAdmin', 'Unexpected error checking admin status', error instanceof Error ? error : new Error(String(error)))
+        setIsAdmin(false)
+      } finally {
+        if (!cancelled && timeoutId) {
+          clearTimeout(timeoutId)
+        }
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
     }
 
-    if (!profile) {
-      setIsAdmin(false)
-      setLoading(false)
-      return
+    checkAdminStatus()
+
+    return () => {
+      cancelled = true
+      if (timeoutId) clearTimeout(timeoutId)
     }
+  }, [supabase])
 
-    // Verificar si el email es admin@chamali.com (bypass)
-    const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user?.email === 'admin@chamali.com') {
-        setIsAdmin(true)
-        setLoading(false)
-        return
-      }
-
-      // Verificar rol del perfil
-      let roleStr: string
-      const role = profile.role
-      if (typeof role === 'string') {
-        roleStr = role.trim().toLowerCase()
-      } else if (role && typeof role === 'object' && role !== null && 'value' in role) {
-        const roleValue = (role as { value?: unknown }).value
-        roleStr = String(roleValue || '').trim().toLowerCase()
-      } else {
-        roleStr = String(role || '').trim().toLowerCase()
-      }
-
-      setIsAdmin(roleStr === 'admin')
-      setLoading(false)
-    })
-  }, [profile, authLoading])
-
-  return { isAdmin, loading: loading || authLoading }
+  return { isAdmin, loading }
 }
 
 /**

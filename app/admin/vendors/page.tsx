@@ -475,7 +475,6 @@ export default function AdminVendorsPage() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleEditUser(vendor)}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                           title="Editar usuario"
                         >
                           <Edit2 className="h-4 w-4 mr-2" />
