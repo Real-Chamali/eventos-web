@@ -9,11 +9,10 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  let supabase
   let user
   
   try {
-    supabase = await createClient()
+    const supabase = await createClient()
     const {
       data: { user: authUser },
       error: authError,
@@ -37,9 +36,11 @@ export default async function AdminLayout({
 
   let userRole = 'vendor'
 
-  if (!user || !supabase) {
+  if (!user) {
     redirect('/login')
   }
+  
+  const supabase = await createClient()
 
   try {
     // Usar el cliente admin para obtener el perfil sin problemas de RLS
@@ -160,7 +161,15 @@ export default async function AdminLayout({
   // El usuario admin@chamali.com siempre debe tener acceso
   const isAdminEmail = user.email === 'admin@chamali.com'
   
-  if (userRole !== 'admin' && !isAdminEmail) {
+  // Si es admin@chamali.com, siempre permitir acceso (bypass completo)
+  if (isAdminEmail) {
+    logger.info('AdminLayout', 'Admin email detected, granting access', {
+      userId: user.id,
+      email: user.email,
+      userRole,
+    })
+  } else if (userRole !== 'admin') {
+    // Solo redirigir si NO es admin@chamali.com Y NO es admin
     logger.warn('AdminLayout', 'User is not admin, redirecting to dashboard', {
       userId: user.id,
       email: user.email,
@@ -169,15 +178,6 @@ export default async function AdminLayout({
       timestamp: new Date().toISOString(),
     })
     redirect('/dashboard')
-  }
-  
-  // Si es admin@chamali.com pero el rol no se detectó, loguear pero permitir acceso
-  if (isAdminEmail && userRole !== 'admin') {
-    logger.warn('AdminLayout', 'Admin email detected but role not set correctly, allowing access', {
-      userId: user.id,
-      email: user.email,
-      userRole,
-    })
   }
   
   logger.info('AdminLayout', 'Admin access granted', {
