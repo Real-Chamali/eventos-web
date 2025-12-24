@@ -10,6 +10,7 @@ import { AppProvider } from "@/contexts/AppContext";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import PreventFOUC from "@/components/PreventFOUC";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
+import ServiceWorkerRegistration from "@/components/pwa/ServiceWorkerRegistration";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -89,19 +90,6 @@ export default function RootLayout({
                     document.documentElement.style.opacity = '1';
                   }
                 } catch(e) {}
-                
-                // Registrar Service Worker
-                if ('serviceWorker' in navigator) {
-                  window.addEventListener('load', function() {
-                    navigator.serviceWorker.register('/sw.js')
-                      .then(function(registration) {
-                        console.log('SW registered: ', registration);
-                      })
-                      .catch(function(registrationError) {
-                        console.log('SW registration failed: ', registrationError);
-                      });
-                  });
-                }
               })();
             `,
           }}
@@ -117,6 +105,7 @@ export default function RootLayout({
               <SWRProvider>
                 <ToastProvider>
                   <SentryProvider>
+                    <ServiceWorkerRegistration />
                     {children}
                     <OnboardingTour />
                     <InstallPrompt />

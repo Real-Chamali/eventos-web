@@ -1,24 +1,25 @@
-import { sanitizeHTML, sanitizeText, generateCSRFToken, validateCSRFToken } from '@/lib/utils/security'
+import { sanitizeHTML, sanitizeHTMLSync, sanitizeText, generateCSRFToken, validateCSRFToken } from '@/lib/utils/security'
 
 describe('Security Utils', () => {
   describe('sanitizeHTML', () => {
-    it('should remove dangerous HTML tags', () => {
+    it('should remove dangerous HTML tags', async () => {
       const dirty = '<script>alert("xss")</script><p>Safe content</p>'
-      const result = sanitizeHTML(dirty)
+      const result = await sanitizeHTML(dirty)
       expect(result).not.toContain('<script>')
       expect(result).toContain('Safe content')
     })
 
-    it('should allow safe HTML tags', () => {
+    it('should allow safe HTML tags', async () => {
       const dirty = '<b>Bold</b> <i>Italic</i> <p>Paragraph</p>'
-      const result = sanitizeHTML(dirty)
+      const result = await sanitizeHTML(dirty)
       expect(result).toContain('<b>')
       expect(result).toContain('<i>')
       expect(result).toContain('<p>')
     })
 
-    it('should handle empty strings', () => {
-      expect(sanitizeHTML('')).toBe('')
+    it('should handle empty strings', async () => {
+      const result = await sanitizeHTML('')
+      expect(result).toBe('')
     })
   })
 

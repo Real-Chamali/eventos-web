@@ -1,7 +1,7 @@
 // Service Worker para PWA - Versión mejorada
-const CACHE_NAME = 'eventos-crm-v2'
-const RUNTIME_CACHE = 'eventos-runtime-v2'
-const STATIC_CACHE = 'eventos-static-v2'
+const CACHE_NAME = 'eventos-crm-v3'
+const RUNTIME_CACHE = 'eventos-runtime-v3'
+const STATIC_CACHE = 'eventos-static-v3'
 
 // Archivos estáticos críticos para cachear
 const STATIC_ASSETS = [
@@ -9,6 +9,7 @@ const STATIC_ASSETS = [
   '/dashboard',
   '/login',
   '/manifest.json',
+  '/offline',
 ]
 
 // Estrategias de cache
@@ -77,8 +78,13 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Ignorar phtp requests (Supabase Realtime)
+  // Ignorar WebSocket requests (Supabase Realtime)
   if (url.protocol === 'wss:' || url.protocol === 'ws:') {
+    return
+  }
+
+  // Ignorar extensiones de Chrome
+  if (url.protocol === 'chrome-extension:') {
     return
   }
 
@@ -115,8 +121,13 @@ async function cacheFirst(request) {
   } catch (error) {
     console.error('[SW] Cache First error:', error)
     // Retornar página offline si está disponible
-    const offlinePage = await cache.match('/')
-    return offlinePage || new Response('Offline', { status: 503 })
+    const offlinePage = await cache.match('/offline')
+    if (offlinePage) {
+      return offlinePage
+    }
+    // Fallback a página principal
+    const homePage = await cache.match('/')
+    return homePage || new Response('Offline', { status: 503 })
   }
 }
 
@@ -136,10 +147,16 @@ async function networkFirst(request) {
     if (cached) {
       return cached
     }
-    return new Response(JSON.stringify({ error: 'Offline' }), {
-      status: 503,
-      headers: { 'Content-Type': 'application/json' }
-    })
+    // Para rutas API, retornar error JSON
+    if (url.pathname.startsWith('/api/')) {
+      return new Response(JSON.stringify({ error: 'Offline', message: 'No hay conexión a internet' }), {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
+    // Para otras rutas, redirigir a página offline
+    const offlinePage = await cache.match('/offline')
+    return offlinePage || new Response('Offline', { status: 503 })
   }
 }
 
@@ -159,7 +176,18 @@ async function staleWhileRevalidate(request) {
   })
   
   // Retornar cache inmediatamente si existe, o esperar fetch
-  return cached || fetchPromise || new Response('Offline', { status: 503 })
+  if (cached) {
+    return cached
+  }
+  
+  // Si no hay cache, intentar fetch
+  try {
+    return await fetchPromise
+  } catch (error) {
+    // Si fetch falla, retornar página offline
+    const offlinePage = await cache.match('/offline')
+    return offlinePage || new Response('Offline', { status: 503 })
+  }
 }
 
 // Manejar mensajes del cliente
@@ -175,4 +203,22 @@ self.addEventListener('message', (event) => {
       })
     )
   }
+
+  if (event.data && event.data.type === 'GET_VERSION') {
+    event.ports[0].postMessage({ version: CACHE_NAME })
+  }
+})
+
+// Notificar a los clientes cuando hay una nueva versión disponible
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    self.clients.matchAll().then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({
+          type: 'SW_UPDATED',
+          version: CACHE_NAME
+        })
+      })
+    })
+  )
 })
