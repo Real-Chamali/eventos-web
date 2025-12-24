@@ -8,7 +8,21 @@ export async function updateSession(request: NextRequest) {
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   
   if (!supabaseUrl || !supabaseAnonKey) {
-    return NextResponse.next({ request })
+    // Si faltan variables de entorno, permitir acceso pero loguear el problema
+    console.error('[Middleware] Missing Supabase environment variables:', {
+      hasUrl: !!supabaseUrl,
+      hasKey: !!supabaseAnonKey,
+      pathname: request.nextUrl.pathname,
+    })
+    // Permitir acceso a login y raíz para que el usuario pueda ver el error
+    const pathname = request.nextUrl.pathname
+    if (pathname === '/login' || pathname === '/') {
+      return NextResponse.next({ request })
+    }
+    // Redirigir a login si no hay variables de entorno
+    const url = request.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
   }
   
   let supabaseResponse = NextResponse.next({
