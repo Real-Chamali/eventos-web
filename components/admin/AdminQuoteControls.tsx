@@ -27,6 +27,8 @@ import {
   canDeleteQuote,
   type QuoteStatus,
 } from '@/lib/utils/quoteStateMachine'
+import { logQuoteStatusChange, logQuoteDelete } from '@/lib/utils/criticalAudit'
+import { useIsAdmin } from '@/lib/hooks'
 
 interface AdminQuoteControlsProps {
   quoteId: string
@@ -102,6 +104,22 @@ export default function AdminQuoteControls({
         return
       }
 
+      // Log acción crítica (cambio de estado)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await logQuoteStatusChange(
+          user.id,
+          quoteId,
+          currentStatus,
+          newStatus,
+          `Cambio de estado por ${isAdmin ? 'administrador' : 'usuario'}`,
+          {
+            ipAddress: undefined, // No disponible en cliente
+            userAgent: navigator.userAgent,
+          }
+        )
+      }
+
       toastSuccess(`Estado cambiado a ${getStatusLabel(newStatus)}`)
       onStatusChange?.()
     } catch (error) {
@@ -121,12 +139,34 @@ export default function AdminQuoteControls({
 
   const handleDelete = async () => {
     try {
+      // Obtener datos de la cotización antes de eliminar (para audit log)
+      const { data: quoteData } = await supabase
+        .from('quotes')
+        .select('*')
+        .eq('id', quoteId)
+        .single()
+
       const { error } = await supabase
         .from('quotes')
         .delete()
         .eq('id', quoteId)
 
       if (error) throw error
+
+      // Log acción crítica (eliminación)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user && quoteData) {
+        await logQuoteDelete(
+          user.id,
+          quoteId,
+          quoteData as Record<string, unknown>,
+          `Eliminación por ${isAdmin ? 'administrador' : 'usuario'}`,
+          {
+            ipAddress: undefined, // No disponible en cliente
+            userAgent: navigator.userAgent,
+          }
+        )
+      }
 
       toastSuccess('Cotización eliminada exitosamente')
       onDelete?.()

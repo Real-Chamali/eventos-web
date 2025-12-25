@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { useToast, useIsAdmin } from '@/lib/hooks'
+import { logPriceOverride } from '@/lib/utils/criticalAudit'
 import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import { Edit2, Check, X, DollarSign } from 'lucide-react'
@@ -110,6 +111,25 @@ export default function EditableServicePrice({
             code: totalError.code,
           })
           // No fallar si solo falla la actualización del total
+        }
+      }
+
+      // Log acción crítica si es cambio de precio en cotización confirmada
+      if ((quoteStatus === 'confirmed' || quoteStatus === 'cancelled') && isAdmin) {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          await logPriceOverride(
+            user.id,
+            quoteId,
+            quoteServiceId,
+            currentPrice,
+            newPrice,
+            `Modificación de precio en cotización ${quoteStatus} por administrador`,
+            {
+              ipAddress: undefined,
+              userAgent: navigator.userAgent,
+            }
+          )
         }
       }
 
