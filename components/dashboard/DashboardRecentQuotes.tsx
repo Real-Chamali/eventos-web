@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useMemo } from 'react'
+import { memo, useMemo } from 'react'
 import { useRecentQuotes } from '@/lib/hooks/useRecentQuotes'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import Badge from '@/components/ui/Badge'
@@ -27,7 +27,7 @@ const getStatusBadge = (status: string) => {
   }
 }
 
-export function DashboardRecentQuotes() {
+export const DashboardRecentQuotes = memo(function DashboardRecentQuotes() {
   const { quotes, loading } = useRecentQuotes()
   
   // Memoizar formateo de fechas y precios para evitar recálculos
@@ -136,5 +136,5 @@ export function DashboardRecentQuotes() {
       </CardContent>
     </Card>
   )
-}
+})
 

@@ -17,6 +17,7 @@ import { es } from 'date-fns/locale'
 import type { FinancialReport, OverduePayment, UpcomingPayment } from '@/lib/utils/paymentIntelligence'
 import { useAuth } from '@/lib/hooks'
 import EmptyState from '@/components/ui/EmptyState'
+import { logger } from '@/lib/utils/logger'
 
 export default function FinancialReports() {
   const [reports, setReports] = useState<FinancialReport[]>([])
@@ -47,7 +48,7 @@ export default function FinancialReports() {
       setOverdue(overdueData)
       setUpcoming(upcomingData)
     } catch (error) {
-      console.error('Error loading financial data', error)
+      logger.error('FinancialReports', 'Error loading financial data', error instanceof Error ? error : new Error(String(error)))
     } finally {
       setLoading(false)
     }

@@ -5,13 +5,14 @@
 
 'use client'
 
+import { memo } from 'react'
 import { useDashboardStats } from '@/lib/hooks/useDashboardStats'
 import StatsCard from '@/components/ui/StatsCard'
 import { Card, CardContent } from '@/components/ui/Card'
 import Skeleton from '@/components/ui/Skeleton'
 import { DollarSign, TrendingUp, FileText, Calendar as CalendarIcon, Target, Zap } from 'lucide-react'
 
-export function DashboardStats() {
+export const DashboardStats = memo(function DashboardStats() {
   const { stats, loading } = useDashboardStats()
   
   if (loading || !stats) {
@@ -123,5 +124,5 @@ export function DashboardStats() {
       </div>
     </>
   )
-}
+})
 

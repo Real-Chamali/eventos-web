@@ -43,6 +43,7 @@ import { es } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { cn } from '@/lib/utils/cn'
+import { logger } from '@/lib/utils/logger'
 
 export default function OwnerDashboardPage() {
   const [kpis, setKpis] = useState<OwnerKPIs | null>(null)
@@ -74,7 +75,7 @@ export default function OwnerDashboardPage() {
       setEventsAtRisk(riskData)
       setCashFlow(cashFlowData)
     } catch (error) {
-      console.error('Error loading dashboard data', error)
+      logger.error('OwnerDashboard', 'Error loading dashboard data', error instanceof Error ? error : new Error(String(error)))
     } finally {
       setLoading(false)
     }

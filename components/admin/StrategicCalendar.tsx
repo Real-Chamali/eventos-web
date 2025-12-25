@@ -15,6 +15,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Skeleton from '@/components/ui/Skeleton'
 import { cn } from '@/lib/utils/cn'
+import { logger } from '@/lib/utils/logger'
 
 interface DateProfitability {
   eventDate: string
@@ -48,7 +49,7 @@ export default function StrategicCalendar() {
         .limit(selectedPeriod === 'week' ? 7 : selectedPeriod === 'month' ? 30 : selectedPeriod === 'quarter' ? 90 : 365)
       
       if (error) {
-        console.error('Error loading profitability data', error)
+        logger.error('StrategicCalendar', 'Error loading profitability data', error as Error)
         return
       }
       
@@ -63,7 +64,7 @@ export default function StrategicCalendar() {
         averageProfitPerEvent: Number(item.average_profit_per_event || 0),
       })))
     } catch (error) {
-      console.error('Error loading profitability data', error)
+      logger.error('StrategicCalendar', 'Error loading profitability data', error instanceof Error ? error : new Error(String(error)))
     } finally {
       setLoading(false)
     }

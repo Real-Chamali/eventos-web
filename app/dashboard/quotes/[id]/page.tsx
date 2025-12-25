@@ -36,6 +36,8 @@ import { Download, Edit, ArrowLeft, CheckCircle2, Mail, User, Sparkles, FileText
 import Link from 'next/link'
 import PaymentsList from '@/components/payments/PaymentsList'
 import QuotePriceControl from '@/components/admin/QuotePriceControl'
+import StructuredData from '@/components/seo/StructuredData'
+import { generateQuoteStructuredData, generateOrganizationStructuredData } from '@/lib/utils/seo'
 
 interface Quote {
   id: string
@@ -365,17 +367,32 @@ export default function QuoteDetailPage() {
 
   const status = statusConfig[quote.status as keyof typeof statusConfig] || statusConfig.draft
 
+  // Generar structured data para SEO
+  const structuredData = [
+    generateQuoteStructuredData({
+      id: quote.id,
+      clientName: quote.client?.name || 'Cliente',
+      totalPrice: quote.total_price,
+      status: quote.status,
+      createdAt: quote.created_at,
+      eventDate: quote.event_date || undefined,
+    }),
+    generateOrganizationStructuredData(),
+  ]
+
   return (
-    <div className="space-y-8 p-6 lg:p-8">
-      <PageHeader
-        title={`Cotización #${quote.id.slice(0, 8)}`}
-        description="Detalle completo de la cotización"
-        breadcrumbs={[
-          { label: 'Dashboard', href: '/dashboard' },
-          { label: 'Cotizaciones', href: '/dashboard/quotes' },
-          { label: 'Detalle' },
-        ]}
-      />
+    <>
+      <StructuredData data={structuredData} />
+      <div className="space-y-8 p-6 lg:p-8">
+        <PageHeader
+          title={`Cotización #${quote.id.slice(0, 8)}`}
+          description="Detalle completo de la cotización"
+          breadcrumbs={[
+            { label: 'Dashboard', href: '/dashboard' },
+            { label: 'Cotizaciones', href: '/dashboard/quotes' },
+            { label: 'Detalle' },
+          ]}
+        />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -630,6 +647,7 @@ export default function QuoteDetailPage() {
           <CommentThread entityType="quote" entityId={quoteId} />
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </>
   )
 }

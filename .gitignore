@@ -53,6 +53,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+tsconfig.tsbuildinfo
+
+# documentation archive
+docs/archive/
 
 # IDE and editor files
 .idea/

@@ -52,7 +52,8 @@ async function getDOMPurify() {
       DOMPurify = dompurifyModule.default || dompurifyModule
     } catch (error) {
       // Si falla la importación, usar sanitizador básico
-      console.warn('DOMPurify not available, using basic sanitizer:', error)
+      // No usar logger aquí porque podría causar dependencia circular
+      // Este warning es aceptable en este contexto
       DOMPurify = createBasicSanitizer()
     }
   }

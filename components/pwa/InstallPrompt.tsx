@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { Download, X } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import { cn } from '@/lib/utils/cn'
+import { logger } from '@/lib/utils/logger'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -68,11 +69,11 @@ export default function InstallPrompt() {
     const { outcome } = await deferredPrompt.userChoice
 
     if (outcome === 'accepted') {
-      console.log('Usuario aceptó instalar la PWA')
+      logger.info('InstallPrompt', 'Usuario aceptó instalar la PWA')
       setShowPrompt(false)
       setIsInstalled(true)
     } else {
-      console.log('Usuario rechazó instalar la PWA')
+      logger.info('InstallPrompt', 'Usuario rechazó instalar la PWA')
     }
 
     // Limpiar el prompt

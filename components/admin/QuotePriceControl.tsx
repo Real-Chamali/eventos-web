@@ -15,6 +15,7 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { createClient } from '@/utils/supabase/client'
 import Skeleton from '@/components/ui/Skeleton'
+import { logger } from '@/lib/utils/logger'
 
 interface QuotePriceControlProps {
   quoteId: string
@@ -89,7 +90,7 @@ export default function QuotePriceControl({ quoteId }: QuotePriceControlProps) {
         })))
       }
     } catch (error) {
-      console.error('Error loading price control data', error)
+      logger.error('QuotePriceControl', 'Error loading price control data', error instanceof Error ? error : new Error(String(error)))
     } finally {
       setLoading(false)
     }

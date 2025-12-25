@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import ToastProvider from "@/components/ToastProvider";
 import ThemeProviderWrapper from "@/components/ThemeProvider";
-import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { PremiumErrorBoundary } from "@/components/ui/PremiumErrorBoundary";
 import { SentryProvider } from "@/components/SentryProvider";
 import { SWRProvider } from "@/components/providers/SWRProvider";
 import { AppProvider } from "@/contexts/AppContext";
@@ -11,6 +11,8 @@ import OnboardingTour from "@/components/onboarding/OnboardingTour";
 import PreventFOUC from "@/components/PreventFOUC";
 import InstallPrompt from "@/components/pwa/InstallPrompt";
 import ServiceWorkerRegistration from "@/components/pwa/ServiceWorkerRegistration";
+import { CommandPalette } from "@/components/ui/CommandPalette";
+import { KeyboardShortcuts } from "@/components/ui/KeyboardShortcuts";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -23,10 +25,14 @@ const inter = Inter({
   weight: ["400", "500", "600", "700"],
 });
 
+import { generateMetadata as generateSEOMetadata } from '@/lib/utils/seo'
+
 export const metadata: Metadata = {
-  title: "Eventos CRM - Sistema de Gestión",
-  description: "Sistema completo de gestión de eventos, cotizaciones y clientes",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"),
+  ...generateSEOMetadata({
+    title: "Eventos CRM - Sistema de Gestión",
+    description: "Sistema completo de gestión de eventos, cotizaciones y clientes",
+    path: "/",
+  }),
   manifest: "/manifest.json",
   themeColor: "#6366f1",
   appleWebApp: {
@@ -99,7 +105,7 @@ export default function RootLayout({
         className={`${inter.variable} font-sans antialiased`}
       >
         <PreventFOUC />
-        <ErrorBoundary>
+        <PremiumErrorBoundary>
           <ThemeProviderWrapper>
             <AppProvider>
               <SWRProvider>
@@ -109,12 +115,14 @@ export default function RootLayout({
                     {children}
                     <OnboardingTour />
                     <InstallPrompt />
+                    <CommandPalette />
+                    <KeyboardShortcuts />
                   </SentryProvider>
                 </ToastProvider>
               </SWRProvider>
             </AppProvider>
           </ThemeProviderWrapper>
-        </ErrorBoundary>
+        </PremiumErrorBoundary>
       </body>
     </html>
   );

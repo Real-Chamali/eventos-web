@@ -6,11 +6,13 @@ import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { logger } from '@/lib/utils/logger'
-import { Menu, X, User, LogOut, Settings, Sparkles } from 'lucide-react'
+import { Menu, X, User, LogOut, Settings, Sparkles, Shield, Home, FileText, Plus, Calendar, BarChart3, PartyPopper, DollarSign, Users, TrendingUp } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import GlobalSearch from './layout/GlobalSearch'
 import QuickActions from './layout/QuickActions'
 import NotificationCenter from './notifications/NotificationCenter'
+import MobileSidebar from './MobileSidebar'
+import { useApp } from '@/contexts/AppContext'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,11 +23,12 @@ import {
 } from './ui/DropdownMenu'
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false)
   const [userEmail, setUserEmail] = useState<string>('')
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const { state, actions } = useApp()
+  const isOpen = state.sidebarOpen
 
   useEffect(() => {
     const getUser = async () => {
@@ -48,6 +51,39 @@ export default function Navbar() {
   }
 
   const isDashboard = pathname?.startsWith('/dashboard') || pathname?.startsWith('/admin')
+  const isAdmin = pathname?.startsWith('/admin')
+
+  // Navigation items based on route
+  const dashboardNavItems = [
+    { href: '/dashboard', label: 'Dashboard', icon: Home },
+    { href: '/dashboard/analytics', label: 'Analytics', icon: BarChart3 },
+    { href: '/dashboard/clients', label: 'Clientes', icon: User },
+    { href: '/dashboard/quotes', label: 'Cotizaciones', icon: FileText },
+    { href: '/dashboard/quotes/new', label: 'Nueva Cotización', icon: Plus },
+    { href: '/dashboard/events', label: 'Eventos', icon: PartyPopper },
+    { href: '/dashboard/calendar', label: 'Calendario', icon: Calendar },
+    { href: '/dashboard/settings', label: 'Configuración', icon: Settings },
+  ]
+
+  const adminNavItems = [
+    { href: '/admin/dashboard', label: 'Dashboard del Dueño', icon: BarChart3 },
+    { href: '/admin/calendar-strategic', label: 'Calendario Estratégico', icon: TrendingUp },
+    { href: '/admin/services', label: 'Gestión de Servicios', icon: Settings },
+    { href: '/admin/vendors', label: 'Gestión de Personal', icon: Users },
+    { href: '/admin/finance', label: 'Finanzas', icon: DollarSign },
+    { href: '/admin/events', label: 'Eventos', icon: Calendar },
+    { href: '/admin/users', label: 'Gestión de Usuarios', icon: Shield },
+  ]
+
+  const navItems = isAdmin ? adminNavItems : dashboardNavItems
+
+  const toggleSidebar = () => {
+    actions.toggleSidebar()
+  }
+
+  const closeSidebar = () => {
+    actions.setSidebarOpen(false)
+  }
 
   if (!isDashboard) {
     return null
@@ -62,16 +98,30 @@ export default function Navbar() {
   })
 
   return (
-    <nav className="sticky top-0 z-40 w-full border-b border-gray-200/60 bg-white/80 backdrop-blur-xl dark:border-gray-800/60 dark:bg-gray-900/80">
-      <div className="mx-auto flex h-20 max-w-[1920px] items-center justify-between px-6 lg:px-8">
-        {/* Logo & Mobile Menu */}
-        <div className="flex items-center space-x-6">
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="inline-flex items-center justify-center rounded-xl p-2.5 text-gray-700 hover:bg-gray-100/80 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:text-gray-300 dark:hover:bg-gray-800/80 lg:hidden transition-all duration-200"
-          >
-            {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-          </button>
+    <>
+      {/* Mobile Sidebar */}
+      <MobileSidebar
+        isOpen={isOpen}
+        onClose={closeSidebar}
+        navItems={navItems}
+        headerTitle={isAdmin ? 'Admin' : 'Eventos'}
+        headerSubtitle="Premium"
+        headerIcon={isAdmin ? Shield : Sparkles}
+        headerIconBg={isAdmin ? 'bg-gradient-to-br from-purple-500 via-purple-600 to-violet-600' : 'bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600'}
+      />
+
+      <nav className="sticky top-0 z-40 w-full border-b border-gray-200/60 bg-white/80 backdrop-blur-xl dark:border-gray-800/60 dark:bg-gray-900/80">
+        <div className="mx-auto flex h-20 max-w-[1920px] items-center justify-between px-6 lg:px-8">
+          {/* Logo & Mobile Menu */}
+          <div className="flex items-center space-x-6">
+            <button
+              onClick={toggleSidebar}
+              className="inline-flex items-center justify-center rounded-xl p-2.5 text-gray-700 hover:bg-gray-100/80 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:text-gray-300 dark:hover:bg-gray-800/80 lg:hidden transition-all duration-200"
+              aria-label={isOpen ? 'Cerrar menú' : 'Abrir menú'}
+              aria-expanded={isOpen}
+            >
+              {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </button>
           <Link href="/dashboard" className="flex items-center space-x-3 group">
             <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-105">
               <Sparkles className="h-5 w-5 text-white" />
@@ -159,5 +209,6 @@ export default function Navbar() {
         </div>
       </div>
     </nav>
+    </>
   )
 }

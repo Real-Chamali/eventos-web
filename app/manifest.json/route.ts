@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * Ruta API para servir el Manifest
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Error serving manifest:', error)
+    logger.error('ManifestRoute', 'Error serving manifest', error instanceof Error ? error : new Error(String(error)))
     return NextResponse.json(
       { error: 'Manifest not found' },
       { status: 404 }

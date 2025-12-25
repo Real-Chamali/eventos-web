@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { CookieOptions } from '@supabase/ssr'
+import { logger } from '@/lib/utils/logger'
 
 export async function updateSession(request: NextRequest) {
   // Validar variables de entorno
@@ -9,7 +10,7 @@ export async function updateSession(request: NextRequest) {
   
   if (!supabaseUrl || !supabaseAnonKey) {
     // Si faltan variables de entorno, permitir acceso pero loguear el problema
-    console.error('[Middleware] Missing Supabase environment variables:', {
+    logger.error('Middleware', 'Missing Supabase environment variables', new Error('Missing env vars'), {
       hasUrl: !!supabaseUrl,
       hasKey: !!supabaseAnonKey,
       pathname: request.nextUrl.pathname,

@@ -43,7 +43,7 @@ type AppAction =
 
 const initialState: AppState = {
   theme: 'system',
-  sidebarOpen: true,
+  sidebarOpen: false, // Mobile sidebar starts closed
   notifications: [],
   filters: {
     quotes: {

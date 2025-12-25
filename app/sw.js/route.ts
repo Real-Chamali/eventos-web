@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readFile } from 'fs/promises'
 import { join } from 'path'
+import { logger } from '@/lib/utils/logger'
 
 /**
  * Ruta API para servir el Service Worker
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
       },
     })
   } catch (error) {
-    console.error('Error serving service worker:', error)
+    logger.error('ServiceWorkerRoute', 'Error serving service worker', error instanceof Error ? error : new Error(String(error)))
     return new NextResponse('Service Worker not found', { status: 404 })
   }
 }

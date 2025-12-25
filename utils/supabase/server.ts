@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { logger } from '@/lib/utils/logger'
 
 export async function createClient() {
   const cookieStore = await cookies()
@@ -10,11 +11,10 @@ export async function createClient() {
   if (!supabaseUrl || !supabaseAnonKey) {
     // En producción, loguear el error pero no bloquear completamente
     const error = new Error('Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set')
-    console.error('Missing Supabase environment variables:', {
+    logger.error('SupabaseServer', 'Missing Supabase environment variables', error, {
       hasUrl: !!supabaseUrl,
       hasKey: !!supabaseAnonKey,
       nodeEnv: process.env.NODE_ENV,
-      error: error.message,
     })
     // En producción, es mejor lanzar el error para que se maneje apropiadamente
     // en lugar de retornar un cliente inválido que causaría más errores

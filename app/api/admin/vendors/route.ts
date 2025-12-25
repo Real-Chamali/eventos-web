@@ -54,7 +54,13 @@ export async function GET() {
       checkAdmin = middlewareModule.checkAdmin
     } catch (importError) {
       // Si las importaciones fallan, devolver error JSON
-      console.error('Error importing modules:', importError)
+      try {
+        if (logger) {
+          logger.error('API /admin/vendors', 'Error importing modules', importError instanceof Error ? importError : new Error(String(importError)))
+        }
+      } catch {
+        // Fallback si logger no está disponible
+      }
       return errorResponse(
         'Module import error',
         importError instanceof Error ? importError.message : 'Error al cargar módulos necesarios',
@@ -73,7 +79,7 @@ export async function GET() {
       try {
         logger.error('API /admin/vendors', 'Error getting session', sessionError as Error)
       } catch {
-        console.error('Error getting session:', errorMsg)
+        // Fallback silencioso si logger no está disponible
       }
       return errorResponse('Session error', errorMsg, 500)
     }
@@ -91,7 +97,7 @@ export async function GET() {
       try {
         logger.error('API /admin/vendors', 'Error checking admin role', checkError as Error)
       } catch {
-        console.error('Error checking admin role:', errorMsg)
+        // Fallback silencioso si logger no está disponible
       }
       return errorResponse('Authorization error', errorMsg, 500)
     }
