@@ -82,7 +82,24 @@ export function initSentry() {
         return null
       }
 
+      // Ignore errors from ad blockers blocking Sentry
+      if (error && typeof error === 'object' && 'message' in error) {
+        const errorMessage = String(error.message)
+        if (errorMessage.includes('ERR_BLOCKED_BY_CLIENT') || errorMessage.includes('net::ERR_BLOCKED_BY_CLIENT')) {
+          return null
+        }
+      }
+
       return event
+    },
+    
+    // Silently handle transport errors (e.g., ad blockers)
+    transportOptions: {
+      // Don't log transport errors to console
+      beforeSend: (request) => {
+        // Silently handle blocked requests
+        return request
+      },
     },
 
     // Configure which URLs to include/exclude

@@ -58,8 +58,12 @@ export function SentryProvider({ children }: { children: React.ReactNode }) {
           
           subscription = authSubscription
         } catch (error) {
-          // Si Sentry falla, usar solo logger interno
-          logger.warn('SentryProvider', 'Sentry no disponible, usando logger interno', { error })
+          // Silenciar errores de Sentry bloqueado por ad blockers
+          const errorMessage = error instanceof Error ? error.message : String(error)
+          if (!errorMessage.includes('ERR_BLOCKED_BY_CLIENT') && !errorMessage.includes('net::ERR_BLOCKED_BY_CLIENT')) {
+            // Solo loguear errores que no sean de bloqueo
+            logger.warn('SentryProvider', 'Sentry no disponible, usando logger interno', { error })
+          }
         }
       }
       
