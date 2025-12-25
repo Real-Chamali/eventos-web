@@ -171,29 +171,33 @@ BEGIN
   -- confirmed puede ir a: cancelled (solo admin puede hacer esto)
   -- cancelled es terminal (no puede cambiar)
   
-  CASE OLD.status
-    WHEN 'draft' THEN
-      valid_transitions := ARRAY['pending', 'cancelled'];
-    WHEN 'pending' THEN
-      valid_transitions := ARRAY['confirmed', 'cancelled'];
-    WHEN 'confirmed' THEN
-      -- Solo admin puede cancelar una cotización confirmada
-      IF NEW.status = 'cancelled' AND NOT (SELECT public.is_admin()) THEN
-        RAISE EXCEPTION 'Solo los administradores pueden cancelar cotizaciones confirmadas';
+  -- Mapear estados del enum a lógica de negocio
+  -- Enum: DRAFT, APPROVED, REJECTED
+  -- Lógica: DRAFT -> APPROVED (confirmar), DRAFT -> REJECTED (cancelar)
+  --         APPROVED -> REJECTED (solo admin puede cancelar confirmada)
+  --         REJECTED es terminal
+  
+  CASE OLD.status::text
+    WHEN 'DRAFT' THEN
+      valid_transitions := ARRAY['APPROVED', 'REJECTED'];
+    WHEN 'APPROVED' THEN
+      -- Solo admin puede rechazar una cotización aprobada
+      IF NEW.status::text = 'REJECTED' AND NOT (SELECT public.is_admin()) THEN
+        RAISE EXCEPTION 'Solo los administradores pueden rechazar cotizaciones aprobadas';
       END IF;
-      valid_transitions := ARRAY['cancelled'];
-    WHEN 'cancelled' THEN
-      -- cancelled es terminal, no puede cambiar
-      RAISE EXCEPTION 'No se puede cambiar el estado de una cotización cancelada. Estado actual: cancelled';
+      valid_transitions := ARRAY['REJECTED'];
+    WHEN 'REJECTED' THEN
+      -- REJECTED es terminal, no puede cambiar
+      RAISE EXCEPTION 'No se puede cambiar el estado de una cotización rechazada. Estado actual: REJECTED';
     ELSE
       -- Estado desconocido, permitir (por compatibilidad)
       RETURN NEW;
   END CASE;
   
   -- Validar que la transición sea válida
-  IF NOT (NEW.status = ANY(valid_transitions)) THEN
+  IF NOT (NEW.status::text = ANY(valid_transitions)) THEN
     RAISE EXCEPTION 'Transición de estado inválida: de % a %. Transiciones válidas desde %: %',
-      OLD.status, NEW.status, OLD.status, array_to_string(valid_transitions, ', ');
+      OLD.status::text, NEW.status::text, OLD.status::text, array_to_string(valid_transitions, ', ');
   END IF;
   
   RETURN NEW;
@@ -219,9 +223,10 @@ COMMENT ON FUNCTION validate_quote_status_transition() IS
 -- ============================================================================
 
 -- Índice para filtrar cotizaciones por status y fecha
+-- Nota: Usar valores del enum quote_status (DRAFT, APPROVED, REJECTED)
 CREATE INDEX IF NOT EXISTS idx_quotes_status_created_at 
 ON quotes(status, created_at DESC)
-WHERE status IN ('pending', 'confirmed', 'cancelled');
+WHERE status IN ('APPROVED', 'REJECTED');
 
 -- Índice para consultas de cotizaciones por vendedor y fecha
 CREATE INDEX IF NOT EXISTS idx_quotes_vendor_created_at 
