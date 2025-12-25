@@ -92,15 +92,6 @@ export function initSentry() {
 
       return event
     },
-    
-    // Silently handle transport errors (e.g., ad blockers)
-    transportOptions: {
-      // Don't log transport errors to console
-      beforeSend: (request) => {
-        // Silently handle blocked requests
-        return request
-      },
-    },
 
     // Configure which URLs to include/exclude
     allowUrls: [
