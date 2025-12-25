@@ -473,7 +473,7 @@ export default function QuoteDetailPageClient({ initialQuote }: QuoteDetailPageC
           )}
 
           {/* Payments */}
-          <PaymentsList quoteId={quoteId} />
+          <PaymentsList quoteId={quoteId} totalPrice={quote.total_price} />
         </div>
       </div>
     </div>

@@ -46,7 +46,7 @@ function getStatusBadge(status: string) {
 }
 
 export default function AdminQuotesPageClient() {
-  const { quotes, isLoading, refresh } = useQuotes()
+  const { quotes, loading: isLoading, refresh } = useQuotes()
   const { isAdmin, loading: adminLoading } = useIsAdmin()
   const router = useRouter()
   const supabase = createClient()

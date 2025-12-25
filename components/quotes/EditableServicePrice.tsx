@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { useToast, useIsAdmin } from '@/lib/hooks'
-import { Input } from '@/components/ui/Input'
+import Input from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
 import { Edit2, Check, X, DollarSign } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
@@ -105,7 +105,10 @@ export default function EditableServicePrice({
           .eq('id', quoteId)
 
         if (totalError) {
-          logger.warn('EditableServicePrice', 'Error updating quote total', totalError)
+          logger.warn('EditableServicePrice', 'Error updating quote total', {
+            error: totalError.message,
+            code: totalError.code,
+          })
           // No fallar si solo falla la actualización del total
         }
       }
@@ -209,8 +212,11 @@ export default function EditableServicePrice({
         </Button>
       )}
       {!editable && (quoteStatus === 'confirmed' || quoteStatus === 'cancelled') && !isAdmin && (
-        <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-          <DollarSign className="h-4 w-4 text-gray-400" title="Solo administradores pueden editar" />
+        <div 
+          className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          title="Solo administradores pueden editar"
+        >
+          <DollarSign className="h-4 w-4 text-gray-400" />
         </div>
       )}
     </div>
