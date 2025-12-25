@@ -1,6 +1,16 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import { generateMetadata as generateSEOMetadata } from '@/lib/utils/seo'
 import AdvancedAnalytics from '@/components/analytics/AdvancedAnalytics'
+
+export const metadata: Metadata = generateSEOMetadata({
+  title: 'Analytics',
+  description: 'Métricas detalladas, tendencias y análisis de rendimiento de tu negocio',
+  path: '/dashboard/analytics',
+  keywords: ['analytics', 'métricas', 'estadísticas', 'análisis'],
+  noIndex: true, // Analytics generalmente no debe ser indexado
+})
 
 export default async function AnalyticsPage() {
   const supabase = await createClient()

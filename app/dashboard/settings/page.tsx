@@ -1,10 +1,19 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/utils/supabase/server'
 import { redirect } from 'next/navigation'
+import { generateMetadata as generateSEOMetadata } from '@/lib/utils/seo'
 import SecuritySettings from '@/components/security/SecuritySettings'
 import UserPreferences from '@/components/settings/UserPreferences'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import { Shield, Settings as SettingsIcon } from 'lucide-react'
+
+export const metadata: Metadata = generateSEOMetadata({
+  title: 'Configuración',
+  description: 'Gestiona tus preferencias y configuración de seguridad',
+  path: '/dashboard/settings',
+  noIndex: true, // Settings no debe ser indexado
+})
 
 export default async function SettingsPage() {
   const supabase = await createClient()

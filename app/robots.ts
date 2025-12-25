@@ -13,14 +13,20 @@ export default function robots(): MetadataRoute.Robots {
           '/dashboard/quotes',
           '/dashboard/clients',
           '/dashboard/events',
+          '/dashboard/calendar',
+          '/dashboard/analytics',
         ],
         disallow: [
           '/api/',
           '/admin/',
-          '/dashboard/quotes/[id]/edit',
+          '/dashboard/quotes/*/edit',
           '/dashboard/quotes/new',
           '/dashboard/clients/new',
           '/dashboard/settings',
+          '/dashboard/*/edit',
+          '/dashboard/*/new',
+          '/login',
+          '/offline',
         ],
       },
       {
@@ -28,16 +34,39 @@ export default function robots(): MetadataRoute.Robots {
         allow: [
           '/',
           '/dashboard',
+          '/dashboard/quotes',
+          '/dashboard/clients',
+          '/dashboard/events',
         ],
         disallow: [
           '/api/',
           '/admin/',
           '/dashboard/*/edit',
           '/dashboard/*/new',
+          '/dashboard/settings',
+          '/login',
+        ],
+      },
+      {
+        userAgent: 'Bingbot',
+        allow: [
+          '/',
+          '/dashboard',
+          '/dashboard/quotes',
+          '/dashboard/clients',
+          '/dashboard/events',
+        ],
+        disallow: [
+          '/api/',
+          '/admin/',
+          '/dashboard/*/edit',
+          '/dashboard/*/new',
+          '/dashboard/settings',
         ],
       },
     ],
     sitemap: `${baseUrl}/sitemap.xml`,
+    host: baseUrl,
   }
 }
 

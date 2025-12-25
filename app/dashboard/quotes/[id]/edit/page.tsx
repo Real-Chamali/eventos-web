@@ -122,7 +122,8 @@ export default function EditQuotePage() {
         return
       }
 
-      if (data.status !== 'draft') {
+      // Solo permitir editar si es admin o si está en draft
+      if (!isAdmin && data.status !== 'draft') {
         toastError('Solo se pueden editar cotizaciones en estado borrador')
         router.push(`/dashboard/quotes/${quoteId}`)
         return
@@ -561,7 +562,13 @@ export default function EditQuotePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-xl">Servicios</CardTitle>
-                  <CardDescription className="mt-1">Agrega y configura los servicios de la cotización</CardDescription>
+                  <CardDescription className="mt-1">
+                    {quote?.status === 'draft' || quote?.status === 'pending'
+                      ? 'Puedes ajustar los precios según la negociación con el cliente. Los precios se pueden personalizar independientemente del precio base del servicio.'
+                      : isAdmin
+                      ? 'Como administrador, puedes modificar los precios incluso en cotizaciones confirmadas.'
+                      : 'Agrega y configura los servicios de la cotización'}
+                  </CardDescription>
                 </div>
                 <Button variant="premium" size="sm" onClick={addService} className="shadow-lg hover:shadow-xl">
                   <Plus className="mr-2 h-4 w-4" />

@@ -8,6 +8,7 @@ import type { Metadata } from 'next'
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 const siteName = 'Eventos CRM'
 const defaultDescription = 'Sistema completo de gestión de eventos, cotizaciones y clientes'
+const defaultImage = `${baseUrl}/icon-512.png`
 
 /**
  * Genera metadata base con Open Graph y Twitter Cards
@@ -19,6 +20,10 @@ export function generateMetadata({
   image,
   type = 'website',
   noIndex = false,
+  keywords,
+  publishedTime,
+  modifiedTime,
+  authors,
 }: {
   title: string
   description?: string
@@ -26,12 +31,17 @@ export function generateMetadata({
   image?: string
   type?: 'website' | 'article'
   noIndex?: boolean
+  keywords?: string[]
+  publishedTime?: string
+  modifiedTime?: string
+  authors?: string[]
 }): Metadata {
   const url = `${baseUrl}${path}`
-  const ogImage = image || `${baseUrl}/og-image.png`
+  // Usar imagen OG dinámica si no se proporciona una imagen específica
+  const ogImage = image || (path ? `${baseUrl}/api/og-image?title=${encodeURIComponent(title)}&description=${encodeURIComponent(description)}` : defaultImage)
   const fullTitle = title.includes(siteName) ? title : `${title} | ${siteName}`
 
-  return {
+  const metadata: Metadata = {
     title: fullTitle,
     description,
     metadataBase: new URL(baseUrl),
@@ -59,7 +69,7 @@ export function generateMetadata({
       title: fullTitle,
       description,
       images: [ogImage],
-      creator: '@eventoscrm', // Actualizar con tu handle de Twitter si lo tienes
+      creator: '@eventoscrm',
     },
     robots: {
       index: !noIndex,
@@ -73,6 +83,24 @@ export function generateMetadata({
       },
     },
   }
+
+  // Agregar keywords si se proporcionan
+  if (keywords && keywords.length > 0) {
+    metadata.keywords = keywords
+  }
+
+  // Agregar información de artículo si es tipo article
+  if (type === 'article') {
+    metadata.openGraph = {
+      ...metadata.openGraph,
+      type: 'article',
+      ...(publishedTime && { publishedTime }),
+      ...(modifiedTime && { modifiedTime }),
+      ...(authors && authors.length > 0 && { authors }),
+    }
+  }
+
+  return metadata
 }
 
 /**
@@ -128,8 +156,14 @@ export function generateQuoteStructuredData(quote: {
   status: string
   createdAt: string
   eventDate?: string
+  updatedAt?: string
+  services?: Array<{
+    name: string
+    quantity: number
+    price: number
+  }>
 }) {
-  return {
+  const structuredData: any = {
     '@context': 'https://schema.org',
     '@type': 'Invoice',
     identifier: quote.id,
@@ -146,6 +180,31 @@ export function generateQuoteStructuredData(quote: {
     dateCreated: quote.createdAt,
     scheduledPaymentDate: quote.eventDate || quote.createdAt,
   }
+
+  // Agregar fecha de modificación si existe
+  if (quote.updatedAt) {
+    structuredData.dateModified = quote.updatedAt
+  }
+
+  // Agregar items si se proporcionan
+  if (quote.services && quote.services.length > 0) {
+    structuredData.itemListElement = quote.services.map((service, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      item: {
+        '@type': 'Product',
+        name: service.name,
+        quantity: service.quantity,
+        price: {
+          '@type': 'MonetaryAmount',
+          currency: 'MXN',
+          value: service.price,
+        },
+      },
+    }))
+  }
+
+  return structuredData
 }
 
 /**
@@ -157,13 +216,55 @@ export function generateOrganizationStructuredData() {
     '@type': 'Organization',
     name: siteName,
     url: baseUrl,
-    logo: `${baseUrl}/icon-512.png`,
+    logo: {
+      '@type': 'ImageObject',
+      url: `${baseUrl}/icon-512.png`,
+      width: 512,
+      height: 512,
+    },
     description: defaultDescription,
     sameAs: [
       // Agregar redes sociales aquí si las tienes
       // 'https://twitter.com/eventoscrm',
       // 'https://facebook.com/eventoscrm',
     ],
+  }
+}
+
+/**
+ * Genera structured data JSON-LD para BreadcrumbList
+ */
+export function generateBreadcrumbStructuredData(items: Array<{ name: string; url: string }>) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, index) => ({
+      '@type': 'ListItem',
+      position: index + 1,
+      name: item.name,
+      item: item.url,
+    })),
+  }
+}
+
+/**
+ * Genera structured data JSON-LD para WebSite con SearchAction
+ */
+export function generateWebSiteStructuredData() {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: siteName,
+    url: baseUrl,
+    description: defaultDescription,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `${baseUrl}/dashboard/quotes?search={search_term_string}`,
+      },
+      'query-input': 'required name=search_term_string',
+    },
   }
 }
 
