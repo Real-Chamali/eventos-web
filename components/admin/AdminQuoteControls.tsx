@@ -28,7 +28,6 @@ import {
   type QuoteStatus,
 } from '@/lib/utils/quoteStateMachine'
 import { logQuoteStatusChange, logQuoteDelete } from '@/lib/utils/criticalAudit'
-import { useIsAdmin } from '@/lib/hooks'
 
 interface AdminQuoteControlsProps {
   quoteId: string
@@ -208,9 +207,11 @@ export default function AdminQuoteControls({
               variant={getStatusVariant(currentStatus as QuoteStatus)}
               className="flex items-center gap-2"
             >
-              {statusOptions.find((s) => s.value === currentStatus)?.icon && (
-                <statusOptions.find((s) => s.value === currentStatus)!.icon className="h-4 w-4" />
-              )}
+              {(() => {
+                const option = statusOptions.find((s) => s.value === currentStatus)
+                const IconComponent = option?.icon
+                return IconComponent ? <IconComponent className="h-4 w-4" /> : null
+              })()}
               {getStatusLabel(currentStatus as QuoteStatus)}
             </Badge>
           </div>
