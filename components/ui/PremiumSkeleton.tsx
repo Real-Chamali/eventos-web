@@ -1,10 +1,10 @@
 'use client'
 
 import { HTMLAttributes } from 'react'
-import { motion } from 'framer-motion'
+import { motion, HTMLMotionProps } from 'framer-motion'
 import { cn } from '@/lib/utils/cn'
 
-interface PremiumSkeletonProps extends HTMLAttributes<HTMLDivElement> {
+interface PremiumSkeletonProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onDrag' | 'onDragStart' | 'onDragEnd'> {
   variant?: 'default' | 'circular' | 'text' | 'card' | 'table'
   lines?: number
   animated?: boolean
@@ -33,6 +33,9 @@ export default function PremiumSkeleton({
     className
   )
 
+  // Filtrar props que no son compatibles con motion.div
+  const { onDrag, onDragStart, onDragEnd, ...motionProps } = props as any
+
   if (variant === 'text' && lines > 1) {
     return (
       <div className="space-y-2">
@@ -44,7 +47,7 @@ export default function PremiumSkeleton({
             transition={{ delay: i * 0.1 }}
             className={cn(baseStyles, 'h-4')}
             style={{ width: i === lines - 1 ? '75%' : '100%' }}
-            {...props}
+            {...(motionProps as HTMLMotionProps<'div'>)}
           />
         ))}
       </div>
@@ -56,7 +59,7 @@ export default function PremiumSkeleton({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       className={baseStyles}
-      {...props}
+      {...(motionProps as HTMLMotionProps<'div'>)}
     />
   )
 }
