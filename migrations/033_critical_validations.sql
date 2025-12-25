@@ -21,7 +21,7 @@ DECLARE
   v_new_total DECIMAL(10,2);
 BEGIN
   -- Obtener el total de la cotización
-  SELECT COALESCE(total_price, 0) INTO v_total_price
+  SELECT COALESCE(total_amount, 0) INTO v_total_price
   FROM quotes
   WHERE id = NEW.quote_id;
   
@@ -253,13 +253,13 @@ COMMENT ON INDEX idx_events_start_date_status IS
 -- 5. VALIDACIONES ADICIONALES DE INTEGRIDAD
 -- ============================================================================
 
--- Validar que total_price de quotes sea positivo
+-- Validar que total_amount de quotes sea positivo
 ALTER TABLE quotes 
-DROP CONSTRAINT IF EXISTS quotes_total_price_positive;
+DROP CONSTRAINT IF EXISTS quotes_total_amount_positive;
 
 ALTER TABLE quotes 
-ADD CONSTRAINT quotes_total_price_positive 
-CHECK (total_price >= 0);
+ADD CONSTRAINT quotes_total_amount_positive 
+CHECK (total_amount >= 0);
 
 -- Validar que quantity en quote_services sea positiva
 ALTER TABLE quote_services 
@@ -278,7 +278,7 @@ ADD CONSTRAINT quote_services_final_price_positive
 CHECK (final_price >= 0);
 
 -- Comentarios
-COMMENT ON CONSTRAINT quotes_total_price_positive ON quotes IS 
+COMMENT ON CONSTRAINT quotes_total_amount_positive ON quotes IS 
 'Garantiza que el total de la cotización no sea negativo';
 COMMENT ON CONSTRAINT quote_services_quantity_positive ON quote_services IS 
 'Garantiza que la cantidad de servicios sea mayor a 0';
