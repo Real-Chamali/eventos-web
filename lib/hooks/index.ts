@@ -373,4 +373,5 @@ export { useServices } from './useServices'
 export { useEvents } from './useEvents'
 export { useAdminEvents } from './useAdminEvents'
 export { useOptimisticMutation } from './useOptimisticMutation'
+export { useAutoSave } from './useAutoSave'
 

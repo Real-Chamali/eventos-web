@@ -5,6 +5,8 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CreateQuoteSchema } from '@/lib/validations/schemas'
 import { useToast, useDebounce, useOptimisticMutation, useQuotes, useInfiniteQuotes } from '@/lib/hooks'
+import { useAutoSave } from '@/lib/hooks/useAutoSave'
+import ProgressIndicator from '@/components/ui/ProgressIndicator'
 import { logger } from '@/lib/utils/logger'
 import { createAuditLog } from '@/lib/utils/audit'
 import { createNotification } from '@/lib/utils/notifications'
@@ -62,6 +64,46 @@ export default function NewQuotePage() {
   const { execute: optimisticCreate } = useOptimisticMutation<Quote[]>()
   const { refresh: refreshQuotes } = useQuotes()
   const { refresh: refreshInfiniteQuotes } = useInfiniteQuotes()
+
+  // Auto-save del borrador
+  const draftData = useMemo(() => ({
+    selectedClientId: selectedClient?.id || null,
+    quoteServices,
+    step,
+  }), [selectedClient?.id, quoteServices, step])
+
+  const { clear: clearDraft, hasDraft } = useAutoSave({
+    data: draftData,
+    storageKey: 'quote-new-draft',
+    enabled: true,
+    debounceMs: 2000,
+    onRestore: (restored) => {
+      // Restaurar cliente si existe
+      if (restored.selectedClientId) {
+        const client = clients.find(c => c.id === restored.selectedClientId)
+        if (client) {
+          setSelectedClient(client)
+        }
+      }
+      // Restaurar servicios
+      if (restored.quoteServices && Array.isArray(restored.quoteServices)) {
+        setQuoteServices(restored.quoteServices)
+      }
+      // Restaurar paso
+      if (restored.step) {
+        setStep(restored.step)
+      }
+    },
+  })
+
+  // Limpiar borrador cuando se guarda exitosamente
+  useEffect(() => {
+    // Limpiar borrador si se completa exitosamente (se detecta por la redirección)
+    return () => {
+      // Este cleanup se ejecuta cuando el componente se desmonta
+      // Si hay una redirección, significa que se guardó exitosamente
+    }
+  }, [])
 
   // Cargar cliente si viene en query params
   useEffect(() => {
@@ -503,6 +545,9 @@ export default function NewQuotePage() {
       
       logger.info('NewQuotePage', 'Quote created successfully', { quoteId: createdQuoteId })
       
+      // Limpiar borrador antes de redirigir
+      clearDraft()
+      
       // Redirigir a la cotización creada
       if (createdQuoteId) {
         router.push(`/dashboard/quotes/${createdQuoteId}`)
@@ -538,36 +583,21 @@ export default function NewQuotePage() {
       {/* Premium Step Indicator */}
       <Card variant="elevated" className="overflow-hidden">
         <CardContent className="p-6">
-          <div className="flex items-center justify-center">
-            <div className="flex items-center w-full max-w-md">
-              <div className="flex flex-col items-center flex-1">
-                <div className={cn(
-                  "flex items-center justify-center w-12 h-12 rounded-2xl font-bold text-sm transition-all duration-200",
-                  step >= 1 
-                    ? "bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-lg" 
-                    : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
-                )}>
-                  {step > 1 ? <CheckCircle2 className="h-6 w-6" /> : '1'}
-                </div>
-                <span className="mt-2 text-xs font-medium text-gray-600 dark:text-gray-400">Cliente</span>
-              </div>
-              <div className={cn(
-                "flex-1 h-1 mx-2 transition-all duration-200",
-                step >= 2 ? "bg-gradient-to-r from-indigo-500 to-violet-500" : "bg-gray-200 dark:bg-gray-700"
-              )} />
-              <div className="flex flex-col items-center flex-1">
-                <div className={cn(
-                  "flex items-center justify-center w-12 h-12 rounded-2xl font-bold text-sm transition-all duration-200",
-                  step >= 2 
-                    ? "bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-lg" 
-                    : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
-                )}>
-                  {step > 2 ? <CheckCircle2 className="h-6 w-6" /> : '2'}
-                </div>
-                <span className="mt-2 text-xs font-medium text-gray-600 dark:text-gray-400">Servicios</span>
-              </div>
+          <ProgressIndicator
+            steps={[
+              { id: 'client', label: 'Cliente', completed: step > 1, current: step === 1 },
+              { id: 'services', label: 'Servicios', completed: step > 2, current: step === 2 },
+            ]}
+            currentStep={step - 1}
+          />
+          {hasDraft() && (
+            <div className="mt-4 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800">
+              <p className="text-sm text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                <Sparkles className="h-4 w-4" />
+                Tienes un borrador guardado automáticamente
+              </p>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
