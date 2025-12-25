@@ -40,11 +40,20 @@ export function initSentry() {
     tracesSampleRate: TRANSACTION_SAMPLE_RATE,
     profilesSampleRate: IS_PRODUCTION ? 0.1 : 1.0,
     
-    // Debug mode in development
-    debug: !IS_PRODUCTION,
+    // Debug mode deshabilitado para evitar ruido en consola
+    debug: false,
     
     // Automatically capture unhandled promise rejections
     attachStacktrace: true,
+    
+    // Ignorar errores comunes de bloqueo por ad blockers
+    ignoreErrors: [
+      'ERR_BLOCKED_BY_CLIENT',
+      'net::ERR_BLOCKED_BY_CLIENT',
+      'Failed to fetch',
+      'NetworkError',
+      'Load failed',
+    ],
     
     // Deshabilitar integración de editor (solo funciona en macOS)
     // Esto evita warnings cuando intenta abrir archivos en Linux
