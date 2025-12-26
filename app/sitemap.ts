@@ -1,6 +1,4 @@
 import { MetadataRoute } from 'next'
-import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
