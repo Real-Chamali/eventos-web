@@ -155,7 +155,7 @@ export async function POST(request: NextRequest) {
 
     await auditAPIAction(auth.userId, 'CREATE', 'quotes', data.id, undefined, data, request)
 
-    // Crear notificaciones
+    // Crear notificaciones y enviar WhatsApp
     try {
       // Notificar al vendedor
       await createNotification({
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
         // Obtener información del cliente para el mensaje
         const { data: clientData } = await supabase
           .from('clients')
-          .select('name')
+          .select('name, phone')
           .eq('id', payload.client_id)
           .single()
 
@@ -188,6 +188,50 @@ export async function POST(request: NextRequest) {
             link: `/dashboard/quotes/${data.id}`,
           },
         })
+
+        // Enviar WhatsApp al cliente si tiene teléfono
+        if (clientData?.phone && clientData?.name) {
+          try {
+            const { sendWhatsApp, whatsappTemplates } = await import('@/lib/integrations/whatsapp')
+            const message = whatsappTemplates.quoteCreated(data.id, clientData.name, data.total_amount || 0)
+            await sendWhatsApp({
+              to: clientData.phone,
+              message,
+            })
+          } catch (whatsappError) {
+            // No fallar si hay error en WhatsApp
+            logger.warn('API', 'Error sending WhatsApp for quote', {
+              error: whatsappError instanceof Error ? whatsappError.message : String(whatsappError),
+              quoteId: data.id,
+            })
+          }
+        }
+
+        // Enviar WhatsApp al admin
+        try {
+          const { sendWhatsAppToAdmin, whatsappTemplates } = await import('@/lib/integrations/whatsapp')
+          // Obtener nombre del vendedor si existe
+          const { data: vendorData } = await supabase
+            .from('profiles')
+            .select('full_name')
+            .eq('id', auth.userId)
+            .single()
+          
+          await sendWhatsAppToAdmin(
+            whatsappTemplates.admin.quoteCreated(
+              data.id,
+              clientData?.name || 'Cliente',
+              data.total_amount || 0,
+              vendorData?.full_name
+            )
+          )
+        } catch (whatsappError) {
+          // No fallar si hay error en WhatsApp al admin
+          logger.warn('API', 'Error sending WhatsApp to admin', {
+            error: whatsappError instanceof Error ? whatsappError.message : String(whatsappError),
+            quoteId: data.id,
+          })
+        }
       }
     } catch (notificationError) {
       // No fallar si hay error en notificaciones

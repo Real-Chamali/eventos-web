@@ -131,6 +131,89 @@ export default function RegisterPaymentDialog({
 
       if (error) throw error
 
+      // Enviar WhatsApp al cliente si tiene teléfono
+      try {
+        const { data: quoteData } = await supabase
+          .from('quotes')
+          .select(`
+            id,
+            total_amount,
+            client_id,
+            clients:client_id (
+              name,
+              phone
+            )
+          `)
+          .eq('id', quoteId)
+          .single()
+
+        // Calcular total pagado
+        const { data: paymentsData } = await supabase
+          .from('partial_payments')
+          .select('amount')
+          .eq('quote_id', quoteId)
+
+        const totalPaid = (paymentsData || []).reduce((sum, p) => sum + (p.amount || 0), 0)
+
+        if (quoteData?.clients) {
+          const clientsArray = Array.isArray(quoteData.clients) ? quoteData.clients : [quoteData.clients]
+          const client = clientsArray[0] as { name?: string; phone?: string } | undefined
+          if (client?.phone && client?.name) {
+            const { whatsappTemplates } = await import('@/lib/integrations/whatsapp')
+            const message = whatsappTemplates.paymentRegistered(
+              quoteId,
+              client.name,
+              data.amount,
+              totalPaid,
+              quoteData.total_amount || 0
+            )
+            // Enviar vía API route (solo funciona en servidor)
+            await fetch('/api/whatsapp/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                to: client.phone,
+                message,
+              }),
+            }).catch(() => {
+              // Silenciar errores de WhatsApp
+            })
+
+            // Enviar notificación al admin si el pago es significativo (>10% del total)
+            if (data.amount > (quoteData.total_amount || 0) * 0.1) {
+              try {
+                const { whatsappTemplates } = await import('@/lib/integrations/whatsapp')
+                const adminMessage = whatsappTemplates.admin.paymentReceived(
+                  quoteId,
+                  client.name,
+                  data.amount,
+                  totalPaid,
+                  quoteData.total_amount || 0
+                )
+                await fetch('/api/whatsapp/send-admin', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ message: adminMessage }),
+                }).catch(() => {
+                  // Silenciar errores de WhatsApp al admin
+                })
+              } catch (adminError) {
+                // No fallar si hay error
+                logger.warn('RegisterPaymentDialog', 'Error sending WhatsApp to admin', {
+                  error: adminError instanceof Error ? adminError.message : String(adminError),
+                })
+              }
+            }
+          }
+        }
+      } catch (whatsappError) {
+        // No fallar si hay error en WhatsApp
+        logger.warn('RegisterPaymentDialog', 'Error sending WhatsApp', {
+          error: whatsappError instanceof Error ? whatsappError.message : String(whatsappError),
+          quoteId,
+        })
+      }
+
       toastSuccess('Pago registrado exitosamente')
       reset()
       setOpen(false)

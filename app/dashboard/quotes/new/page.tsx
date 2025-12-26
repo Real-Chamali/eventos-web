@@ -30,7 +30,8 @@ import { cn } from '@/lib/utils/cn'
 interface Client {
   id: string
   name: string
-  email: string
+  email: string | null
+  phone: string | null
 }
 
 interface Service {
@@ -493,7 +494,7 @@ export default function NewQuotePage() {
             },
           })
 
-          // Crear notificaciones
+          // Crear notificaciones y enviar WhatsApp
           try {
             // Notificar al vendedor
             await createNotification({
@@ -519,6 +520,58 @@ export default function NewQuotePage() {
                   link: `/dashboard/quotes/${quote.id}`,
                 },
               })
+
+              // Enviar WhatsApp al cliente si tiene teléfono (vía API)
+              if (selectedClient.phone && selectedClient.name) {
+                try {
+                  const { whatsappTemplates } = await import('@/lib/integrations/whatsapp')
+                  const message = whatsappTemplates.quoteCreated(
+                    quote.id,
+                    selectedClient.name,
+                    total
+                  )
+                  // Enviar vía API route (solo funciona en servidor)
+                  await fetch('/api/whatsapp/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      to: selectedClient.phone,
+                      message,
+                    }),
+                  }).catch(() => {
+                    // Silenciar errores de WhatsApp
+                  })
+                } catch (whatsappError) {
+                  // No fallar si hay error en WhatsApp
+                  logger.warn('NewQuotePage', 'Error sending WhatsApp', {
+                    error: whatsappError instanceof Error ? whatsappError.message : String(whatsappError),
+                    quoteId: quote.id,
+                  })
+                }
+              }
+
+              // Enviar notificación al admin
+              try {
+                const { whatsappTemplates } = await import('@/lib/integrations/whatsapp')
+                const adminMessage = whatsappTemplates.admin.quoteCreated(
+                  quote.id,
+                  selectedClient?.name || 'Cliente',
+                  total,
+                  user.user_metadata?.full_name || user.email
+                )
+                await fetch('/api/whatsapp/send-admin', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ message: adminMessage }),
+                }).catch(() => {
+                  // Silenciar errores de WhatsApp al admin
+                })
+              } catch (adminError) {
+                // No fallar si hay error
+                logger.warn('NewQuotePage', 'Error sending WhatsApp to admin', {
+                  error: adminError instanceof Error ? adminError.message : String(adminError),
+                })
+              }
             }
           } catch (notificationError) {
             // No fallar si hay error en notificaciones

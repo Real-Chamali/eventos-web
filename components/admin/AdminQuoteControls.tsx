@@ -119,6 +119,87 @@ export default function AdminQuoteControls({
         )
       }
 
+      // Enviar WhatsApp al cliente si el estado cambió a aprobado o rechazado
+      if (newStatus === 'confirmed' || newStatus === 'cancelled') {
+        try {
+          // Obtener datos de la cotización y cliente
+          const { data: quoteData } = await supabase
+            .from('quotes')
+            .select(`
+              id,
+              total_amount,
+              client_id,
+              clients:client_id (
+                name,
+                phone
+              )
+            `)
+            .eq('id', quoteId)
+            .single()
+
+          if (quoteData?.clients) {
+            const clientsArray = Array.isArray(quoteData.clients) ? quoteData.clients : [quoteData.clients]
+            const client = clientsArray[0] as { name?: string; phone?: string } | undefined
+            if (client?.phone && client?.name) {
+              const { whatsappTemplates } = await import('@/lib/integrations/whatsapp')
+              
+              let message: string
+              if (newStatus === 'confirmed') {
+                message = whatsappTemplates.quoteApproved(
+                  quoteId,
+                  client.name,
+                  quoteData.total_amount || 0
+                )
+              } else {
+                message = whatsappTemplates.quoteRejected(quoteId, client.name)
+              }
+
+              // Enviar vía API route (solo funciona en servidor)
+              await fetch('/api/whatsapp/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  to: client.phone,
+                  message,
+                }),
+              }).catch(() => {
+                // Silenciar errores de WhatsApp
+              })
+
+              // Si se aprobó, notificar al admin también
+              if (newStatus === 'confirmed') {
+                try {
+                  const { whatsappTemplates } = await import('@/lib/integrations/whatsapp')
+                  const adminMessage = whatsappTemplates.admin.quoteApproved(
+                    quoteId,
+                    client.name,
+                    quoteData.total_amount || 0
+                  )
+                  await fetch('/api/whatsapp/send-admin', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: adminMessage }),
+                  }).catch(() => {
+                    // Silenciar errores de WhatsApp al admin
+                  })
+                } catch (adminError) {
+                  // No fallar si hay error
+                  logger.warn('AdminQuoteControls', 'Error sending WhatsApp to admin', {
+                    error: adminError instanceof Error ? adminError.message : String(adminError),
+                  })
+                }
+              }
+            }
+          }
+        } catch (whatsappError) {
+          // No fallar si hay error en WhatsApp
+          logger.warn('AdminQuoteControls', 'Error sending WhatsApp', {
+            error: whatsappError instanceof Error ? whatsappError.message : String(whatsappError),
+            quoteId,
+          })
+        }
+      }
+
       toastSuccess(`Estado cambiado a ${getStatusLabel(newStatus)}`)
       onStatusChange?.()
     } catch (error) {
