@@ -51,7 +51,7 @@ async function imageToBase64(imagePath: string): Promise<string | null> {
     
     const response = await fetch(absolutePath)
     if (!response.ok) {
-      logger.warn('pdfTemplates', `Failed to fetch image: ${absolutePath}`, new Error(`HTTP ${response.status}`))
+      logger.warn('pdfTemplates', `Failed to fetch image: ${absolutePath}`, { status: response.status, statusText: response.statusText })
       return null
     }
     
@@ -63,13 +63,13 @@ async function imageToBase64(imagePath: string): Promise<string | null> {
         resolve(base64)
       }
       reader.onerror = () => {
-        logger.warn('pdfTemplates', 'Failed to read image as base64', new Error('FileReader error'))
+        logger.warn('pdfTemplates', 'Failed to read image as base64', { error: 'FileReader error' })
         reject(new Error('Failed to read image'))
       }
       reader.readAsDataURL(blob)
     })
   } catch (error) {
-    logger.warn('pdfTemplates', 'Failed to load image for PDF', error as Error)
+    logger.warn('pdfTemplates', 'Failed to load image for PDF', { error: error instanceof Error ? error.message : String(error) })
     return null
   }
 }
