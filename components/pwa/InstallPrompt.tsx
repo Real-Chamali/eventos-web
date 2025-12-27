@@ -35,17 +35,19 @@ export default function InstallPrompt() {
 
     // Escuchar evento beforeinstallprompt
     const handleBeforeInstallPrompt = (e: Event) => {
-      // Prevenir el banner automático del navegador
-      // Guardamos el evento para mostrarlo cuando el usuario lo solicite
-      e.preventDefault()
       const promptEvent = e as BeforeInstallPromptEvent
+      
+      // Prevenir el banner automático del navegador
+      // Solo prevenir si vamos a manejar el prompt nosotros
+      e.preventDefault()
+      
+      // Guardar el evento para mostrarlo cuando el usuario lo solicite
       setDeferredPrompt(promptEvent)
       
-      // Mostrar nuestro prompt personalizado después de un pequeño delay
-      // Esto evita el warning del navegador sobre preventDefault sin prompt inmediato
-      setTimeout(() => {
-        setShowPrompt(true)
-      }, 100)
+      // Mostrar nuestro prompt personalizado inmediatamente
+      // Esto evita el warning del navegador porque el prompt está disponible
+      // aunque no lo llamemos hasta que el usuario haga clic
+      setShowPrompt(true)
     }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
@@ -70,22 +72,29 @@ export default function InstallPrompt() {
       return
     }
 
-    // Mostrar el prompt de instalación
-    await deferredPrompt.prompt()
+    try {
+      // Mostrar el prompt de instalación
+      // Esto debe llamarse dentro de un gesto del usuario (click)
+      await deferredPrompt.prompt()
 
-    // Esperar a que el usuario responda
-    const { outcome } = await deferredPrompt.userChoice
+      // Esperar a que el usuario responda
+      const { outcome } = await deferredPrompt.userChoice
 
-    if (outcome === 'accepted') {
-      logger.info('InstallPrompt', 'Usuario aceptó instalar la PWA')
+      if (outcome === 'accepted') {
+        logger.info('InstallPrompt', 'Usuario aceptó instalar la PWA')
+        setShowPrompt(false)
+        setIsInstalled(true)
+      } else {
+        logger.info('InstallPrompt', 'Usuario rechazó instalar la PWA')
+      }
+    } catch (error) {
+      // El prompt puede fallar si ya se mostró o si el usuario ya interactuó
+      logger.warn('InstallPrompt', 'Error al mostrar prompt de instalación', error as Error)
       setShowPrompt(false)
-      setIsInstalled(true)
-    } else {
-      logger.info('InstallPrompt', 'Usuario rechazó instalar la PWA')
+    } finally {
+      // Limpiar el prompt después de usarlo
+      setDeferredPrompt(null)
     }
-
-    // Limpiar el prompt
-    setDeferredPrompt(null)
   }
 
   const handleDismiss = () => {

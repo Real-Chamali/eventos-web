@@ -96,6 +96,37 @@ export default function RootLayout({
                     document.documentElement.style.opacity = '1';
                   }
                 } catch(e) {}
+                
+                // Silenciar errores de Sentry bloqueados por ad blockers
+                // Estos errores son esperados y no afectan la funcionalidad
+                if (typeof window !== 'undefined' && window.addEventListener) {
+                  window.addEventListener('error', function(e) {
+                    if (e.message && (
+                      e.message.includes('ERR_BLOCKED_BY_CLIENT') ||
+                      e.message.includes('net::ERR_BLOCKED_BY_CLIENT') ||
+                      (e.filename && e.filename.includes('sentry.io'))
+                    )) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return false;
+                    }
+                  }, true);
+                  
+                  // También silenciar errores de fetch bloqueados
+                  const originalFetch = window.fetch;
+                  window.fetch = function(...args) {
+                    return originalFetch.apply(this, args).catch(function(error) {
+                      if (error && (
+                        error.message && error.message.includes('ERR_BLOCKED_BY_CLIENT') ||
+                        (args[0] && typeof args[0] === 'string' && args[0].includes('sentry.io'))
+                      )) {
+                        // Silenciar error de Sentry bloqueado
+                        return Promise.reject(new Error('Resource blocked by client'));
+                      }
+                      throw error;
+                    });
+                  };
+                }
               })();
             `,
           }}

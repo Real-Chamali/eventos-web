@@ -12,6 +12,7 @@ import type {
   CashFlowProjection,
   ProfitabilityAnalysis,
 } from './advancedFinance'
+import type { PDFTableColumn, PDFTableData } from './pdfTemplates'
 
 /**
  * Exporta reporte financiero a CSV
@@ -179,8 +180,7 @@ export function exportToExcel(data: {
 }
 
 /**
- * Exporta reporte financiero a PDF
- * Nota: Requiere implementación con librería como jsPDF o react-pdf
+ * Exporta reporte financiero a PDF con diseño profesional
  */
 export async function exportToPDF(data: {
   executiveSummary?: ExecutiveFinancialSummary | null
@@ -190,10 +190,280 @@ export async function exportToPDF(data: {
   cashFlowProjection?: CashFlowProjection[]
   profitabilityAnalysis?: ProfitabilityAnalysis | null
 }): Promise<void> {
-  // Por ahora, PDF se exporta como CSV
-  // En el futuro se puede usar jsPDF o react-pdf para generar PDFs reales
-  logger.warn('exportFinancialReports', 'PDF export not fully implemented, exporting as CSV', {})
-  const csvContent = exportToCSV(data)
-  downloadCSV(csvContent, 'reporte-financiero.pdf')
+  try {
+    const pdfTemplates = await import('@/lib/utils/pdfTemplates')
+    const { createPDFDocument, addHeader, addFooter, addTable, ensurePageSpace } = pdfTemplates
+    const { format } = await import('date-fns')
+    const { es } = await import('date-fns/locale')
+
+    const doc = createPDFDocument()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 20
+
+    // Header
+    let yPos = await addHeader(doc, 'REPORTE FINANCIERO')
+
+    // Fecha del reporte
+    const reportDate = format(new Date(), "dd 'de' MMMM, yyyy", { locale: es })
+    doc.setFontSize(9)
+    doc.setTextColor(107, 114, 128)
+    doc.setFont('helvetica', 'normal')
+    doc.text(`Generado el: ${reportDate}`, pageWidth - margin, yPos - 5, { align: 'right' })
+    yPos += 10
+
+    // Resumen Ejecutivo
+    if (data.executiveSummary) {
+      yPos = ensurePageSpace(doc, 80, yPos)
+
+      doc.setFontSize(14)
+      doc.setTextColor(59, 130, 246)
+      doc.setFont('helvetica', 'bold')
+      doc.text('RESUMEN EJECUTIVO', margin, yPos)
+      yPos += 10
+
+      const summaryColumns: PDFTableColumn[] = [
+        { header: 'Métrica', dataKey: 'metric' },
+        { header: 'Valor', dataKey: 'value', align: 'right' },
+      ]
+
+      const summaryData: PDFTableData[] = [
+        { metric: 'Ventas del Mes', value: `$${data.executiveSummary.monthlySales.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` },
+        { metric: 'Ventas del Año', value: `$${data.executiveSummary.yearlySales.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` },
+        { metric: 'Utilidad del Mes', value: `$${data.executiveSummary.monthlyProfit.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` },
+        { metric: 'Utilidad del Año', value: `$${data.executiveSummary.yearlyProfit.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` },
+        { metric: 'Pagos del Mes', value: `$${data.executiveSummary.monthlyPayments.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` },
+        { metric: 'Pagos del Año', value: `$${data.executiveSummary.yearlyPayments.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` },
+        { metric: 'Total Pendiente', value: `$${data.executiveSummary.totalPending.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` },
+        { metric: 'Total Vencido', value: `$${data.executiveSummary.totalOverdue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` },
+        { metric: 'Cotizaciones del Mes', value: data.executiveSummary.monthlyQuotes.toString() },
+        { metric: 'Clientes del Mes', value: data.executiveSummary.monthlyClients.toString() },
+        { metric: 'Ticket Promedio', value: `$${data.executiveSummary.averageQuoteValue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` },
+      ]
+
+      yPos = addTable(doc, summaryData, summaryColumns, yPos)
+      yPos += 5
+    }
+
+    // Comparativa Mensual
+    if (data.monthlyComparison && data.monthlyComparison.length > 0) {
+      yPos = ensurePageSpace(doc, 60, yPos)
+
+      doc.setFontSize(14)
+      doc.setTextColor(59, 130, 246)
+      doc.setFont('helvetica', 'bold')
+      doc.text('COMPARATIVA MENSUAL', margin, yPos)
+      yPos += 10
+
+      const monthlyColumns: PDFTableColumn[] = [
+        { header: 'Mes', dataKey: 'month' },
+        { header: 'Cotizaciones', dataKey: 'quotes', align: 'center' },
+        { header: 'Ventas', dataKey: 'sales', align: 'right' },
+        { header: 'Utilidad', dataKey: 'profit', align: 'right' },
+        { header: 'Clientes', dataKey: 'clients', align: 'center' },
+        { header: 'Cambio Ventas %', dataKey: 'salesChange', align: 'right' },
+        { header: 'Cambio Utilidad %', dataKey: 'profitChange', align: 'right' },
+        { header: 'Margen %', dataKey: 'margin', align: 'right' },
+      ]
+
+      const monthlyData: PDFTableData[] = data.monthlyComparison.map((month) => ({
+        month: month.monthName,
+        quotes: month.confirmedQuotes.toString(),
+        sales: `$${month.totalSales.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        profit: `$${month.totalProfit.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        clients: month.uniqueClients.toString(),
+        salesChange: `${month.salesChangePercent.toFixed(2)}%`,
+        profitChange: `${month.profitChangePercent.toFixed(2)}%`,
+        margin: `${month.marginPercent.toFixed(2)}%`,
+      }))
+
+      yPos = addTable(doc, monthlyData, monthlyColumns, yPos)
+      yPos += 5
+    }
+
+    // Rentabilidad por Servicio
+    if (data.serviceProfitability && data.serviceProfitability.length > 0) {
+      yPos = ensurePageSpace(doc, 60, yPos)
+
+      doc.setFontSize(14)
+      doc.setTextColor(59, 130, 246)
+      doc.setFont('helvetica', 'bold')
+      doc.text('RENTABILIDAD POR SERVICIO', margin, yPos)
+      yPos += 10
+
+      const serviceColumns: PDFTableColumn[] = [
+        { header: 'Servicio', dataKey: 'service' },
+        { header: 'Precio Base', dataKey: 'basePrice', align: 'right' },
+        { header: 'Costo', dataKey: 'cost', align: 'right' },
+        { header: 'Utilidad Unitaria', dataKey: 'unitProfit', align: 'right' },
+        { header: 'Margen %', dataKey: 'margin', align: 'right' },
+        { header: 'Veces Vendido', dataKey: 'timesSold', align: 'center' },
+        { header: 'Cantidad Total', dataKey: 'quantity', align: 'center' },
+        { header: 'Ingresos Totales', dataKey: 'revenue', align: 'right' },
+        { header: 'Utilidad Total', dataKey: 'profit', align: 'right' },
+      ]
+
+      const serviceData: PDFTableData[] = data.serviceProfitability.map((service) => ({
+        service: service.serviceName,
+        basePrice: `$${service.basePrice.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        cost: `$${service.costPrice.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        unitProfit: `$${service.unitProfit.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        margin: `${service.marginPercent.toFixed(2)}%`,
+        timesSold: service.timesSold.toString(),
+        quantity: service.totalQuantitySold.toString(),
+        revenue: `$${service.totalRevenue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        profit: `$${service.totalProfit.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+      }))
+
+      yPos = addTable(doc, serviceData, serviceColumns, yPos)
+      yPos += 5
+    }
+
+    // Rentabilidad por Cliente
+    if (data.clientProfitability && data.clientProfitability.length > 0) {
+      yPos = ensurePageSpace(doc, 60, yPos)
+
+      doc.setFontSize(14)
+      doc.setTextColor(59, 130, 246)
+      doc.setFont('helvetica', 'bold')
+      doc.text('RENTABILIDAD POR CLIENTE', margin, yPos)
+      yPos += 10
+
+      const clientColumns: PDFTableColumn[] = [
+        { header: 'Cliente', dataKey: 'client' },
+        { header: 'Email', dataKey: 'email' },
+        { header: 'Cotizaciones Totales', dataKey: 'totalQuotes', align: 'center' },
+        { header: 'Cotizaciones Confirmadas', dataKey: 'confirmedQuotes', align: 'center' },
+        { header: 'Ventas Totales', dataKey: 'sales', align: 'right' },
+        { header: 'Utilidad Total', dataKey: 'profit', align: 'right' },
+        { header: 'Ticket Promedio', dataKey: 'avgTicket', align: 'right' },
+        { header: 'Pagado', dataKey: 'paid', align: 'right' },
+        { header: 'Pendiente', dataKey: 'pending', align: 'right' },
+      ]
+
+      const clientData: PDFTableData[] = data.clientProfitability.map((client) => ({
+        client: client.clientName,
+        email: client.email || 'N/A',
+        totalQuotes: client.totalQuotes.toString(),
+        confirmedQuotes: client.confirmedQuotes.toString(),
+        sales: `$${client.totalSales.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        profit: `$${client.totalProfit.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        avgTicket: `$${client.averageQuoteValue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        paid: `$${client.totalPaid.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        pending: `$${client.totalPending.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+      }))
+
+      yPos = addTable(doc, clientData, clientColumns, yPos)
+      yPos += 5
+    }
+
+    // Proyección de Flujo de Caja
+    if (data.cashFlowProjection && data.cashFlowProjection.length > 0) {
+      yPos = ensurePageSpace(doc, 60, yPos)
+
+      doc.setFontSize(14)
+      doc.setTextColor(59, 130, 246)
+      doc.setFont('helvetica', 'bold')
+      doc.text('PROYECCIÓN DE FLUJO DE EFECTIVO', margin, yPos)
+      yPos += 10
+
+      const cashFlowColumns: PDFTableColumn[] = [
+        { header: 'Fecha', dataKey: 'date' },
+        { header: 'Tipo Día', dataKey: 'dayType' },
+        { header: 'Depósitos Recibidos', dataKey: 'depositsReceived', align: 'right' },
+        { header: 'Pagos Recibidos', dataKey: 'paymentsReceived', align: 'right' },
+        { header: 'Total Entrada', dataKey: 'totalInflow', align: 'right' },
+        { header: 'Pagos por Vencer', dataKey: 'paymentsDue', align: 'right' },
+        { header: 'Depósitos por Vencer', dataKey: 'depositsDue', align: 'right' },
+        { header: 'Total Salida', dataKey: 'totalOutflow', align: 'right' },
+        { header: 'Flujo Neto', dataKey: 'netFlow', align: 'right' },
+        { header: 'Balance Acumulado', dataKey: 'cumulativeBalance', align: 'right' },
+      ]
+
+      const cashFlowData: PDFTableData[] = data.cashFlowProjection.map((cf) => ({
+        date: format(new Date(cf.date), 'dd/MM/yyyy', { locale: es }),
+        dayType: cf.dayType === 'weekend' ? 'Fin de Semana' : 'Día Laboral',
+        depositsReceived: `$${cf.depositsReceived.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        paymentsReceived: `$${cf.paymentsReceived.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        totalInflow: `$${cf.totalInflow.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        paymentsDue: `$${cf.paymentsDue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        depositsDue: `$${cf.depositsDue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        totalOutflow: `$${cf.totalOutflow.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        netFlow: `$${cf.netFlow.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        cumulativeBalance: `$${cf.cumulativeBalance.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+      }))
+
+      yPos = addTable(doc, cashFlowData, cashFlowColumns, yPos)
+      yPos += 5
+    }
+
+    // Análisis de Rentabilidad
+    if (data.profitabilityAnalysis) {
+      yPos = ensurePageSpace(doc, 80, yPos)
+
+      doc.setFontSize(14)
+      doc.setTextColor(59, 130, 246)
+      doc.setFont('helvetica', 'bold')
+      doc.text('ANÁLISIS DE RENTABILIDAD', margin, yPos)
+      yPos += 10
+
+      const analysisColumns: PDFTableColumn[] = [
+        { header: 'Métrica', dataKey: 'metric' },
+        { header: 'Valor', dataKey: 'value', align: 'right' },
+      ]
+
+      const analysisData: PDFTableData[] = [
+        { metric: 'Ingresos Totales', value: `$${data.profitabilityAnalysis.totalRevenue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` },
+        { metric: 'Costos Totales', value: `$${data.profitabilityAnalysis.totalCost.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` },
+        { metric: 'Utilidad Total', value: `$${data.profitabilityAnalysis.totalProfit.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` },
+        { metric: 'Margen %', value: `${data.profitabilityAnalysis.marginPercent.toFixed(2)}%` },
+        { metric: 'Total Cotizaciones', value: data.profitabilityAnalysis.totalQuotes.toString() },
+        { metric: 'Ticket Promedio', value: `$${data.profitabilityAnalysis.averageQuoteValue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` },
+        { metric: 'Utilidad por Cotización', value: `$${data.profitabilityAnalysis.averageProfitPerQuote.toLocaleString('es-MX', { minimumFractionDigits: 2 })}` },
+      ]
+
+      if (data.profitabilityAnalysis.topServiceName) {
+        analysisData.push({
+          metric: 'Servicio Más Rentable',
+          value: data.profitabilityAnalysis.topServiceName,
+        })
+        analysisData.push({
+          metric: 'Utilidad del Servicio',
+          value: `$${data.profitabilityAnalysis.topServiceProfit.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        })
+      }
+
+      if (data.profitabilityAnalysis.topClientName) {
+        analysisData.push({
+          metric: 'Cliente Más Valioso',
+          value: data.profitabilityAnalysis.topClientName,
+        })
+        analysisData.push({
+          metric: 'Ingresos del Cliente',
+          value: `$${data.profitabilityAnalysis.topClientRevenue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        })
+      }
+
+      yPos = addTable(doc, analysisData, analysisColumns, yPos)
+    }
+
+    // Agregar footer en todas las páginas
+    const totalPages = doc.getNumberOfPages()
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i)
+      addFooter(doc, i, totalPages)
+    }
+
+    // Descargar
+    const filename = `reporte-financiero-${format(new Date(), 'yyyy-MM-dd')}.pdf`
+    doc.save(filename)
+    logger.info('exportFinancialReports', 'PDF exported successfully', { filename })
+  } catch (error) {
+    logger.error('exportFinancialReports', 'Error exporting PDF', error as Error)
+    // Fallback a CSV si hay error
+    logger.warn('exportFinancialReports', 'Falling back to CSV export', {})
+    const csvContent = exportToCSV(data)
+    downloadCSV(csvContent, 'reporte-financiero.pdf')
+  }
 }
 

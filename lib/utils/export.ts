@@ -5,13 +5,30 @@
 import jsPDF from 'jspdf'
 import 'jspdf-autotable'
 import { logger } from '@/lib/utils/logger'
+import {
+  createPDFDocument,
+  addHeader,
+  addFooter,
+  addTable,
+  addTotalSection,
+  ensurePageSpace,
+  addTwoColumnInfo,
+  type PDFTableColumn,
+  type PDFTableData,
+} from '@/lib/utils/pdfTemplates'
+import { format } from 'date-fns'
+import { es } from 'date-fns/locale'
 
 interface Quote {
   id: string
-  client?: { name: string; email: string }
+  client?: { name: string; email: string; phone?: string }
+  vendor?: { name?: string; email?: string }
   total_price: number
   status: string
   created_at?: string
+  updated_at?: string
+  event_date?: string | null
+  notes?: string | null
   quote_services?: Array<{
     service?: { name: string }
     quantity: number
@@ -20,58 +37,120 @@ interface Quote {
 }
 
 /**
- * Exportar cotización a PDF
+ * Exportar cotización a PDF con diseño profesional
  */
-interface PDFWithAutoTable {
-  autoTable?: (opts: unknown) => void
-  lastAutoTable?: { finalY?: number }
-}
-
-export function exportQuoteToPDF(quote: Quote): void {
+export async function exportQuoteToPDF(quote: Quote): Promise<void> {
   try {
-    const pdf = new jsPDF()
+    const doc = createPDFDocument()
+    const pageWidth = doc.internal.pageSize.getWidth()
+    const pageHeight = doc.internal.pageSize.getHeight()
+    const margin = 20
 
-    // Título
-    pdf.setFontSize(16)
-    pdf.text('Cotización', 20, 20)
+    // Agregar header con logo
+    let yPos = await addHeader(doc, 'COTIZACIÓN')
 
-    // Info básica
-    pdf.setFontSize(11)
-    pdf.text(`ID: ${quote.id}`, 20, 35)
-    pdf.text(`Cliente: ${quote.client?.name || 'N/A'}`, 20, 45)
-    pdf.text(`Email: ${quote.client?.email || 'N/A'}`, 20, 55)
-    pdf.text(`Estado: ${quote.status}`, 20, 65)
-    pdf.text(`Fecha: ${new Date(quote.created_at || Date.now()).toLocaleDateString('es-MX')}`, 20, 75)
+    // Información de la cotización y cliente
+    const quoteDate = quote.created_at
+      ? format(new Date(quote.created_at), "dd 'de' MMMM, yyyy", { locale: es })
+      : format(new Date(), "dd 'de' MMMM, yyyy", { locale: es })
 
-    // Tabla de servicios
-    if (quote.quote_services && quote.quote_services.length > 0) {
-      const tableData = quote.quote_services.map((qs) => [
-        qs.service?.name || 'N/A',
-        String(qs.quantity),
-        `$${qs.final_price.toLocaleString('es-MX')}`,
-        `$${(qs.quantity * qs.final_price).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
-      ])
+    const statusLabels: Record<string, string> = {
+      DRAFT: 'Borrador',
+      APPROVED: 'Aprobada',
+      REJECTED: 'Rechazada',
+      draft: 'Borrador',
+      approved: 'Aprobada',
+      rejected: 'Rechazada',
+      confirmed: 'Confirmada',
+      cancelled: 'Cancelada',
+    }
 
-      ;(pdf as unknown as PDFWithAutoTable).autoTable?.({
-        head: [['Servicio', 'Cantidad', 'Precio Unitario', 'Subtotal']],
-        body: tableData,
-        startY: 90,
-        theme: 'grid',
-        headerStyles: { fillColor: [59, 130, 246] },
+    const statusLabel = statusLabels[quote.status] || quote.status
+
+    // Información en dos columnas
+    const leftData = [
+      { label: 'ID Cotización', value: quote.id.slice(0, 8).toUpperCase() },
+      { label: 'Fecha', value: quoteDate },
+      { label: 'Estado', value: statusLabel },
+    ]
+
+    if (quote.event_date) {
+      leftData.push({
+        label: 'Fecha del Evento',
+        value: format(new Date(quote.event_date), "dd 'de' MMMM, yyyy", { locale: es }),
       })
     }
 
-    // Total
-    const finalY = (pdf as unknown as PDFWithAutoTable).lastAutoTable?.finalY || 150
-    pdf.setFontSize(12)
-    pdf.text(
-      `Total: $${quote.total_price.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
-      20,
-      finalY + 20
-    )
+    const rightData = [
+      { label: 'Cliente', value: quote.client?.name || 'N/A' },
+      { label: 'Email', value: quote.client?.email || 'N/A' },
+    ]
+
+    if (quote.client?.phone) {
+      rightData.push({ label: 'Teléfono', value: quote.client.phone })
+    }
+
+    yPos = addTwoColumnInfo(doc, 'INFORMACIÓN DE LA COTIZACIÓN', leftData, 'INFORMACIÓN DEL CLIENTE', rightData, yPos)
+
+    // Espacio antes de la tabla
+    yPos += 5
+
+    // Tabla de servicios
+    if (quote.quote_services && quote.quote_services.length > 0) {
+      yPos = ensurePageSpace(doc, 50, yPos)
+
+      const tableColumns: PDFTableColumn[] = [
+        { header: 'Servicio', dataKey: 'service' },
+        { header: 'Cantidad', dataKey: 'quantity', align: 'center' },
+        { header: 'Precio Unitario', dataKey: 'unitPrice', align: 'right' },
+        { header: 'Subtotal', dataKey: 'subtotal', align: 'right' },
+      ]
+
+      const tableData: PDFTableData[] = quote.quote_services.map((qs) => ({
+        service: qs.service?.name || 'N/A',
+        quantity: qs.quantity.toString(),
+        unitPrice: `$${qs.final_price.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+        subtotal: `$${(qs.quantity * qs.final_price).toLocaleString('es-MX', { minimumFractionDigits: 2 })}`,
+      }))
+
+      yPos = addTable(doc, tableData, tableColumns, yPos)
+    }
+
+    // Sección de totales
+    yPos = ensurePageSpace(doc, 30, yPos)
+    yPos = addTotalSection(doc, 'TOTAL', quote.total_price, yPos)
+
+    // Notas adicionales si existen
+    if (quote.notes) {
+      yPos = ensurePageSpace(doc, 30, yPos)
+      yPos += 10
+
+      doc.setFontSize(11)
+      doc.setTextColor(59, 130, 246)
+      doc.setFont('helvetica', 'bold')
+      doc.text('NOTAS ADICIONALES', margin, yPos)
+      yPos += 7
+
+      doc.setFontSize(9)
+      doc.setTextColor(75, 85, 99)
+      doc.setFont('helvetica', 'normal')
+      const notesLines = doc.splitTextToSize(quote.notes, pageWidth - 2 * margin)
+      notesLines.forEach((line: string) => {
+        yPos = ensurePageSpace(doc, 10, yPos)
+        doc.text(line, margin, yPos)
+        yPos += 5
+      })
+    }
+
+    // Agregar footer en todas las páginas
+    const totalPages = doc.getNumberOfPages()
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i)
+      addFooter(doc, i, totalPages)
+    }
 
     // Descargar
-    pdf.save(`cotizacion-${quote.id}.pdf`)
+    doc.save(`cotizacion-${quote.id.slice(0, 8)}.pdf`)
     logger.info('exportQuoteToPDF', 'PDF exported successfully', { quoteId: quote.id })
   } catch (error) {
     logger.error('exportQuoteToPDF', 'Error exporting PDF', error instanceof Error ? error : new Error(String(error)))

@@ -23,10 +23,33 @@ export function SentryProvider({ children }: { children: React.ReactNode }) {
       const initializeSentry = async () => {
         try {
           // Dynamic import para evitar errores si Sentry no está disponible
-          const sentryModule = await import('@/sentry.config')
+          // Usar try-catch para manejar bloqueos de ad blockers silenciosamente
+          let sentryModule
+          try {
+            sentryModule = await import('@/sentry.config')
+          } catch (importError) {
+            // Si el import falla (por ejemplo, bloqueado por ad blocker), usar logger interno
+            const errorMessage = importError instanceof Error ? importError.message : String(importError)
+            if (errorMessage.includes('ERR_BLOCKED_BY_CLIENT') || errorMessage.includes('net::ERR_BLOCKED_BY_CLIENT')) {
+              // Silenciar errores de bloqueo - es esperado con ad blockers
+              return
+            }
+            throw importError
+          }
+          
           const { initSentry, setSentryUser, clearSentryUser } = sentryModule
           
-          initSentry()
+          try {
+            initSentry()
+          } catch (initError) {
+            // Si la inicialización falla (por ejemplo, bloqueado), usar logger interno
+            const errorMessage = initError instanceof Error ? initError.message : String(initError)
+            if (errorMessage.includes('ERR_BLOCKED_BY_CLIENT') || errorMessage.includes('net::ERR_BLOCKED_BY_CLIENT')) {
+              // Silenciar errores de bloqueo - es esperado con ad blockers
+              return
+            }
+            throw initError
+          }
 
           // Track authenticated user in Sentry
           const supabase = createClient()

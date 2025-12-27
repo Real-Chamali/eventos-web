@@ -264,7 +264,14 @@ export default function QuoteDetailPageClient({ initialQuote }: QuoteDetailPageC
         )}
 
         <Button
-          onClick={() => exportQuoteToPDF(quote)}
+          onClick={async () => {
+            try {
+              await exportQuoteToPDF(quote)
+            } catch (error) {
+              toastError('Error al exportar PDF')
+              logger.error('QuoteDetailPageClient', 'Error exporting PDF', error as Error)
+            }
+          }}
           variant="outline"
         >
           <Download className="h-4 w-4 mr-2" />
