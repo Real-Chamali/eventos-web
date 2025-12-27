@@ -96,7 +96,7 @@ export async function addHeader(
         doc.addImage(logoBase64, 'PNG', margin, yPos, 30, 30)
       }
     } catch (error) {
-      logger.warn('pdfTemplates', 'Failed to add logo to PDF header', error as Error)
+      logger.warn('pdfTemplates', 'Failed to add logo to PDF header', { error: error instanceof Error ? error.message : String(error) })
     }
   }
 
