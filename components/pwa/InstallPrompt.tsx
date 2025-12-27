@@ -89,7 +89,7 @@ export default function InstallPrompt() {
       }
     } catch (error) {
       // El prompt puede fallar si ya se mostró o si el usuario ya interactuó
-      logger.warn('InstallPrompt', 'Error al mostrar prompt de instalación', error as Error)
+      logger.warn('InstallPrompt', 'Error al mostrar prompt de instalación', { error: error instanceof Error ? error.message : String(error) })
       setShowPrompt(false)
     } finally {
       // Limpiar el prompt después de usarlo
