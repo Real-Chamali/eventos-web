@@ -123,7 +123,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     return [...staticPages, ...dynamicPages]
   } catch (error) {
     // Si hay error, retornar solo páginas estáticas
-    console.error('Error generating dynamic sitemap:', error)
+    // Usar logger si está disponible, sino silenciar (sitemap no debe fallar)
+    try {
+      const { logger } = await import('@/lib/utils/logger')
+      logger.warn('sitemap', 'Error generating dynamic sitemap, using static pages only', {
+        error: error instanceof Error ? error : new Error(String(error)),
+      })
+    } catch {
+      // Si logger no está disponible, silenciar (no crítico para sitemap)
+    }
     return staticPages
   }
 }
