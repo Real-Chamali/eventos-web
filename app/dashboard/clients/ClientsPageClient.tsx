@@ -1,7 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { useClients, useToast, useIsAdmin } from '@/lib/hooks'
+import { useState, useRef, useMemo, memo, useCallback } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import { useClients, useToast, useIsAdmin, useDebounce, useWindowSize } from '@/lib/hooks'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
@@ -32,6 +33,95 @@ interface Client {
   _quotes_count?: number
 }
 
+// Componente de fila memoizado para evitar re-renders innecesarios
+const ClientRow = memo(function ClientRow({
+  client,
+  isAdmin,
+  onEdit,
+  onDeleteClick,
+}: {
+  client: Client
+  isAdmin: boolean
+  onEdit: (client: Client) => void
+  onDeleteClick: (id: string) => void
+}) {
+  return (
+    <div className="group border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+      <div className="grid grid-cols-12 gap-4 px-6 py-4 items-center">
+        <div className="col-span-3">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+              <Users className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div>
+              <Link
+                href={`/dashboard/clients/${client.id}`}
+                className="font-semibold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200"
+              >
+                {client.name}
+              </Link>
+            </div>
+          </div>
+        </div>
+        <div className="col-span-3">
+          {client.email ? (
+            <div className="flex items-center gap-2">
+              <Mail className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+              <span className="text-sm text-gray-600 dark:text-gray-400">
+                {client.email}
+              </span>
+            </div>
+          ) : (
+            <span className="text-sm text-gray-400 dark:text-gray-500">Sin email</span>
+          )}
+        </div>
+        <div className="col-span-2">
+          <Badge variant="info" size="sm">
+            {client._quotes_count || 0} {client._quotes_count === 1 ? 'cotización' : 'cotizaciones'}
+          </Badge>
+        </div>
+        <div className="col-span-2">
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+            <span className="text-sm text-gray-600 dark:text-gray-400">
+              {format(new Date(client.created_at), "dd MMM yyyy", { locale: es })}
+            </span>
+          </div>
+        </div>
+        <div className="col-span-2 text-right">
+          <div className="flex items-center justify-end gap-2">
+            <Link href={`/dashboard/clients/${client.id}`}>
+              <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                Ver detalles
+              </Button>
+            </Link>
+            {isAdmin && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEdit(client)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                >
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDeleteClick(client.id)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+})
+
 export default function ClientsPageClient() {
   const { clients: clientsData, loading, error, refresh } = useClients()
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -41,6 +131,32 @@ export default function ClientsPageClient() {
   const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
   const { isAdmin } = useIsAdmin()
+  const tableContainerRef = useRef<HTMLDivElement>(null)
+  const { height: windowHeight } = useWindowSize()
+
+  // Calcular altura dinámica del contenedor (responsive)
+  const containerHeight = useMemo(() => {
+    const baseHeight = windowHeight > 768 ? windowHeight - 400 : windowHeight - 300
+    return Math.max(400, Math.min(800, baseHeight))
+  }, [windowHeight])
+
+  // Virtual scrolling para la lista de clientes
+  const virtualizer = useVirtualizer({
+    count: clientsData.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 80,
+    overscan: 5,
+    measureElement: (element) => element?.getBoundingClientRect().height ?? 80,
+    scrollMargin: 20,
+  })
+  
+  // Scroll suave a un elemento específico
+  const scrollToIndex = useCallback((index: number) => {
+    virtualizer.scrollToIndex(index, {
+      align: 'start',
+      behavior: 'smooth',
+    })
+  }, [virtualizer])
 
   if (loading) {
     return (
@@ -73,17 +189,17 @@ export default function ClientsPageClient() {
     )
   }
 
-  const handleEdit = (client: Client) => {
+  const handleEdit = useCallback((client: Client) => {
     setSelectedClient(client)
     setEditDialogOpen(true)
-  }
+  }, [])
 
-  const handleDeleteClick = (clientId: string) => {
+  const handleDeleteClick = useCallback((clientId: string) => {
     setClientToDelete(clientId)
     setDeleteConfirmOpen(true)
-  }
+  }, [])
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = useCallback(async () => {
     if (!clientToDelete) return
 
     try {
@@ -102,7 +218,7 @@ export default function ClientsPageClient() {
       logger.error('ClientsPage', 'Error deleting client', error as Error)
       toastError('Error al eliminar el cliente: ' + (error instanceof Error ? error.message : String(error)))
     }
-  }
+  }, [clientToDelete, supabase, toastSuccess, toastError, refresh])
 
   return (
     <div className="space-y-8 p-6 lg:p-8">
@@ -170,10 +286,20 @@ export default function ClientsPageClient() {
         <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100/50 dark:from-gray-900/50 dark:to-gray-800/30 border-b border-gray-200/60 dark:border-gray-800/60">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-xl">Lista de Clientes</CardTitle>
-              <CardDescription className="mt-1">
-                {clientsData.length} {clientsData.length === 1 ? 'cliente' : 'clientes'} registrado{clientsData.length !== 1 ? 's' : ''}
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl">Lista de Clientes</CardTitle>
+                  <CardDescription className="mt-1">
+                    {clientsData.length} {clientsData.length === 1 ? 'cliente' : 'clientes'} registrado{clientsData.length !== 1 ? 's' : ''}
+                  </CardDescription>
+                </div>
+                {/* Indicador de posición */}
+                {virtualizer.getVirtualItems().length > 0 && (
+                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                    Mostrando {virtualizer.getVirtualItems()[0]?.index + 1 || 0} - {virtualizer.getVirtualItems()[virtualizer.getVirtualItems().length - 1]?.index + 1 || 0} de {clientsData.length}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -189,92 +315,61 @@ export default function ClientsPageClient() {
               }}
             />
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Contacto</TableHead>
-                  <TableHead>Cotizaciones</TableHead>
-                  <TableHead>Fecha de Registro</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {clientsData.map((client) => (
-                  <TableRow key={client.id} className="group">
-                    <TableCell>
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-                          <Users className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-                        </div>
-                        <div>
-                          <Link
-                            href={`/dashboard/clients/${client.id}`}
-                            className="font-semibold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200"
-                          >
-                            {client.name}
-                          </Link>
-                        </div>
+            <div className="overflow-hidden">
+              {/* Header fijo */}
+              <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+                <div className="grid grid-cols-12 gap-4 px-6 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  <div className="col-span-3">Cliente</div>
+                  <div className="col-span-3">Contacto</div>
+                  <div className="col-span-2">Cotizaciones</div>
+                  <div className="col-span-2">Fecha de Registro</div>
+                  <div className="col-span-2 text-right">Acciones</div>
+                </div>
+              </div>
+              
+              {/* Lista virtualizada con altura dinámica */}
+              <div 
+                ref={tableContainerRef} 
+                className="overflow-auto transition-all duration-300"
+                style={{ height: `${containerHeight}px` }}
+              >
+                <div
+                  style={{
+                    height: `${virtualizer.getTotalSize()}px`,
+                    width: '100%',
+                    position: 'relative',
+                  }}
+                  className="transition-opacity duration-300"
+                >
+                  {virtualizer.getVirtualItems().map((virtualRow) => {
+                    const client = clientsData[virtualRow.index]
+                    return (
+                      <div
+                        key={virtualRow.key}
+                        data-index={virtualRow.index}
+                        ref={virtualizer.measureElement}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: `${virtualRow.size}px`,
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                        className="transition-opacity duration-200"
+                      >
+                        <ClientRow
+                          client={client}
+                          isAdmin={isAdmin}
+                          onEdit={handleEdit}
+                          onDeleteClick={handleDeleteClick}
+                        />
                       </div>
-                    </TableCell>
-                    <TableCell>
-                      {client.email ? (
-                        <div className="flex items-center gap-2">
-                          <Mail className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                          <span className="text-sm text-gray-600 dark:text-gray-400">
-                            {client.email}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-400 dark:text-gray-500">Sin email</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="info" size="sm">
-                        {client._quotes_count || 0} {client._quotes_count === 1 ? 'cotización' : 'cotizaciones'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                        <span className="text-sm text-gray-600 dark:text-gray-400">
-                          {format(new Date(client.created_at), "dd MMM yyyy", { locale: es })}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link href={`/dashboard/clients/${client.id}`}>
-                          <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                            Ver detalles
-                          </Button>
-                        </Link>
-                        {isAdmin && (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEdit(client)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteClick(client.id)}
-                              className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

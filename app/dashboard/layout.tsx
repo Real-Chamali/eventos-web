@@ -41,7 +41,10 @@ export default async function DashboardLayout({
   }
 
   // Intentar obtener el perfil con manejo mejorado de errores
+  // PERMITIR ACCESO AL DASHBOARD INCLUSO SI HAY ERRORES AL OBTENER EL PERFIL
+  // Solo redirigir a /admin si definitivamente es admin, pero no bloquear acceso
   let userRole = 'vendor' // Rol por defecto
+  let shouldRedirectToAdmin = false
 
   try {
     // Usar el cliente admin para obtener el perfil sin problemas de RLS
@@ -49,60 +52,88 @@ export default async function DashboardLayout({
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     
     if (supabaseUrl && supabaseServiceKey) {
-      const { createClient: createAdminClient } = await import('@supabase/supabase-js')
-      const adminClient = createAdminClient(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false,
-        },
-      })
-
-      const { data, error: profileError } = await adminClient
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle()
-
-      if (profileError) {
-        logger.warn('DashboardLayout', 'Error fetching profile with admin client', {
-          userId: user.id,
-          error: profileError.message,
-          code: profileError.code,
+      try {
+        const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+        const adminClient = createAdminClient(supabaseUrl, supabaseServiceKey, {
+          auth: {
+            autoRefreshToken: false,
+            persistSession: false,
+          },
         })
-      } else if (data && data.role) {
-        // Manejar el enum de PostgreSQL correctamente
-        const roleStr = String(data.role).trim().toLowerCase()
-        userRole = roleStr === 'admin' ? 'admin' : 'vendor'
-        
-        logger.debug('DashboardLayout', 'Role determined', {
+
+        const { data, error: profileError } = await adminClient
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle()
+
+        if (profileError) {
+          logger.warn('DashboardLayout', 'Error fetching profile with admin client', {
+            userId: user.id,
+            error: profileError.message,
+            code: profileError.code,
+          })
+        } else if (data && data.role) {
+          // Manejar el enum de PostgreSQL correctamente
+          const roleStr = String(data.role).trim().toLowerCase()
+          userRole = roleStr === 'admin' ? 'admin' : 'vendor'
+          
+          logger.debug('DashboardLayout', 'Role determined', {
+            userId: user.id,
+            roleRaw: data.role,
+            roleStr,
+            userRole,
+          })
+        }
+      } catch (adminClientError) {
+        logger.warn('DashboardLayout', 'Error creating admin client, using fallback', {
           userId: user.id,
-          roleRaw: data.role,
-          roleStr,
-          userRole,
+          error: adminClientError instanceof Error ? adminClientError.message : String(adminClientError),
         })
       }
-    } else {
-      // Fallback al cliente normal si no hay service key
-      const { data, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle()
+    }
+    
+    // Fallback al cliente normal si no hay service key o si falló el admin client
+    if (userRole === 'vendor') {
+      try {
+        const { data, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .maybeSingle()
 
-      if (!profileError && data && data.role) {
-        const roleStr = String(data.role).trim().toLowerCase()
-        userRole = roleStr === 'admin' ? 'admin' : 'vendor'
+        if (!profileError && data && data.role) {
+          const roleStr = String(data.role).trim().toLowerCase()
+          userRole = roleStr === 'admin' ? 'admin' : 'vendor'
+        }
+      } catch (fallbackError) {
+        logger.warn('DashboardLayout', 'Error in fallback profile fetch', {
+          userId: user.id,
+          error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+        })
+        // Continuar con rol por defecto (vendor) - no bloquear acceso
       }
     }
   } catch (error) {
-    // Error inesperado - usar rol por defecto
+    // Error inesperado - usar rol por defecto y PERMITIR ACCESO
     logger.error('DashboardLayout', 'Unexpected error fetching profile', error as Error, {
       userId: user.id,
     })
-    // Continuar con rol por defecto
+    // Continuar con rol por defecto - NO bloquear acceso al dashboard
   }
 
+  // Solo redirigir a /admin si definitivamente es admin
+  // Si hay dudas, permitir acceso al dashboard (mejor que bloquear)
   if (userRole === 'admin') {
+    shouldRedirectToAdmin = true
+    logger.info('DashboardLayout', 'Admin user detected, redirecting to admin panel', {
+      userId: user.id,
+      email: user.email,
+    })
+  }
+
+  // Redirigir solo si definitivamente es admin
+  if (shouldRedirectToAdmin) {
     redirect('/admin')
   }
 

@@ -59,15 +59,23 @@ export default async function Home() {
         })
         
         // Fallback al cliente normal
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .maybeSingle()
+        try {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('role')
+            .eq('id', user.id)
+            .maybeSingle()
 
-        if (profile && profile.role) {
-          const roleStr = String(profile.role).trim().toLowerCase()
-          role = roleStr === 'admin' ? 'admin' : 'vendor'
+          if (profile && profile.role) {
+            const roleStr = String(profile.role).trim().toLowerCase()
+            role = roleStr === 'admin' ? 'admin' : 'vendor'
+          }
+        } catch (fallbackError) {
+          logger.warn('Home', 'Error in fallback profile fetch', {
+            userId: user.id,
+            error: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
+          })
+          // Continuar con rol por defecto
         }
       }
     } else {

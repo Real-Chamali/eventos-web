@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef, memo, useCallback } from 'react'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import { useWindowSize } from '@/lib/hooks'
 import { createClient } from '@/utils/supabase/client'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import SearchInput from '@/components/ui/SearchInput'
@@ -58,6 +60,112 @@ interface Event {
   }[]
 }
 
+// Componente de fila memoizado para evitar re-renders innecesarios
+const EventRow = memo(function EventRow({
+  event,
+  isAdmin,
+  onEdit,
+  onDeleteClick,
+  getStatusBadge,
+  formatCurrency,
+  formatDateTime,
+}: {
+  event: Event
+  isAdmin: boolean
+  onEdit: (event: Event) => void
+  onDeleteClick: (id: string) => void
+  getStatusBadge: (status: string) => React.ReactNode
+  formatCurrency: (amount: number) => string
+  formatDateTime: (dateString: string) => string
+}) {
+  const quote = Array.isArray(event.quote) ? event.quote[0] : event.quote
+  const client = quote?.client 
+    ? (Array.isArray(quote.client) ? quote.client[0] : quote.client)
+    : null
+  const clientName = client?.name || 'Sin cliente'
+  const clientEmail = client?.email || ''
+
+  return (
+    <div className="group border-b border-gray-200 dark:border-gray-800 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 transition-colors">
+      <div className="grid grid-cols-12 gap-4 px-6 py-4 items-center">
+        <div className="col-span-3">
+          <div className="flex items-center space-x-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-900/30 dark:to-violet-900/30 flex items-center justify-center">
+              <User className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900 dark:text-white">{clientName}</p>
+              {clientEmail && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">{clientEmail}</p>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="col-span-2">
+          <div className="flex items-center space-x-2">
+            <CalendarIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+            <span className="text-sm text-gray-700 dark:text-gray-300">
+              {event.start_date ? formatDateTime(event.start_date) : 'Sin fecha'}
+            </span>
+          </div>
+        </div>
+        <div className="col-span-2">
+          {event.end_date ? (
+            <div className="flex items-center space-x-2">
+              <CalendarIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+              <span className="text-sm text-gray-700 dark:text-gray-300">
+                {formatDateTime(event.end_date)}
+              </span>
+            </div>
+          ) : (
+            <span className="text-sm text-gray-400 dark:text-gray-500">—</span>
+          )}
+        </div>
+        <div className="col-span-2">
+          {getStatusBadge(event.status)}
+        </div>
+        <div className="col-span-1">
+          <span className="font-semibold text-gray-900 dark:text-white">
+            {quote?.total_amount ? formatCurrency(quote.total_amount) : '—'}
+          </span>
+        </div>
+        <div className="col-span-2 text-right">
+          <div className="flex items-center justify-end gap-2">
+            {isAdmin && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onEdit(event)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  title="Editar evento"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => onDeleteClick(event.id)}
+                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                  title="Eliminar evento"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+            <Link href={`/dashboard/events/${event.id}`}>
+              <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                Ver detalles
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+})
+
 export default function EventsPageClient() {
   const [events, setEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
@@ -78,6 +186,14 @@ export default function EventsPageClient() {
   const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
   const { isAdmin } = useIsAdmin()
+  const tableContainerRef = useRef<HTMLDivElement>(null)
+  const { height: windowHeight } = useWindowSize()
+
+  // Calcular altura dinámica del contenedor (responsive)
+  const containerHeight = useMemo(() => {
+    const baseHeight = windowHeight > 768 ? windowHeight - 400 : windowHeight - 300
+    return Math.max(400, Math.min(800, baseHeight))
+  }, [windowHeight])
 
   useEffect(() => {
     loadEvents()
@@ -213,6 +329,24 @@ export default function EventsPageClient() {
     })
   }, [events, searchTerm, statusFilter, dateFilter])
 
+  // Virtual scrolling para la lista de eventos
+  const virtualizer = useVirtualizer({
+    count: filteredEvents.length,
+    getScrollElement: () => tableContainerRef.current,
+    estimateSize: () => 100,
+    overscan: 5,
+    measureElement: (element) => element?.getBoundingClientRect().height ?? 100,
+    scrollMargin: 20,
+  })
+  
+  // Scroll suave a un elemento específico
+  const scrollToIndex = useCallback((index: number) => {
+    virtualizer.scrollToIndex(index, {
+      align: 'start',
+      behavior: 'smooth',
+    })
+  }, [virtualizer])
+
   const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'confirmed':
@@ -248,7 +382,7 @@ export default function EventsPageClient() {
     }
   }
 
-  const handleEdit = (event: Event) => {
+  const handleEdit = useCallback((event: Event) => {
     // Obtener quote_id del evento si está disponible
     const quote = Array.isArray(event.quote) ? event.quote[0] : event.quote
     const quoteId = quote?.id
@@ -264,14 +398,14 @@ export default function EventsPageClient() {
       status: event.status,
     })
     setEditDialogOpen(true)
-  }
+  }, [toastError])
 
-  const handleDeleteClick = (eventId: string) => {
+  const handleDeleteClick = useCallback((eventId: string) => {
     setEventToDelete(eventId)
     setDeleteConfirmOpen(true)
-  }
+  }, [])
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = useCallback(async () => {
     if (!eventToDelete) return
 
     try {
@@ -290,7 +424,7 @@ export default function EventsPageClient() {
       logger.error('EventsPage', 'Error deleting event', error as Error)
       toastError('Error al eliminar el evento: ' + (error instanceof Error ? error.message : String(error)))
     }
-  }
+  }, [eventToDelete, supabase, toastSuccess, toastError, loadEvents])
 
   const stats = useMemo(() => {
     const total = events.length
@@ -474,115 +608,83 @@ export default function EventsPageClient() {
           <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-xl">Lista de Eventos</CardTitle>
-                <CardDescription className="mt-1">
-                  {filteredEvents.length} {filteredEvents.length === 1 ? 'evento encontrado' : 'eventos encontrados'}
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl">Lista de Eventos</CardTitle>
+                    <CardDescription className="mt-1">
+                      {filteredEvents.length} {filteredEvents.length === 1 ? 'evento encontrado' : 'eventos encontrados'}
+                    </CardDescription>
+                  </div>
+                  {/* Indicador de posición */}
+                  {virtualizer.getVirtualItems().length > 0 && (
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      Mostrando {virtualizer.getVirtualItems()[0]?.index + 1 || 0} - {virtualizer.getVirtualItems()[virtualizer.getVirtualItems().length - 1]?.index + 1 || 0} de {filteredEvents.length}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Fecha de Inicio</TableHead>
-                  <TableHead>Fecha de Fin</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredEvents.map((event) => {
-                  // Procesar quote que puede ser array o objeto
-                  const quote = Array.isArray(event.quote) ? event.quote[0] : event.quote
-                  const client = quote?.client 
-                    ? (Array.isArray(quote.client) ? quote.client[0] : quote.client)
-                    : null
-                  const clientName = client?.name || 'Sin cliente'
-                  const clientEmail = client?.email || ''
-
-                  return (
-                    <TableRow key={event.id} className="group hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 transition-colors">
-                      <TableCell>
-                        <div className="flex items-center space-x-3">
-                          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-100 to-violet-100 dark:from-indigo-900/30 dark:to-violet-900/30 flex items-center justify-center">
-                            <User className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-900 dark:text-white">{clientName}</p>
-                            {clientEmail && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400">{clientEmail}</p>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <CalendarIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                          <span className="text-sm text-gray-700 dark:text-gray-300">
-                            {event.start_date ? formatDateTime(event.start_date) : 'Sin fecha'}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {event.end_date ? (
-                          <div className="flex items-center space-x-2">
-                            <CalendarIcon className="h-4 w-4 text-gray-400 dark:text-gray-500" />
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
-                              {formatDateTime(event.end_date)}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-sm text-gray-400 dark:text-gray-500">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {getStatusBadge(event.status)}
-                      </TableCell>
-                      <TableCell>
-                        <span className="font-semibold text-gray-900 dark:text-white">
-                          {quote?.total_amount ? formatCurrency(quote.total_amount) : '—'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          {isAdmin && (
-                            <>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleEdit(event)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-                                title="Editar evento"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDeleteClick(event.id)}
-                                className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
-                                title="Eliminar evento"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </>
-                          )}
-                          <Link href={`/dashboard/events/${event.id}`}>
-                            <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                              Ver detalles
-                              <ArrowRight className="ml-2 h-4 w-4" />
-                            </Button>
-                          </Link>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
+            <div className="overflow-hidden">
+              {/* Header fijo */}
+              <div className="sticky top-0 z-10 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+                <div className="grid grid-cols-12 gap-4 px-6 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  <div className="col-span-3">Cliente</div>
+                  <div className="col-span-2">Fecha de Inicio</div>
+                  <div className="col-span-2">Fecha de Fin</div>
+                  <div className="col-span-2">Estado</div>
+                  <div className="col-span-1">Valor</div>
+                  <div className="col-span-2 text-right">Acciones</div>
+                </div>
+              </div>
+              
+              {/* Lista virtualizada con altura dinámica */}
+              <div 
+                ref={tableContainerRef} 
+                className="overflow-auto transition-all duration-300"
+                style={{ height: `${containerHeight}px` }}
+              >
+                <div
+                  style={{
+                    height: `${virtualizer.getTotalSize()}px`,
+                    width: '100%',
+                    position: 'relative',
+                  }}
+                  className="transition-opacity duration-300"
+                >
+                  {virtualizer.getVirtualItems().map((virtualRow) => {
+                    const event = filteredEvents[virtualRow.index]
+                    return (
+                      <div
+                        key={virtualRow.key}
+                        data-index={virtualRow.index}
+                        ref={virtualizer.measureElement}
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: `${virtualRow.size}px`,
+                          transform: `translateY(${virtualRow.start}px)`,
+                        }}
+                        className="transition-opacity duration-200"
+                      >
+                        <EventRow
+                          event={event}
+                          isAdmin={isAdmin}
+                          onEdit={handleEdit}
+                          onDeleteClick={handleDeleteClick}
+                          getStatusBadge={getStatusBadge}
+                          formatCurrency={formatCurrency}
+                          formatDateTime={formatDateTime}
+                        />
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { OptimizedImage } from '@/components/ui/OptimizedImage'
 import { useToast } from '@/lib/hooks'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -186,7 +187,14 @@ export default function SecuritySettings() {
               <div className="space-y-4">
                 {qrCode && (
                   <div className="flex flex-col items-center space-y-4">
-                    <img src={qrCode} alt="QR Code" className="w-64 h-64 border rounded-lg" />
+                    <OptimizedImage
+                      src={qrCode}
+                      alt="QR Code para autenticación de dos factores"
+                      width={256}
+                      height={256}
+                      className="object-contain border rounded-lg"
+                      priority
+                    />
                     {secret && (
                       <div className="w-full">
                         <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
