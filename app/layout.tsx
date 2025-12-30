@@ -119,7 +119,8 @@ export default function RootLayout({
                            message.includes('net::ERR_BLOCKED_BY_CLIENT') ||
                            message.includes('sentry.io') ||
                            message.includes('ingest.us.sentry.io') ||
-                           message.includes('o4510508203704320');
+                           message.includes('o4510508203704320') ||
+                           message.includes('Failed to load resource');
                   };
                   
                   console.error = function(...args) {
@@ -180,6 +181,7 @@ export default function RootLayout({
                     const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
                     if (url.includes('sentry.io') || url.includes('ingest.us.sentry.io')) {
                       // Retornar una promesa que nunca se resuelve (silenciosa)
+                      // Esto previene que aparezca en la consola como error
                       return new Promise(() => {});
                     }
                     return originalFetch.apply(this, args).catch(function(error) {
@@ -203,17 +205,29 @@ export default function RootLayout({
                     if (typeof url === 'string' && (url.includes('sentry.io') || url.includes('ingest.us.sentry.io'))) {
                       // Marcar para ignorar
                       this._shouldIgnore = true;
+                      // Prevenir que aparezca en la consola
+                      this.addEventListener('error', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }, true);
                     }
                     return originalXHROpen.apply(this, [method, url, ...rest]);
                   };
                   
                   XMLHttpRequest.prototype.send = function(...args) {
                     if (this._shouldIgnore) {
-                      // No hacer nada si es Sentry
+                      // No hacer nada si es Sentry - prevenir completamente la request
+                      // Agregar listeners para silenciar cualquier error
+                      this.addEventListener('error', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }, true);
+                      this.addEventListener('loadend', function() {}, true);
                       return;
                     }
                     return originalXHRSend.apply(this, args);
                   };
+                  
                 }
               })();
             `,

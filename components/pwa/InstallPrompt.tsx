@@ -33,8 +33,6 @@ export default function InstallPrompt() {
       return
     }
 
-    let autoPromptTimer: NodeJS.Timeout | null = null
-
     // Escuchar evento beforeinstallprompt
     const handleBeforeInstallPrompt = (e: Event) => {
       const promptEvent = e as BeforeInstallPromptEvent
@@ -48,19 +46,10 @@ export default function InstallPrompt() {
       // Mostrar nuestro prompt personalizado inmediatamente
       setShowPrompt(true)
       
-      // Llamar a prompt() automáticamente después de un breve delay
-      // Esto satisface el requisito del navegador que espera que prompt() se llame pronto
-      // El usuario verá nuestro prompt personalizado primero, y si no interactúa,
-      // Chrome mostrará su prompt nativo después de 3 segundos
-      autoPromptTimer = setTimeout(() => {
-        // Verificar que el prompt aún está disponible usando una verificación directa
-        if (promptEvent && !window.matchMedia('(display-mode: standalone)').matches) {
-          promptEvent.prompt().catch(() => {
-            // Ignorar errores si el prompt ya se mostró o fue cancelado
-            // Esto es esperado y no es un error real
-          })
-        }
-      }, 3000) // 3 segundos es suficiente para que el usuario vea nuestro prompt
+      // NO llamar a prompt() automáticamente - solo cuando el usuario haga click
+      // Esto evita el warning "Banner not shown" porque el navegador espera que
+      // prompt() se llame como resultado de una interacción del usuario, no automáticamente
+      // El usuario verá nuestro prompt personalizado y puede decidir instalar
     }
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
@@ -76,9 +65,6 @@ export default function InstallPrompt() {
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
       clearTimeout(checkInstalled)
-      if (autoPromptTimer) {
-        clearTimeout(autoPromptTimer)
-      }
     }
   }, [])
 
