@@ -100,25 +100,51 @@ export default function RootLayout({
                 // Silenciar errores de Sentry bloqueados por ad blockers
                 // Estos errores son esperados y no afectan la funcionalidad
                 if (typeof window !== 'undefined') {
-                  // Interceptar errores de red bloqueados
+                  // Interceptar TODOS los métodos de console que puedan mostrar errores
                   const originalError = console.error;
+                  const originalWarn = console.warn;
+                  const originalLog = console.log;
+                  
+                  const shouldSilence = function(...args) {
+                    const message = args.map(arg => {
+                      if (typeof arg === 'string') return arg;
+                      if (arg instanceof Error) return arg.message;
+                      if (arg && typeof arg === 'object') {
+                        try { return JSON.stringify(arg); } catch(e) { return String(arg); }
+                      }
+                      return String(arg);
+                    }).join(' ');
+                    
+                    return message.includes('ERR_BLOCKED_BY_CLIENT') || 
+                           message.includes('net::ERR_BLOCKED_BY_CLIENT') ||
+                           message.includes('sentry.io') ||
+                           message.includes('ingest.us.sentry.io') ||
+                           message.includes('o4510508203704320');
+                  };
+                  
                   console.error = function(...args) {
-                    const message = args.join(' ');
-                    if (message.includes('ERR_BLOCKED_BY_CLIENT') || 
-                        message.includes('net::ERR_BLOCKED_BY_CLIENT') ||
-                        message.includes('sentry.io')) {
-                      // Silenciar errores de Sentry bloqueados
-                      return;
-                    }
+                    if (shouldSilence(...args)) return;
                     originalError.apply(console, args);
                   };
                   
-                  // Interceptar errores de window
+                  console.warn = function(...args) {
+                    if (shouldSilence(...args)) return;
+                    originalWarn.apply(console, args);
+                  };
+                  
+                  console.log = function(...args) {
+                    if (shouldSilence(...args)) return;
+                    originalLog.apply(console, args);
+                  };
+                  
+                  // Interceptar errores de window (captura fase)
                   window.addEventListener('error', function(e) {
                     if (e.message && (
                       e.message.includes('ERR_BLOCKED_BY_CLIENT') ||
                       e.message.includes('net::ERR_BLOCKED_BY_CLIENT') ||
-                      (e.filename && e.filename.includes('sentry.io'))
+                      e.message.includes('sentry.io') ||
+                      e.message.includes('ingest.us.sentry.io') ||
+                      (e.filename && (e.filename.includes('sentry.io') || e.filename.includes('ingest.us.sentry.io')))
                     )) {
                       e.preventDefault();
                       e.stopPropagation();
@@ -131,8 +157,16 @@ export default function RootLayout({
                   window.addEventListener('unhandledrejection', function(e) {
                     const reason = e.reason;
                     if (reason && (
-                      (typeof reason === 'string' && (reason.includes('ERR_BLOCKED_BY_CLIENT') || reason.includes('sentry.io'))) ||
-                      (reason instanceof Error && (reason.message.includes('ERR_BLOCKED_BY_CLIENT') || reason.message.includes('sentry.io')))
+                      (typeof reason === 'string' && (
+                        reason.includes('ERR_BLOCKED_BY_CLIENT') || 
+                        reason.includes('sentry.io') ||
+                        reason.includes('ingest.us.sentry.io')
+                      )) ||
+                      (reason instanceof Error && (
+                        reason.message.includes('ERR_BLOCKED_BY_CLIENT') || 
+                        reason.message.includes('sentry.io') ||
+                        reason.message.includes('ingest.us.sentry.io')
+                      ))
                     )) {
                       e.preventDefault();
                       e.stopPropagation();
@@ -140,24 +174,45 @@ export default function RootLayout({
                     }
                   }, true);
                   
-                  // Interceptar fetch bloqueados
+                  // Interceptar fetch/XHR bloqueados ANTES de que se ejecuten
                   const originalFetch = window.fetch;
                   window.fetch = function(...args) {
                     const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
-                    if (url.includes('sentry.io')) {
-                      // Silenciar fetch a Sentry bloqueado
-                      return Promise.reject(new Error('Resource blocked by client'));
+                    if (url.includes('sentry.io') || url.includes('ingest.us.sentry.io')) {
+                      // Retornar una promesa que nunca se resuelve (silenciosa)
+                      return new Promise(() => {});
                     }
                     return originalFetch.apply(this, args).catch(function(error) {
                       if (error && (
                         (error.message && error.message.includes('ERR_BLOCKED_BY_CLIENT')) ||
-                        url.includes('sentry.io')
+                        url.includes('sentry.io') ||
+                        url.includes('ingest.us.sentry.io')
                       )) {
-                        // Silenciar error de Sentry bloqueado
-                        return Promise.reject(new Error('Resource blocked by client'));
+                        // Silenciar error de Sentry bloqueado - retornar promesa que nunca se resuelve
+                        return new Promise(() => {});
                       }
                       throw error;
                     });
+                  };
+                  
+                  // Interceptar XMLHttpRequest también
+                  const originalXHROpen = XMLHttpRequest.prototype.open;
+                  const originalXHRSend = XMLHttpRequest.prototype.send;
+                  
+                  XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+                    if (typeof url === 'string' && (url.includes('sentry.io') || url.includes('ingest.us.sentry.io'))) {
+                      // Marcar para ignorar
+                      this._shouldIgnore = true;
+                    }
+                    return originalXHROpen.apply(this, [method, url, ...rest]);
+                  };
+                  
+                  XMLHttpRequest.prototype.send = function(...args) {
+                    if (this._shouldIgnore) {
+                      // No hacer nada si es Sentry
+                      return;
+                    }
+                    return originalXHRSend.apply(this, args);
                   };
                 }
               })();
