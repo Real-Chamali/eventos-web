@@ -5,43 +5,23 @@
 
 ---
 
-## ✅ URL PRINCIPAL (FUNCIONA AHORA)
+## ✅ URL PRINCIPAL DE PRODUCCIÓN
 
 ```
 https://eventos-1caznmnl6-victhorrrs-projects.vercel.app
 ```
 
-**Esta URL está activa y funcionando al 100%**
+**Esta es la URL oficial de producción.**  
+✅ Funciona al 100%  
+✅ HTTPS/SSL activo  
+✅ Todas las funcionalidades disponibles
 
 ---
 
-## 🔧 DOMINIO PERSONALIZADO (Pendiente DNS)
+## 📝 NOTA
 
-```
-https://real-chamali-vercel.app
-```
-
-**Estado:** ❌ DNS no configurado  
-**Acción requerida:** Configurar registro DNS (ver `SOLUCION_DNS.md`)
-
----
-
-## 📋 INFORMACIÓN DE CONFIGURACIÓN DNS
-
-Para activar `real-chamali-vercel.app`, configura en tu registrador:
-
-**Registro A (Recomendado):**
-```
-Tipo: A
-Nombre: @
-Valor: 76.76.21.21
-```
-
-**O Nameservers de Vercel:**
-```
-ns1.vercel-dns.com
-ns2.vercel-dns.com
-```
+Se eliminó el dominio personalizado que no estaba configurado.  
+La aplicación usa el dominio de Vercel, que es estable y confiable.
 
 ---
 
