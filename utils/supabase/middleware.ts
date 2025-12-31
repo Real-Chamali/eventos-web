@@ -78,16 +78,24 @@ export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname
 
   // Excluir solo rutas estáticas, NO APIs
+  // PERO incluir manifest.json que debe ser público para PWA
   if (
     pathname.startsWith('/_next') ||
     pathname === '/favicon.ico' ||
+    pathname === '/manifest.json' ||
     pathname.match(/\.(ico|png|jpg|jpeg|svg|gif|webp)$/)
   ) {
     return supabaseResponse
   }
 
   // Para rutas API, verificar autenticación pero no redirigir
+  // EXCEPTO manifest.json que debe ser público
   if (pathname.startsWith('/api')) {
+    // Permitir manifest.json sin autenticación
+    if (pathname === '/api/manifest.json' || pathname.includes('/manifest.json')) {
+      return supabaseResponse
+    }
+    
     if (!user) {
       // Para APIs, retornar JSON en lugar de redirigir
       return NextResponse.json(
