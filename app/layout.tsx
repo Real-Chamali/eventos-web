@@ -106,6 +106,80 @@ export default function RootLayout({
                 // Silenciar errores de Sentry bloqueados por ad blockers
                 // Estos errores son esperados y no afectan la funcionalidad
                 if (typeof window !== 'undefined') {
+                  // Interceptar TODOS los errores de red ANTES que se registren
+                  const originalFetch = window.fetch;
+                  const originalXHROpen = XMLHttpRequest.prototype.open;
+                  const originalXHRSend = XMLHttpRequest.prototype.send;
+                  
+                  // Interceptar fetch MUY TEMPRANO
+                  window.fetch = function(...args) {
+                    const url = typeof args[0] === 'string' ? args[0] : (args[0]?.url || '');
+                    const urlLower = url.toLowerCase();
+                    if (urlLower.includes('sentry.io') || 
+                        urlLower.includes('ingest.us.sentry.io') || 
+                        urlLower.includes('o4510508203704320') || 
+                        urlLower.includes('4510508220088320')) {
+                      // Silenciar completamente - retornar promesa que nunca resuelve
+                      return new Promise(() => {});
+                    }
+                    try {
+                      return originalFetch.apply(this, args).catch(function(error) {
+                        // Silenciar errores de Sentry bloqueados
+                        const errorStr = (error?.message || '').toLowerCase();
+                        if (errorStr.includes('blocked') || 
+                            errorStr.includes('sentry') ||
+                            urlLower.includes('sentry')) {
+                          return new Promise(() => {});
+                        }
+                        throw error;
+                      });
+                    } catch (e) {
+                      // Si fetch mismo falla, silenciar si es Sentry
+                      if (urlLower.includes('sentry')) {
+                        return new Promise(() => {});
+                      }
+                      throw e;
+                    }
+                  };
+                  
+                  // Interceptar XMLHttpRequest MUY TEMPRANO
+                  XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+                    const urlLower = (typeof url === 'string' ? url : '').toLowerCase();
+                    if (urlLower.includes('sentry.io') || 
+                        urlLower.includes('ingest.us.sentry.io') || 
+                        urlLower.includes('o4510508203704320') || 
+                        urlLower.includes('4510508220088320')) {
+                      this._shouldIgnore = true;
+                      // Prevenir todos los eventos de error
+                      const ignoreError = function(e) {
+                        if (e) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          e.stopImmediatePropagation();
+                        }
+                      };
+                      this.addEventListener('error', ignoreError, true);
+                      this.addEventListener('loadend', function() {}, true);
+                    }
+                    return originalXHROpen.apply(this, [method, url, ...rest]);
+                  };
+                  
+                  XMLHttpRequest.prototype.send = function(...args) {
+                    if (this._shouldIgnore) {
+                      // Prevenir todos los eventos
+                      const ignoreError = function(e) {
+                        if (e) {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          e.stopImmediatePropagation();
+                        }
+                      };
+                      this.addEventListener('error', ignoreError, true);
+                      this.addEventListener('loadend', function() {}, true);
+                      return;
+                    }
+                    return originalXHRSend.apply(this, args);
+                  };
                   // Función helper para verificar si un mensaje debe ser silenciado
                   const shouldSilenceMessage = function(message) {
                     if (!message || typeof message !== 'string') return false;
@@ -203,51 +277,6 @@ export default function RootLayout({
                     }
                   }, true);
                   
-                  // Interceptar fetch/XHR bloqueados ANTES de que se ejecuten
-                  const originalFetch = window.fetch;
-                  window.fetch = function(...args) {
-                    const url = typeof args[0] === 'string' ? args[0] : (args[0]?.url || '');
-                    const urlLower = url.toLowerCase();
-                    if (urlLower.includes('sentry.io') || urlLower.includes('ingest.us.sentry.io') || urlLower.includes('o4510508203704320') || urlLower.includes('4510508220088320')) {
-                      // Retornar una promesa que nunca se resuelve (silenciosa)
-                      return new Promise(() => {});
-                    }
-                    return originalFetch.apply(this, args).catch(function(error) {
-                      const errorMessage = (error?.message || '').toLowerCase();
-                      if (shouldSilenceMessage(errorMessage) || shouldSilenceMessage(urlLower)) {
-                        return new Promise(() => {});
-                      }
-                      throw error;
-                    });
-                  };
-                  
-                  // Interceptar XMLHttpRequest también
-                  const originalXHROpen = XMLHttpRequest.prototype.open;
-                  const originalXHRSend = XMLHttpRequest.prototype.send;
-                  
-                  XMLHttpRequest.prototype.open = function(method, url, ...rest) {
-                    const urlLower = (typeof url === 'string' ? url : '').toLowerCase();
-                    if (urlLower.includes('sentry.io') || urlLower.includes('ingest.us.sentry.io') || urlLower.includes('o4510508203704320') || urlLower.includes('4510508220088320')) {
-                      this._shouldIgnore = true;
-                      this.addEventListener('error', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }, true);
-                    }
-                    return originalXHROpen.apply(this, [method, url, ...rest]);
-                  };
-                  
-                  XMLHttpRequest.prototype.send = function(...args) {
-                    if (this._shouldIgnore) {
-                      this.addEventListener('error', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }, true);
-                      this.addEventListener('loadend', function() {}, true);
-                      return;
-                    }
-                    return originalXHRSend.apply(this, args);
-                  };
                 }
                 
                 // Prevenir FOUC - mostrar contenido solo cuando esté listo
