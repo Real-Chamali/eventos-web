@@ -598,6 +598,20 @@ export default function NewQuotePage() {
       
       logger.info('NewQuotePage', 'Quote created successfully', { quoteId: createdQuoteId })
       
+      // Track analytics
+      if (createdQuoteId) {
+        try {
+          const { trackingEvents } = await import('@/lib/utils/analytics')
+          const totalAmount = quoteServices.reduce((sum, qs) => sum + (qs.final_price * qs.quantity), 0)
+          trackingEvents.quoteCreated(createdQuoteId, totalAmount)
+        } catch (analyticsError) {
+          // No fallar si hay error en analytics
+          logger.warn('NewQuotePage', 'Error tracking analytics', {
+            error: analyticsError instanceof Error ? analyticsError.message : String(analyticsError),
+          })
+        }
+      }
+      
       // Limpiar borrador antes de redirigir
       clearDraft()
       

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
@@ -50,7 +50,7 @@ interface RegisterPaymentDialogProps {
   onSuccess?: () => void
 }
 
-export default function RegisterPaymentDialog({
+function RegisterPaymentDialog({
   quoteId,
   totalPrice,
   currentPaid,
@@ -130,6 +130,17 @@ export default function RegisterPaymentDialog({
       })
 
       if (error) throw error
+
+      // Track analytics
+      try {
+        const { trackingEvents } = await import('@/lib/utils/analytics')
+        trackingEvents.exportPDF(`payment-${quoteId}-${Date.now()}`)
+      } catch (analyticsError) {
+        // No fallar si hay error en analytics
+        logger.warn('RegisterPaymentDialog', 'Error tracking analytics', {
+          error: analyticsError instanceof Error ? analyticsError.message : String(analyticsError),
+        })
+      }
 
       // Enviar WhatsApp al cliente si tiene teléfono
       try {
@@ -477,4 +488,6 @@ export default function RegisterPaymentDialog({
     </Dialog>
   )
 }
+
+export default memo(RegisterPaymentDialog)
 

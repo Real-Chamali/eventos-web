@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, memo } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { useToast, useIsAdmin } from '@/lib/hooks'
@@ -38,7 +38,7 @@ interface AdminQuoteControlsProps {
   allowDelete?: boolean
 }
 
-export default function AdminQuoteControls({
+function AdminQuoteControls({
   quoteId,
   currentStatus,
   onStatusChange,
@@ -120,7 +120,12 @@ export default function AdminQuoteControls({
       }
 
       // Enviar WhatsApp al cliente si el estado cambió a aprobado o rechazado
-      if (newStatus === 'confirmed' || newStatus === 'cancelled') {
+      // Manejar tanto 'confirmed'/'cancelled' (frontend) como 'APPROVED'/'REJECTED' (BD)
+      const statusString = String(newStatus).toUpperCase()
+      const isApproved = newStatus === 'confirmed' || statusString === 'APPROVED'
+      const isRejected = newStatus === 'cancelled' || statusString === 'REJECTED'
+      
+      if (isApproved || isRejected) {
         try {
           // Obtener datos de la cotización y cliente
           const { data: quoteData } = await supabase
@@ -144,7 +149,7 @@ export default function AdminQuoteControls({
               const { whatsappTemplates } = await import('@/lib/integrations/whatsapp')
               
               let message: string
-              if (newStatus === 'confirmed') {
+              if (isApproved) {
                 message = whatsappTemplates.quoteApproved(
                   quoteId,
                   client.name,
@@ -167,7 +172,7 @@ export default function AdminQuoteControls({
               })
 
               // Si se aprobó, notificar al admin también
-              if (newStatus === 'confirmed') {
+              if (isApproved) {
                 try {
                   const { whatsappTemplates } = await import('@/lib/integrations/whatsapp')
                   const adminMessage = whatsappTemplates.admin.quoteApproved(
@@ -186,6 +191,19 @@ export default function AdminQuoteControls({
                   // No fallar si hay error
                   logger.warn('AdminQuoteControls', 'Error sending WhatsApp to admin', {
                     error: adminError instanceof Error ? adminError.message : String(adminError),
+                  })
+                }
+              }
+
+              // Track analytics después de obtener los datos
+              if (isApproved) {
+                try {
+                  const { trackingEvents } = await import('@/lib/utils/analytics')
+                  trackingEvents.quoteClosed(quoteId, quoteData.total_amount || 0)
+                } catch (analyticsError) {
+                  // No fallar si hay error en analytics
+                  logger.warn('AdminQuoteControls', 'Error tracking analytics', {
+                    error: analyticsError instanceof Error ? analyticsError.message : String(analyticsError),
                   })
                 }
               }
@@ -406,4 +424,6 @@ export default function AdminQuoteControls({
     </Card>
   )
 }
+
+export default memo(AdminQuoteControls)
 

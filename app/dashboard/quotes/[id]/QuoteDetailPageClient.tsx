@@ -202,27 +202,27 @@ export default function QuoteDetailPageClient({ initialQuote }: QuoteDetailPageC
 
   const clientName = quote.client?.name || 'Cliente sin nombre'
   const clientEmail = quote.client?.email || ''
-  const structuredData = [
-    generateQuoteStructuredData({
-      id: quote.id,
-      clientName,
-      totalPrice: quote.total_price,
-      status: quote.status,
-      createdAt: quote.created_at,
-      eventDate: quote.event_date || undefined,
-      updatedAt: quote.updated_at || undefined,
-      services: quote.quote_services?.map(qs => ({
-        name: qs.service?.name || 'Servicio',
-        quantity: qs.quantity,
-        price: qs.final_price,
-      })),
-    }),
-    generateOrganizationStructuredData(),
-  ]
+  const quoteStructuredData = generateQuoteStructuredData({
+    id: quote.id,
+    clientName,
+    totalPrice: quote.total_price,
+    status: quote.status,
+    createdAt: quote.created_at,
+    eventDate: quote.event_date || undefined,
+    updatedAt: quote.updated_at || undefined,
+    services: quote.quote_services?.map(qs => ({
+      name: qs.service?.name || 'Servicio',
+      quantity: qs.quantity,
+      price: qs.final_price,
+    })),
+  })
+
+  const organizationStructuredData = generateOrganizationStructuredData()
 
   return (
     <div className="space-y-8 p-6 lg:p-8">
-      <StructuredData data={structuredData} />
+      <StructuredData type="quote" data={quoteStructuredData} />
+      <StructuredData type="organization" data={organizationStructuredData} />
       
       <PageHeader
         title={`Cotización #${quote.id.slice(0, 8)}`}

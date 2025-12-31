@@ -1,25 +1,46 @@
+'use client'
+
 /**
- * Componente para inyectar Structured Data (JSON-LD)
- * Útil para páginas client components que necesitan structured data
+ * Componente para agregar Structured Data (JSON-LD) a las páginas
+ * Mejora el SEO y la visibilidad en motores de búsqueda
  */
 
+import { generateOrganizationSchema, generateEventSchema, generateQuoteSchema, generateWebSiteSchema, generateBreadcrumbSchema } from '@/lib/utils/structuredData'
+
 interface StructuredDataProps {
-  data: object | object[]
+  type: 'organization' | 'event' | 'quote' | 'website' | 'breadcrumb'
+  data: any
 }
 
-export default function StructuredData({ data }: StructuredDataProps) {
-  const jsonLd = Array.isArray(data) ? data : [data]
+export default function StructuredData({ type, data }: StructuredDataProps) {
+  let schema: object
+
+  switch (type) {
+    case 'organization':
+      schema = generateOrganizationSchema(data)
+      break
+    case 'event':
+      schema = generateEventSchema(data)
+      break
+    case 'quote':
+      schema = generateQuoteSchema(data)
+      break
+    case 'website':
+      schema = generateWebSiteSchema(data)
+      break
+    case 'breadcrumb':
+      schema = generateBreadcrumbSchema(data)
+      break
+    default:
+      return null
+  }
 
   return (
-    <>
-      {jsonLd.map((item, index) => (
-        <script
-          key={index}
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(item) }}
-        />
-      ))}
-    </>
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{
+        __html: JSON.stringify(schema),
+      }}
+    />
   )
 }
-

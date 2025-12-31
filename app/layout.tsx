@@ -75,10 +75,171 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="msapplication-TileColor" content="#6366f1" />
         <meta name="msapplication-config" content="/browserconfig.xml" />
+        {/* Google Analytics */}
+        {process.env.NEXT_PUBLIC_GA_ID && (
+          <>
+            <script
+              async
+              src={`https://www.googletagmanager.com/gtag/js?id=${process.env.NEXT_PUBLIC_GA_ID}`}
+            />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${process.env.NEXT_PUBLIC_GA_ID}', {
+                    page_path: window.location.pathname,
+                  });
+                `,
+              }}
+            />
+          </>
+        )}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
+                // IMPORTANTE: Este script debe ejecutarse ANTES que cualquier otro
+                // para capturar errores desde el inicio
+                
+                // Silenciar errores de Sentry bloqueados por ad blockers
+                // Estos errores son esperados y no afectan la funcionalidad
+                if (typeof window !== 'undefined') {
+                  // Función helper para verificar si un mensaje debe ser silenciado
+                  const shouldSilenceMessage = function(message) {
+                    if (!message || typeof message !== 'string') return false;
+                    const lowerMessage = message.toLowerCase();
+                    return lowerMessage.includes('err_blocked_by_client') ||
+                           lowerMessage.includes('net::err_blocked_by_client') ||
+                           lowerMessage.includes('sentry.io') ||
+                           lowerMessage.includes('ingest.us.sentry.io') ||
+                           lowerMessage.includes('o4510508203704320') ||
+                           lowerMessage.includes('4510508220088320') ||
+                           lowerMessage.includes('failed to load resource') ||
+                           lowerMessage.includes('beforeinstallpromptevent.preventdefault') ||
+                           lowerMessage.includes('banner not shown') ||
+                           lowerMessage.includes('beforeinstallprompt') ||
+                           lowerMessage.includes('the page must call beforeinstallpromptevent.prompt()');
+                  };
+                  
+                  // Interceptar console ANTES que cualquier otro código
+                  const originalError = console.error;
+                  const originalWarn = console.warn;
+                  const originalLog = console.log;
+                  
+                  console.error = function(...args) {
+                    const message = args.map(arg => {
+                      if (typeof arg === 'string') return arg;
+                      if (arg instanceof Error) return arg.message;
+                      if (arg && typeof arg === 'object') {
+                        try { return JSON.stringify(arg); } catch(e) { return String(arg); }
+                      }
+                      return String(arg);
+                    }).join(' ');
+                    
+                    if (shouldSilenceMessage(message)) return;
+                    originalError.apply(console, args);
+                  };
+                  
+                  console.warn = function(...args) {
+                    const message = args.map(arg => {
+                      if (typeof arg === 'string') return arg;
+                      if (arg instanceof Error) return arg.message;
+                      if (arg && typeof arg === 'object') {
+                        try { return JSON.stringify(arg); } catch(e) { return String(arg); }
+                      }
+                      return String(arg);
+                    }).join(' ');
+                    
+                    if (shouldSilenceMessage(message)) return;
+                    originalWarn.apply(console, args);
+                  };
+                  
+                  console.log = function(...args) {
+                    const message = args.map(arg => {
+                      if (typeof arg === 'string') return arg;
+                      if (arg instanceof Error) return arg.message;
+                      if (arg && typeof arg === 'object') {
+                        try { return JSON.stringify(arg); } catch(e) { return String(arg); }
+                      }
+                      return String(arg);
+                    }).join(' ');
+                    
+                    if (shouldSilenceMessage(message)) return;
+                    originalLog.apply(console, args);
+                  };
+                  
+                  // Interceptar errores de window MUY TEMPRANO (captura fase)
+                  window.addEventListener('error', function(e) {
+                    const errorMessage = (e.message || '').toLowerCase();
+                    const errorSource = ((e.filename || e.target?.src || '')).toLowerCase();
+                    if (shouldSilenceMessage(errorMessage) || shouldSilenceMessage(errorSource)) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.stopImmediatePropagation();
+                      return false;
+                    }
+                  }, true);
+                  
+                  // Interceptar errores no capturados de promesas
+                  window.addEventListener('unhandledrejection', function(e) {
+                    const reason = e.reason;
+                    const reasonStr = typeof reason === 'string' ? reason : (reason instanceof Error ? reason.message : String(reason || ''));
+                    if (shouldSilenceMessage(reasonStr)) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      return false;
+                    }
+                  }, true);
+                  
+                  // Interceptar fetch/XHR bloqueados ANTES de que se ejecuten
+                  const originalFetch = window.fetch;
+                  window.fetch = function(...args) {
+                    const url = typeof args[0] === 'string' ? args[0] : (args[0]?.url || '');
+                    const urlLower = url.toLowerCase();
+                    if (urlLower.includes('sentry.io') || urlLower.includes('ingest.us.sentry.io') || urlLower.includes('o4510508203704320') || urlLower.includes('4510508220088320')) {
+                      // Retornar una promesa que nunca se resuelve (silenciosa)
+                      return new Promise(() => {});
+                    }
+                    return originalFetch.apply(this, args).catch(function(error) {
+                      const errorMessage = (error?.message || '').toLowerCase();
+                      if (shouldSilenceMessage(errorMessage) || shouldSilenceMessage(urlLower)) {
+                        return new Promise(() => {});
+                      }
+                      throw error;
+                    });
+                  };
+                  
+                  // Interceptar XMLHttpRequest también
+                  const originalXHROpen = XMLHttpRequest.prototype.open;
+                  const originalXHRSend = XMLHttpRequest.prototype.send;
+                  
+                  XMLHttpRequest.prototype.open = function(method, url, ...rest) {
+                    const urlLower = (typeof url === 'string' ? url : '').toLowerCase();
+                    if (urlLower.includes('sentry.io') || urlLower.includes('ingest.us.sentry.io') || urlLower.includes('o4510508203704320') || urlLower.includes('4510508220088320')) {
+                      this._shouldIgnore = true;
+                      this.addEventListener('error', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }, true);
+                    }
+                    return originalXHROpen.apply(this, [method, url, ...rest]);
+                  };
+                  
+                  XMLHttpRequest.prototype.send = function(...args) {
+                    if (this._shouldIgnore) {
+                      this.addEventListener('error', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }, true);
+                      this.addEventListener('loadend', function() {}, true);
+                      return;
+                    }
+                    return originalXHRSend.apply(this, args);
+                  };
+                }
+                
                 // Prevenir FOUC - mostrar contenido solo cuando esté listo
                 try {
                   if (document.readyState === 'loading') {
@@ -96,141 +257,29 @@ export default function RootLayout({
                     document.documentElement.style.opacity = '1';
                   }
                 } catch(e) {}
-                
-                // Silenciar errores de Sentry bloqueados por ad blockers
-                // Estos errores son esperados y no afectan la funcionalidad
-                if (typeof window !== 'undefined') {
-                  // Interceptar TODOS los métodos de console que puedan mostrar errores
-                  const originalError = console.error;
-                  const originalWarn = console.warn;
-                  const originalLog = console.log;
-                  
-                  const shouldSilence = function(...args) {
-                    const message = args.map(arg => {
-                      if (typeof arg === 'string') return arg;
-                      if (arg instanceof Error) return arg.message;
-                      if (arg && typeof arg === 'object') {
-                        try { return JSON.stringify(arg); } catch(e) { return String(arg); }
-                      }
-                      return String(arg);
-                    }).join(' ');
-                    
-                    return message.includes('ERR_BLOCKED_BY_CLIENT') || 
-                           message.includes('net::ERR_BLOCKED_BY_CLIENT') ||
-                           message.includes('sentry.io') ||
-                           message.includes('ingest.us.sentry.io') ||
-                           message.includes('o4510508203704320') ||
-                           message.includes('Failed to load resource');
-                  };
-                  
-                  console.error = function(...args) {
-                    if (shouldSilence(...args)) return;
-                    originalError.apply(console, args);
-                  };
-                  
-                  console.warn = function(...args) {
-                    if (shouldSilence(...args)) return;
-                    originalWarn.apply(console, args);
-                  };
-                  
-                  console.log = function(...args) {
-                    if (shouldSilence(...args)) return;
-                    originalLog.apply(console, args);
-                  };
-                  
-                  // Interceptar errores de window (captura fase)
-                  window.addEventListener('error', function(e) {
-                    if (e.message && (
-                      e.message.includes('ERR_BLOCKED_BY_CLIENT') ||
-                      e.message.includes('net::ERR_BLOCKED_BY_CLIENT') ||
-                      e.message.includes('sentry.io') ||
-                      e.message.includes('ingest.us.sentry.io') ||
-                      (e.filename && (e.filename.includes('sentry.io') || e.filename.includes('ingest.us.sentry.io')))
-                    )) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      e.stopImmediatePropagation();
-                      return false;
-                    }
-                  }, true);
-                  
-                  // Interceptar errores no capturados de promesas
-                  window.addEventListener('unhandledrejection', function(e) {
-                    const reason = e.reason;
-                    if (reason && (
-                      (typeof reason === 'string' && (
-                        reason.includes('ERR_BLOCKED_BY_CLIENT') || 
-                        reason.includes('sentry.io') ||
-                        reason.includes('ingest.us.sentry.io')
-                      )) ||
-                      (reason instanceof Error && (
-                        reason.message.includes('ERR_BLOCKED_BY_CLIENT') || 
-                        reason.message.includes('sentry.io') ||
-                        reason.message.includes('ingest.us.sentry.io')
-                      ))
-                    )) {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      return false;
-                    }
-                  }, true);
-                  
-                  // Interceptar fetch/XHR bloqueados ANTES de que se ejecuten
-                  const originalFetch = window.fetch;
-                  window.fetch = function(...args) {
-                    const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
-                    if (url.includes('sentry.io') || url.includes('ingest.us.sentry.io')) {
-                      // Retornar una promesa que nunca se resuelve (silenciosa)
-                      // Esto previene que aparezca en la consola como error
-                      return new Promise(() => {});
-                    }
-                    return originalFetch.apply(this, args).catch(function(error) {
-                      if (error && (
-                        (error.message && error.message.includes('ERR_BLOCKED_BY_CLIENT')) ||
-                        url.includes('sentry.io') ||
-                        url.includes('ingest.us.sentry.io')
-                      )) {
-                        // Silenciar error de Sentry bloqueado - retornar promesa que nunca se resuelve
-                        return new Promise(() => {});
-                      }
-                      throw error;
-                    });
-                  };
-                  
-                  // Interceptar XMLHttpRequest también
-                  const originalXHROpen = XMLHttpRequest.prototype.open;
-                  const originalXHRSend = XMLHttpRequest.prototype.send;
-                  
-                  XMLHttpRequest.prototype.open = function(method, url, ...rest) {
-                    if (typeof url === 'string' && (url.includes('sentry.io') || url.includes('ingest.us.sentry.io'))) {
-                      // Marcar para ignorar
-                      this._shouldIgnore = true;
-                      // Prevenir que aparezca en la consola
-                      this.addEventListener('error', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }, true);
-                    }
-                    return originalXHROpen.apply(this, [method, url, ...rest]);
-                  };
-                  
-                  XMLHttpRequest.prototype.send = function(...args) {
-                    if (this._shouldIgnore) {
-                      // No hacer nada si es Sentry - prevenir completamente la request
-                      // Agregar listeners para silenciar cualquier error
-                      this.addEventListener('error', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }, true);
-                      this.addEventListener('loadend', function() {}, true);
-                      return;
-                    }
-                    return originalXHRSend.apply(this, args);
-                  };
-                  
-                }
               })();
             `,
+          }}
+        />
+        {/* Structured Data para SEO - Organización */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              '@context': 'https://schema.org',
+              '@type': 'Organization',
+              name: 'Eventos Web',
+              url: process.env.NEXT_PUBLIC_APP_URL || 'https://eventos-web.vercel.app',
+              description: 'Sistema de gestión de eventos y cotizaciones',
+              potentialAction: {
+                '@type': 'SearchAction',
+                target: {
+                  '@type': 'EntryPoint',
+                  urlTemplate: `${process.env.NEXT_PUBLIC_APP_URL || ''}/dashboard/quotes?search={search_term_string}`,
+                },
+                'query-input': 'required name=search_term_string',
+              },
+            }),
           }}
         />
       </head>
