@@ -20,6 +20,19 @@ https://eventos-1caznmnl6-victhorrrs-projects.vercel.app
 
 ---
 
+## 🔗 URLs ALTERNATIVAS (También Funcionan)
+
+Vercel también proporciona estas URLs alternativas:
+
+```
+https://eventos-web-victhorrrs-projects.vercel.app
+https://eventos-web-victhorrr-victhorrrs-projects.vercel.app
+```
+
+Todas estas URLs apuntan a la misma aplicación.
+
+---
+
 ## 🔗 LINKS ÚTILES
 
 - **Dashboard Vercel:** https://vercel.com/victhorrrs-projects/eventos-web
