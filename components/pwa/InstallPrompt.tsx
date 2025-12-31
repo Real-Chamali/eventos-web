@@ -38,14 +38,14 @@ export default function InstallPrompt() {
       const promptEvent = e as BeforeInstallPromptEvent
       
       // Prevenir el banner automático del navegador
-      // Solo prevenir si realmente vamos a mostrar nuestro prompt personalizado
+      // Esto es necesario para mostrar nuestro prompt personalizado
       e.preventDefault()
       
       // Guardar el evento para mostrarlo cuando el usuario lo solicite
       setDeferredPrompt(promptEvent)
       
       // Mostrar nuestro prompt personalizado después de un pequeño delay
-      // Esto permite que el navegador procese el preventDefault correctamente
+      // Esto evita warnings del navegador mientras el componente se monta
       setTimeout(() => {
         setShowPrompt(true)
       }, 100)

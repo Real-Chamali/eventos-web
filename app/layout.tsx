@@ -110,17 +110,27 @@ export default function RootLayout({
                   const shouldSilenceMessage = function(message) {
                     if (!message || typeof message !== 'string') return false;
                     const lowerMessage = message.toLowerCase();
-                    return lowerMessage.includes('err_blocked_by_client') ||
-                           lowerMessage.includes('net::err_blocked_by_client') ||
-                           lowerMessage.includes('sentry.io') ||
-                           lowerMessage.includes('ingest.us.sentry.io') ||
-                           lowerMessage.includes('o4510508203704320') ||
-                           lowerMessage.includes('4510508220088320') ||
-                           lowerMessage.includes('failed to load resource') ||
-                           lowerMessage.includes('beforeinstallpromptevent.preventdefault') ||
-                           lowerMessage.includes('banner not shown') ||
-                           lowerMessage.includes('beforeinstallprompt') ||
-                           lowerMessage.includes('the page must call beforeinstallpromptevent.prompt()');
+                    
+                    // Silenciar errores de Sentry bloqueados
+                    if (lowerMessage.includes('err_blocked_by_client') ||
+                        lowerMessage.includes('net::err_blocked_by_client') ||
+                        lowerMessage.includes('sentry.io') ||
+                        lowerMessage.includes('ingest.us.sentry.io') ||
+                        lowerMessage.includes('o4510508203704320') ||
+                        lowerMessage.includes('4510508220088320') ||
+                        lowerMessage.includes('failed to load resource')) {
+                      return true;
+                    }
+                    
+                    // Silenciar warnings de PWA install prompt - capturar todas las variantes
+                    if (lowerMessage.includes('banner not shown') ||
+                        (lowerMessage.includes('beforeinstallprompt') && (lowerMessage.includes('preventdefault') || lowerMessage.includes('prevent default'))) ||
+                        (lowerMessage.includes('the page must call') && lowerMessage.includes('prompt')) ||
+                        (lowerMessage.includes('must call') && lowerMessage.includes('prompt') && (lowerMessage.includes('banner') || lowerMessage.includes('beforeinstallprompt')))) {
+                      return true;
+                    }
+                    
+                    return false;
                   };
                   
                   // Interceptar console ANTES que cualquier otro código
