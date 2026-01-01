@@ -47,8 +47,28 @@ export async function DELETE(
       return NextResponse.json({ error: 'Cotización no encontrada' }, { status: 404 })
     }
 
+    // Usar service role key para eliminar cotización (bypass RLS)
+    const { createClient: createAdminClient } = await import('@supabase/supabase-js')
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    
+    if (!supabaseUrl || !supabaseServiceKey) {
+      logger.error('API /admin/quotes/[id]', 'Missing service role key', new Error('SUPABASE_SERVICE_ROLE_KEY not set'))
+      return NextResponse.json(
+        { error: 'Server configuration error' },
+        { status: 500 }
+      )
+    }
+    
+    const adminClient = createAdminClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
+
     // Eliminar servicios de la cotización primero (CASCADE debería hacerlo automáticamente, pero por seguridad)
-    const { error: servicesError } = await supabase
+    const { error: servicesError } = await adminClient
       .from('quote_services')
       .delete()
       .eq('quote_id', id)
@@ -61,8 +81,8 @@ export async function DELETE(
       // Continuar aunque haya error, puede que no existan servicios
     }
 
-    // Eliminar la cotización
-    const { error: deleteError } = await supabase
+    // Eliminar la cotización usando service role (bypass RLS)
+    const { error: deleteError } = await adminClient
       .from('quotes')
       .delete()
       .eq('id', id)

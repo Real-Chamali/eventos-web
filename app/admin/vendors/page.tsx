@@ -25,6 +25,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/Select'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/AlertDialog'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import EmptyState from '@/components/ui/EmptyState'
@@ -58,6 +69,7 @@ export default function AdminVendorsPage() {
     password: '',
     role: 'vendor' as 'admin' | 'vendor',
   })
+  const [vendorToDelete, setVendorToDelete] = useState<string | null>(null)
   const { success: toastSuccess, error: toastError } = useToast()
 
   const loadVendors = useCallback(async () => {
@@ -210,6 +222,27 @@ export default function AdminVendorsPage() {
       toastError(error instanceof Error ? error.message : 'Error al actualizar el usuario')
     } finally {
       setUpdating(false)
+    }
+  }
+
+  const handleDeleteUser = async (userId: string) => {
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al eliminar el usuario')
+      }
+
+      toastSuccess('Usuario eliminado exitosamente')
+      setVendorToDelete(null)
+      loadVendors()
+    } catch (err) {
+      logger.error('AdminVendorsPage', 'Error deleting user', err as Error)
+      toastError(err instanceof Error ? err.message : 'Error al eliminar el usuario')
     }
   }
 
@@ -493,15 +526,54 @@ export default function AdminVendorsPage() {
                         )}
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditUser(vendor)}
-                          title="Editar usuario"
-                        >
-                          <Edit2 className="h-4 w-4 mr-2" />
-                          Editar
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditUser(vendor)}
+                            title="Editar usuario"
+                          >
+                            <Edit2 className="h-4 w-4 mr-2" />
+                            Editar
+                          </Button>
+                          {vendor.role !== 'admin' && (
+                            <AlertDialog>
+                              <AlertDialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setVendorToDelete(vendor.id)}
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                                  title="Eliminar usuario"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </AlertDialogTrigger>
+                              <AlertDialogContent>
+                                <AlertDialogHeader>
+                                  <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
+                                  <AlertDialogDescription>
+                                    Esta acción no se puede deshacer. El usuario será eliminado permanentemente.
+                                    {vendor.quotes_count && vendor.quotes_count > 0 && (
+                                      <span className="block mt-2 text-amber-600 dark:text-amber-400">
+                                        ⚠️ Este usuario tiene {vendor.quotes_count} cotización(es) asociada(s). No se podrá eliminar si tiene cotizaciones.
+                                      </span>
+                                    )}
+                                  </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                  <AlertDialogCancel onClick={() => setVendorToDelete(null)}>Cancelar</AlertDialogCancel>
+                                  <AlertDialogAction
+                                    onClick={() => handleDeleteUser(vendor.id)}
+                                    className="bg-red-600 hover:bg-red-700"
+                                  >
+                                    Eliminar
+                                  </AlertDialogAction>
+                                </AlertDialogFooter>
+                              </AlertDialogContent>
+                            </AlertDialog>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   )
