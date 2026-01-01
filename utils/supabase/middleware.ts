@@ -71,9 +71,31 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Intentar obtener el usuario - si falla, user será null
+  let user = null
+  try {
+    const {
+      data: { user: authUser },
+      error: userError,
+    } = await supabase.auth.getUser()
+    
+    if (userError) {
+      // Si hay error, loguear pero no bloquear - dejar que el layout maneje
+      logger.warn('Middleware', 'Error getting user in middleware', {
+        error: userError.message,
+        pathname: request.nextUrl.pathname,
+        errorCode: userError.status,
+      })
+    } else {
+      user = authUser
+    }
+  } catch (error) {
+    // Si hay excepción, loguear pero no bloquear
+    logger.warn('Middleware', 'Exception getting user in middleware', {
+      error: error instanceof Error ? error.message : String(error),
+      pathname: request.nextUrl.pathname,
+    })
+  }
 
   const pathname = request.nextUrl.pathname
 
