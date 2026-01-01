@@ -43,10 +43,12 @@ export default function Navbar() {
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut()
-      router.push('/login')
-      router.refresh()
+      // Usar window.location para forzar recarga completa y limpiar estado
+      window.location.href = '/login'
     } catch (error) {
       logger.error('Navbar', 'Error signing out', error instanceof Error ? error : new Error(String(error)))
+      // Aún así intentar redirigir
+      window.location.href = '/login'
     }
   }
 

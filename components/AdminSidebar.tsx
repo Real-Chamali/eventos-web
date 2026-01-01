@@ -19,11 +19,13 @@ export default function AdminSidebar() {
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut()
-      router.push('/login')
-      router.refresh()
+      // Usar window.location para forzar recarga completa y limpiar estado
+      window.location.href = '/login'
     } catch (error) {
       logger.error('AdminSidebar', 'Error signing out', error as Error)
       toastError('Error al cerrar sesión')
+      // Aún así intentar redirigir
+      window.location.href = '/login'
     }
   }
 

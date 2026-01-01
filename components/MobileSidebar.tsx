@@ -45,8 +45,11 @@ export default function MobileSidebar({
 
   // Close on route change
   useEffect(() => {
-    onClose()
-  }, [pathname, onClose])
+    if (isOpen) {
+      onClose()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname])
 
   // Prevent body scroll when open
   useEffect(() => {
@@ -85,11 +88,13 @@ export default function MobileSidebar({
     try {
       await supabase.auth.signOut()
       onClose()
-      router.push('/login')
-      router.refresh()
+      // Usar window.location para forzar recarga completa y limpiar estado
+      window.location.href = '/login'
     } catch (error) {
       logger.error('MobileSidebar', 'Error signing out', error as Error)
       toastError('Error al cerrar sesión')
+      // Aún así intentar redirigir
+      window.location.href = '/login'
     }
   }
 
