@@ -264,51 +264,67 @@ export default function NewQuotePage() {
   }, [services])
 
   const updateService = useCallback(async (index: number, field: keyof QuoteService, value: number | string) => {
-    setQuoteServices((prev) => {
-      const updated = [...prev]
-      const service = services.find(s => s.id === updated[index].service_id)
+    const service = services.find(s => s.id === quoteServices[index]?.service_id)
+    
+    if (field === 'quantity') {
+      const v = Number(value) || 1
+      const newQuantity = Math.max(1, v)
       
-      if (field === 'quantity') {
-        const v = Number(value) || 1
-        updated[index] = { ...updated[index], quantity: Math.max(1, v) }
-        
-        // Recalcular precio inteligente cuando cambia la cantidad
-        if (service) {
-          import('@/lib/utils/intelligentPricing').then(({ calculateIntelligentPrice }) => {
-            calculateIntelligentPrice(service.id, v).then(intelligentPrice => {
-              if (intelligentPrice > 0) {
-                setQuoteServices(current => {
-                  const newServices = [...current]
-                  if (newServices[index]) {
-                    newServices[index] = { ...newServices[index], final_price: intelligentPrice }
-                  }
-                  return newServices
-                })
-              }
-            }).catch(() => {
-              // Fallback: usar precio base * cantidad
-              if (service) {
-                setQuoteServices(current => {
-                  const newServices = [...current]
-                  if (newServices[index]) {
-                    newServices[index] = { ...newServices[index], final_price: service.base_price * v }
-                  }
-                  return newServices
-                })
-              }
-            })
-          })
+      // Actualizar cantidad primero
+      setQuoteServices((prev) => {
+        const updated = [...prev]
+        if (updated[index]) {
+          updated[index] = { ...updated[index], quantity: newQuantity }
         }
-      } else if (field === 'final_price') {
-        const v = Number(value) || 0
-        updated[index] = { ...updated[index], final_price: Math.max(0, v) }
-      } else {
-        updated[index] = { ...updated[index], [field]: value }
-      }
+        return updated
+      })
       
-      return updated
-    })
-  }, [services])
+      // Recalcular precio inteligente cuando cambia la cantidad (asíncrono)
+      if (service) {
+        try {
+          const { calculateIntelligentPrice } = await import('@/lib/utils/intelligentPricing')
+          const intelligentPrice = await calculateIntelligentPrice(service.id, newQuantity)
+          if (intelligentPrice > 0) {
+            setQuoteServices((current) => {
+              const newServices = [...current]
+              if (newServices[index]) {
+                newServices[index] = { ...newServices[index], final_price: intelligentPrice }
+              }
+              return newServices
+            })
+          }
+        } catch {
+          // Fallback: usar precio base * cantidad
+          if (service) {
+            setQuoteServices((current) => {
+              const newServices = [...current]
+              if (newServices[index]) {
+                newServices[index] = { ...newServices[index], final_price: service.base_price * newQuantity }
+              }
+              return newServices
+            })
+          }
+        }
+      }
+    } else if (field === 'final_price') {
+      const v = Number(value) || 0
+      setQuoteServices((prev) => {
+        const updated = [...prev]
+        if (updated[index]) {
+          updated[index] = { ...updated[index], final_price: Math.max(0, v) }
+        }
+        return updated
+      })
+    } else {
+      setQuoteServices((prev) => {
+        const updated = [...prev]
+        if (updated[index]) {
+          updated[index] = { ...updated[index], [field]: value }
+        }
+        return updated
+      })
+    }
+  }, [services, quoteServices])
 
   const removeService = useCallback((index: number) => {
     setQuoteServices((prev) => prev.filter((_, i) => i !== index))

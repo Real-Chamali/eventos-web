@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useToast } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 import PageHeader from '@/components/ui/PageHeader'
@@ -59,17 +59,7 @@ export default function AdminVendorsPage() {
   })
   const { success: toastSuccess, error: toastError } = useToast()
 
-  useEffect(() => {
-    loadVendors()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Función para recargar manualmente
-  const handleRefresh = () => {
-    loadVendors()
-  }
-
-  const loadVendors = async () => {
+  const loadVendors = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -124,7 +114,16 @@ export default function AdminVendorsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [toastError])
+
+  useEffect(() => {
+    loadVendors()
+  }, [loadVendors])
+
+  // Función para recargar manualmente
+  const handleRefresh = useCallback(() => {
+    loadVendors()
+  }, [loadVendors])
 
   const handleEditUser = (vendor: Vendor) => {
     setSelectedVendor(vendor)
