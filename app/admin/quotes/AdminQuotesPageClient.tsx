@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { useQuotes } from '@/lib/hooks/useQuotes'
+import { useAdminQuotes } from '@/lib/hooks/useAdminQuotes'
 import { useIsAdmin } from '@/lib/hooks'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import SearchInput from '@/components/ui/SearchInput'
@@ -46,7 +46,7 @@ function getStatusBadge(status: string) {
 }
 
 export default function AdminQuotesPageClient() {
-  const { quotes, loading: isLoading, refresh } = useQuotes()
+  const { quotes, loading: isLoading, refresh } = useAdminQuotes()
   const { isAdmin, loading: adminLoading } = useIsAdmin()
   const router = useRouter()
   const supabase = createClient()
