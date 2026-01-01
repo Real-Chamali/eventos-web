@@ -40,8 +40,11 @@ export async function updateSession(request: NextRequest) {
         },
         setAll(cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          // Recrear la respuesta para incluir las cookies actualizadas
           supabaseResponse = NextResponse.next({
-            request,
+            request: {
+              headers: request.headers,
+            },
           })
           cookiesToSet.forEach(({ name, value, options }) => {
             // Asegurar que las cookies de Supabase tengan los atributos correctos
@@ -51,14 +54,11 @@ export async function updateSession(request: NextRequest) {
             const cookieOptions: CookieOptions = {
               ...options,
               // SameSite: 'lax' funciona bien para la mayoría de casos
-              // 'none' solo es necesario si el frontend y backend están en dominios diferentes
-              // y requiere Secure=true (HTTPS)
               sameSite: options?.sameSite || (isHttps && isProduction ? 'lax' : 'lax'),
               // Secure solo en HTTPS (producción)
               secure: options?.secure ?? isHttps,
               // Las cookies de Supabase necesitan ser accesibles desde JavaScript
               // No usar httpOnly para cookies de autenticación de Supabase
-              // Asegurar que el dominio sea correcto
               domain: options?.domain,
               path: options?.path || '/',
               // Max age para persistencia
@@ -71,13 +71,13 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Intentar obtener el usuario - si falla, user será null
+  // CRÍTICO: Refrescar la sesión ANTES de obtener el usuario
+  // Esto asegura que las cookies estén actualizadas y sincronizadas
+  await supabase.auth.getSession()
+
+  // Intentar obtener el usuario después de refrescar la sesión
   let user = null
   try {
-    // Verificar si hay cookies de Supabase antes de intentar getUser
-    const cookies = request.cookies.getAll()
-    const hasAuthCookie = cookies.some(c => c.name.includes('sb-') || c.name.includes('auth'))
-    
     const {
       data: { user: authUser },
       error: userError,
@@ -89,25 +89,15 @@ export async function updateSession(request: NextRequest) {
         error: userError.message,
         pathname: request.nextUrl.pathname,
         errorCode: userError.status,
-        hasAuthCookie,
-        cookieCount: cookies.length,
       })
     } else {
       user = authUser
-      // Si hay cookies pero no usuario, podría ser un problema de formato
-      if (hasAuthCookie && !authUser) {
-        logger.warn('Middleware', 'Cookies present but no user found', {
-          pathname: request.nextUrl.pathname,
-          cookieNames: cookies.map(c => c.name),
-        })
-      }
     }
   } catch (error) {
     // Si hay excepción, loguear pero no bloquear
     logger.warn('Middleware', 'Exception getting user in middleware', {
       error: error instanceof Error ? error.message : String(error),
       pathname: request.nextUrl.pathname,
-      stack: error instanceof Error ? error.stack : undefined,
     })
   }
 

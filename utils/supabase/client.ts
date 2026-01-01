@@ -32,17 +32,9 @@ NOTA: Obtén tus credenciales en https://app.supabase.com -> Tu Proyecto -> Sett
     supabaseUrl,
     supabaseAnonKey,
     {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        flowType: 'pkce',
-        // NO especificar storage explícitamente - dejar que Supabase SSR
-        // maneje cookies automáticamente para compatibilidad con middleware
-        // storage: typeof window !== 'undefined' ? window.localStorage : undefined,
-        storageKey: 'sb-auth-token',
-        debug: process.env.NODE_ENV === 'development',
-      },
+      // NO especificar opciones de auth personalizadas
+      // Dejar que Supabase SSR maneje todo automáticamente con cookies
+      // Esto es necesario para que el middleware pueda leer la sesión
       global: {
         headers: {
           'x-client-info': 'eventos-web',
