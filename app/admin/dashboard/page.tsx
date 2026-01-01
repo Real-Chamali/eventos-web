@@ -61,7 +61,8 @@ export default function OwnerDashboardPage() {
   const loadDashboardData = async () => {
     try {
       setLoading(true)
-      const [kpisData, vendorsData, monthlyData, riskData, cashFlowData] = await Promise.all([
+      // Usar Promise.allSettled para que un error no bloquee los demás datos
+      const results = await Promise.allSettled([
         getOwnerKPIs(),
         getVendorPerformance(),
         getMonthlyComparison(),
@@ -69,11 +70,29 @@ export default function OwnerDashboardPage() {
         getCashFlowSummary(),
       ])
       
-      setKpis(kpisData)
-      setVendors(vendorsData)
-      setMonthlyComparison(monthlyData)
-      setEventsAtRisk(riskData)
-      setCashFlow(cashFlowData)
+      // Procesar resultados, usando valores por defecto si alguna promesa falla
+      setKpis(results[0].status === 'fulfilled' ? results[0].value : {
+        monthlySales: 0,
+        moneyToCollect: 0,
+        eventsNext7Days: 0,
+        eventsNext30Days: 0,
+        eventsNext90Days: 0,
+        eventsAtRisk: 0,
+        confirmedEventsCount: 0,
+        eventsAtRiskCount: 0,
+      })
+      setVendors(results[1].status === 'fulfilled' ? results[1].value : [])
+      setMonthlyComparison(results[2].status === 'fulfilled' ? results[2].value : [])
+      setEventsAtRisk(results[3].status === 'fulfilled' ? results[3].value : [])
+      setCashFlow(results[4].status === 'fulfilled' ? results[4].value : null)
+      
+      // Log errores individuales sin bloquear la carga
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          const names = ['KPIs', 'Vendor Performance', 'Monthly Comparison', 'Events At Risk', 'Cash Flow']
+          logger.warn('OwnerDashboard', `Error loading ${names[index]}`, result.reason as Error)
+        }
+      })
     } catch (error) {
       logger.error('OwnerDashboard', 'Error loading dashboard data', error instanceof Error ? error : new Error(String(error)))
     } finally {
