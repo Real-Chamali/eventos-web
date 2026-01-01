@@ -90,7 +90,11 @@ export default function OwnerDashboardPage() {
       results.forEach((result, index) => {
         if (result.status === 'rejected') {
           const names = ['KPIs', 'Vendor Performance', 'Monthly Comparison', 'Events At Risk', 'Cash Flow']
-          logger.warn('OwnerDashboard', `Error loading ${names[index]}`, result.reason as Error)
+          const error = result.reason instanceof Error ? result.reason : new Error(String(result.reason))
+          logger.warn('OwnerDashboard', `Error loading ${names[index]}`, {
+            error: error.message,
+            stack: error.stack,
+          })
         }
       })
     } catch (error) {
