@@ -62,18 +62,21 @@ export default function AdminQuotesPageClient() {
 
   const handleDeleteQuote = async (quoteId: string) => {
     try {
-      const { error } = await supabase
-        .from('quotes')
-        .delete()
-        .eq('id', quoteId)
+      const response = await fetch(`/api/admin/quotes/${quoteId}`, {
+        method: 'DELETE',
+      })
 
-      if (error) throw error
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al eliminar la cotización')
+      }
 
       toastSuccess('Cotización eliminada exitosamente')
       refresh()
     } catch (err) {
       logger.error('AdminQuotesPage', 'Error deleting quote', err as Error)
-      toastError('Error al eliminar la cotización')
+      toastError(err instanceof Error ? err.message : 'Error al eliminar la cotización')
     }
   }
 

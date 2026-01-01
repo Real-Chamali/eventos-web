@@ -56,6 +56,7 @@ export default function AdminVendorsPage() {
     name: '',
     email: '',
     password: '',
+    role: 'vendor' as 'admin' | 'vendor',
   })
   const { success: toastSuccess, error: toastError } = useToast()
 
@@ -131,6 +132,7 @@ export default function AdminVendorsPage() {
       name: vendor.full_name || vendor.raw_user_meta_data?.name || '',
       email: vendor.email,
       password: '',
+      role: vendor.role || 'vendor',
     })
     setShowEditDialog(true)
   }
@@ -157,30 +159,51 @@ export default function AdminVendorsPage() {
         updates.password = editForm.password
       }
 
-      // Si no hay cambios, no hacer nada
-      if (Object.keys(updates).length === 0) {
-        toastError('No hay cambios para guardar')
-        return
+      // Actualizar usuario primero
+      if (Object.keys(updates).length > 0) {
+        const response = await fetch(`/api/admin/users/${selectedVendor.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updates),
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Error al actualizar el usuario')
+        }
       }
 
-      const response = await fetch(`/api/admin/users/${selectedVendor.id}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updates),
-      })
+      // Actualizar rol si cambió
+      const currentRole = selectedVendor.role || 'vendor'
+      if (editForm.role !== currentRole) {
+        const roleResponse = await fetch(`/api/admin/users/${selectedVendor.id}/role`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ role: editForm.role }),
+        })
 
-      const data = await response.json()
+        const roleData = await roleResponse.json()
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al actualizar el usuario')
+        if (!roleResponse.ok) {
+          throw new Error(roleData.error || 'Error al actualizar el rol')
+        }
+      }
+
+      // Si no hay cambios, no hacer nada
+      if (Object.keys(updates).length === 0 && editForm.role === currentRole) {
+        toastError('No hay cambios para guardar')
+        return
       }
 
       toastSuccess('Usuario actualizado exitosamente')
       setShowEditDialog(false)
       setSelectedVendor(null)
-      setEditForm({ name: '', email: '', password: '' })
+      setEditForm({ name: '', email: '', password: '', role: 'vendor' })
       loadVendors()
     } catch (error) {
       logger.error('AdminVendorsPage', 'Error updating user', error as Error)
@@ -550,6 +573,40 @@ export default function AdminVendorsPage() {
               </p>
             </div>
             {selectedVendor && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Rol del Usuario
+                </label>
+                <Select 
+                  value={editForm.role} 
+                  onValueChange={(value) => setEditForm({ ...editForm, role: value as 'admin' | 'vendor' })}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="vendor">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4" />
+                        Vendedor
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="admin">
+                      <div className="flex items-center gap-2">
+                        <Crown className="h-4 w-4" />
+                        Administrador
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                {editForm.role === 'admin' && selectedVendor.email !== 'admin@chamali.com' && (
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    ⚠️ Solo admin@chamali.com puede tener rol de administrador. Este cambio será rechazado.
+                  </p>
+                )}
+              </div>
+            )}
+            {selectedVendor && (
               <div className="p-4 rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800">
                 <p className="text-sm text-blue-800 dark:text-blue-200">
                   <strong>Nota:</strong> Solo el administrador puede editar usuarios. Los cambios se aplicarán inmediatamente.
@@ -559,7 +616,7 @@ export default function AdminVendorsPage() {
             <div className="flex justify-end gap-3 pt-4">
               <Button variant="ghost" onClick={() => {
                 setShowEditDialog(false)
-                setEditForm({ name: '', email: '', password: '' })
+                setEditForm({ name: '', email: '', password: '', role: 'vendor' })
               }} disabled={updating}>
                 Cancelar
               </Button>

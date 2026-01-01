@@ -23,7 +23,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/Dialog'
-import { X, Plus, Trash2, Calendar, Clock, User, ShoppingCart, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { X, Plus, Trash2, Calendar, Clock, User, ShoppingCart, AlertTriangle, CheckCircle2, Sparkles } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils/cn'
@@ -66,6 +66,12 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
   const [eventEndDate, setEventEndDate] = useState('')
   const [eventEndTime, setEventEndTime] = useState('')
   const [notes, setNotes] = useState('')
+  const [location, setLocation] = useState('')
+  const [guestCount, setGuestCount] = useState<number | ''>('')
+  const [eventType, setEventType] = useState('')
+  const [emergencyContact, setEmergencyContact] = useState('')
+  const [emergencyPhone, setEmergencyPhone] = useState('')
+  const [specialRequirements, setSpecialRequirements] = useState('')
   const [showNewClientForm, setShowNewClientForm] = useState(false)
   const [newClientName, setNewClientName] = useState('')
   const [newClientEmail, setNewClientEmail] = useState('')
@@ -395,15 +401,28 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
 
       if (servicesError) throw servicesError
 
-      // 3. Crear evento
+      // 3. Crear evento con todos los detalles
+      const eventData: Record<string, unknown> = {
+        quote_id: quote.id,
+        start_date: format(startDateTime, 'yyyy-MM-dd'),
+        end_date: endDateTime ? format(endDateTime, 'yyyy-MM-dd') : null,
+        start_time: eventTime || null,
+        end_time: eventEndTime || null,
+        status: 'confirmed',
+      }
+      
+      // Agregar campos opcionales si tienen valor
+      if (location) eventData.location = location
+      if (guestCount && typeof guestCount === 'number') eventData.guest_count = guestCount
+      if (eventType) eventData.event_type = eventType
+      if (emergencyContact) eventData.emergency_contact = emergencyContact
+      if (emergencyPhone) eventData.emergency_phone = emergencyPhone
+      if (specialRequirements) eventData.special_requirements = specialRequirements
+      if (notes) eventData.additional_notes = notes
+      
       const { data: event, error: eventError } = await supabase
         .from('events')
-        .insert({
-          quote_id: quote.id,
-          start_date: startDateTime.toISOString(),
-          end_date: endDateTime ? endDateTime.toISOString() : null,
-          status: 'confirmed',
-        })
+        .insert(eventData)
         .select()
         .single()
 
@@ -459,6 +478,12 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
       setEventEndDate('')
       setEventEndTime('')
       setNotes('')
+      setLocation('')
+      setGuestCount('')
+      setEventType('')
+      setEmergencyContact('')
+      setEmergencyPhone('')
+      setSpecialRequirements('')
       setSearchClient('')
       setCustomTotal(null)
       setShowNewClientForm(false)
@@ -902,18 +927,108 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
             </CardContent>
           </Card>
 
-          {/* Notas */}
+          {/* Detalles Adicionales del Evento */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Notas Adicionales</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Sparkles className="h-5 w-5" />
+                Detalles Adicionales del Evento
+              </CardTitle>
             </CardHeader>
-            <CardContent>
-              <textarea
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Agregar notas sobre el evento..."
-                className="w-full min-h-[100px] px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Ubicación del Evento
+                  </label>
+                  <Input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Ej: Salón de eventos, dirección..."
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Número de Invitados
+                  </label>
+                  <Input
+                    type="number"
+                    value={guestCount}
+                    onChange={(e) => setGuestCount(e.target.value ? parseInt(e.target.value) : '')}
+                    placeholder="Ej: 50"
+                    min="1"
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Tipo de Evento
+                  </label>
+                  <Select value={eventType} onValueChange={setEventType}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Seleccionar tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="wedding">Boda</SelectItem>
+                      <SelectItem value="birthday">Cumpleaños</SelectItem>
+                      <SelectItem value="corporate">Corporativo</SelectItem>
+                      <SelectItem value="anniversary">Aniversario</SelectItem>
+                      <SelectItem value="graduation">Graduación</SelectItem>
+                      <SelectItem value="baby_shower">Baby Shower</SelectItem>
+                      <SelectItem value="quinceanera">Quinceañera</SelectItem>
+                      <SelectItem value="other">Otro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Contacto de Emergencia
+                  </label>
+                  <Input
+                    type="text"
+                    value={emergencyContact}
+                    onChange={(e) => setEmergencyContact(e.target.value)}
+                    placeholder="Nombre del contacto"
+                    className="w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Teléfono de Emergencia
+                  </label>
+                  <Input
+                    type="tel"
+                    value={emergencyPhone}
+                    onChange={(e) => setEmergencyPhone(e.target.value)}
+                    placeholder="Ej: +52 123 456 7890"
+                    className="w-full"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Requisitos Especiales
+                </label>
+                <textarea
+                  value={specialRequirements}
+                  onChange={(e) => setSpecialRequirements(e.target.value)}
+                  placeholder="Ej: Acceso para silla de ruedas, catering vegetariano, equipo de sonido especial..."
+                  className="w-full min-h-[80px] px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Notas Adicionales
+                </label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Agregar notas sobre el evento..."
+                  className="w-full min-h-[100px] px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
             </CardContent>
           </Card>
 

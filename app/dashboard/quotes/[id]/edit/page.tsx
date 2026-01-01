@@ -77,15 +77,12 @@ export default function EditQuotePage() {
   useEffect(() => {
     if (adminLoading) return
     
-    if (!isAdmin) {
-      router.push('/dashboard/quotes')
-      return
-    }
-    
+    // Si no es admin, verificar permisos después de cargar la cotización
+    // (permitir que admin vea y edite cualquier cotización)
     loadQuote()
     loadServices()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quoteId, isAdmin, adminLoading, router])
+  }, [quoteId, adminLoading])
 
   useEffect(() => {
     if (!isAdmin || adminLoading) return
@@ -123,10 +120,20 @@ export default function EditQuotePage() {
       }
 
       // Solo permitir editar si es admin o si está en draft
+      // Admin puede editar cualquier cotización, independientemente del estado
       if (!isAdmin && data.status !== 'draft') {
-        toastError('Solo se pueden editar cotizaciones en estado borrador')
+        toastError('Solo se pueden editar cotizaciones en estado borrador. Los administradores pueden editar cualquier cotización.')
         router.push(`/dashboard/quotes/${quoteId}`)
         return
+      }
+      
+      // Si es admin, permitir editar cualquier cotización
+      if (isAdmin) {
+        logger.info('EditQuotePage', 'Admin editing quote', {
+          quoteId,
+          quoteStatus: data.status,
+          quoteVendorId: data.vendor_id,
+        })
       }
 
       setQuote(data)
