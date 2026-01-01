@@ -42,9 +42,14 @@ export default function EditableServicePrice({
   const canEdit = () => {
     if (disabled) return false
     
+    // Admin puede editar cualquier cotización, independientemente del estado
+    if (isAdmin) {
+      return true
+    }
+    
     // Si está confirmada o cancelada, solo admin puede editar
     if (quoteStatus === 'confirmed' || quoteStatus === 'cancelled') {
-      return isAdmin
+      return false
     }
     
     // Si está en draft o pending, todos pueden editar

@@ -183,6 +183,11 @@ export function getStatusLabel(status: QuoteStatus): string {
  * Verifica si un estado permite edición
  */
 export function canEditQuote(status: QuoteStatus, isAdmin: boolean): boolean {
+  // Admin puede editar cualquier cotización, independientemente del estado
+  if (isAdmin) {
+    return true
+  }
+
   // Borradores siempre se pueden editar
   if (status === 'draft') {
     return true
@@ -193,12 +198,12 @@ export function canEditQuote(status: QuoteStatus, isAdmin: boolean): boolean {
     return true
   }
 
-  // Confirmadas solo admin puede editar
-  if (status === 'confirmed' && isAdmin) {
-    return true
+  // Confirmadas solo admin puede editar (ya manejado arriba)
+  if (status === 'confirmed') {
+    return false
   }
 
-  // Canceladas no se pueden editar
+  // Canceladas solo admin puede editar (ya manejado arriba)
   return false
 }
 
@@ -206,7 +211,7 @@ export function canEditQuote(status: QuoteStatus, isAdmin: boolean): boolean {
  * Verifica si un estado permite eliminar
  */
 export function canDeleteQuote(status: QuoteStatus, isAdmin: boolean): boolean {
-  // Solo admin puede eliminar, y solo borradores o pendientes
-  return isAdmin && (status === 'draft' || status === 'pending')
+  // Solo admin puede eliminar, y puede eliminar cualquier cotización
+  return isAdmin
 }
 
