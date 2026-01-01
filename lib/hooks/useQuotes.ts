@@ -36,6 +36,7 @@ const fetcher = async (_key: string): Promise<Quote[]> => {
       created_at,
       updated_at,
       vendor_id,
+      client_id,
       client:clients (
         name
       )
@@ -62,6 +63,7 @@ const fetcher = async (_key: string): Promise<Quote[]> => {
     created_at: string
     updated_at?: string | null
     vendor_id: string
+    client_id: string
     client?: Array<{ name?: string }> | { name?: string } | null
   }
 
@@ -70,11 +72,17 @@ const fetcher = async (_key: string): Promise<Quote[]> => {
     // Extraer cliente (puede ser array o objeto)
     const client = quote.client ? (Array.isArray(quote.client) ? quote.client[0] : quote.client) : null
     return {
-      ...quote,
+      id: quote.id,
+      total_amount: quote.total_amount,
       total_price: quote.total_amount, // Alias para compatibilidad
+      status: quote.status,
+      created_at: quote.created_at,
+      updated_at: quote.updated_at,
+      vendor_id: quote.vendor_id,
+      client_id: quote.client_id,
       client_name: client?.name || 'Cliente sin nombre',
-    }
-  }) as Quote[]
+    } as Quote
+  })
 }
 
 export function useQuotes() {
