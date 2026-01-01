@@ -221,7 +221,7 @@ export default function EventsPageClient() {
             total_amount,
             status,
             vendor_id,
-            clients(
+            client:clients(
               name,
               email
             )

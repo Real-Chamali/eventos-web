@@ -203,12 +203,26 @@ export default function ClientsPageClient() {
     if (!clientToDelete) return
 
     try {
-      const { error } = await supabase
-        .from('clients')
-        .delete()
-        .eq('id', clientToDelete)
+      // Si es admin, usar API route segura
+      if (isAdmin) {
+        const response = await fetch(`/api/admin/clients/${clientToDelete}`, {
+          method: 'DELETE',
+        })
 
-      if (error) throw error
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Error al eliminar el cliente')
+        }
+      } else {
+        // Si no es admin, intentar borrado directo (puede fallar por RLS)
+        const { error } = await supabase
+          .from('clients')
+          .delete()
+          .eq('id', clientToDelete)
+
+        if (error) throw error
+      }
 
       toastSuccess('Cliente eliminado exitosamente')
       refresh() // Recargar lista de clientes
@@ -218,7 +232,7 @@ export default function ClientsPageClient() {
       logger.error('ClientsPage', 'Error deleting client', error as Error)
       toastError('Error al eliminar el cliente: ' + (error instanceof Error ? error.message : String(error)))
     }
-  }, [clientToDelete, supabase, toastSuccess, toastError, refresh])
+  }, [clientToDelete, supabase, toastSuccess, toastError, refresh, isAdmin])
 
   return (
     <div className="space-y-8 p-6 lg:p-8">

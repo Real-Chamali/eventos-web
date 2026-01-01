@@ -102,14 +102,15 @@ export default function AdminEventsPage() {
     if (!eventToDelete) return
 
     try {
-      const { createClient } = await import('@/utils/supabase/client')
-      const supabase = createClient()
-      const { error } = await supabase
-        .from('events')
-        .delete()
-        .eq('id', eventToDelete)
+      const response = await fetch(`/api/admin/events/${eventToDelete}`, {
+        method: 'DELETE',
+      })
 
-      if (error) throw error
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al eliminar el evento')
+      }
 
       toastSuccess('Evento eliminado exitosamente')
       refetch?.()

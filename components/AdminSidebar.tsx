@@ -6,7 +6,7 @@ import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
-import { Settings, DollarSign, LogOut, Shield, BarChart3, Calendar, Users, TrendingUp } from 'lucide-react'
+import { Settings, DollarSign, LogOut, Shield, BarChart3, Calendar, Users, TrendingUp, FileText } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import Button from './ui/Button'
 
@@ -33,9 +33,11 @@ export default function AdminSidebar() {
     { href: '/admin/dashboard', label: 'Dashboard del Dueño', icon: BarChart3 },
     { href: '/admin/calendar-strategic', label: 'Calendario Estratégico', icon: TrendingUp },
     { href: '/admin/services', label: 'Gestión de Servicios', icon: Settings },
+    { href: '/admin/clients', label: 'Gestión de Clientes', icon: Users },
+    { href: '/admin/quotes', label: 'Gestión de Cotizaciones', icon: FileText },
     { href: '/admin/vendors', label: 'Gestión de Personal', icon: Users },
-    { href: '/admin/finance', label: 'Finanzas', icon: DollarSign },
     { href: '/admin/events', label: 'Eventos', icon: Calendar },
+    { href: '/admin/finance', label: 'Finanzas', icon: DollarSign },
     { href: '/admin/users', label: 'Gestión de Usuarios', icon: Shield },
   ]
 
