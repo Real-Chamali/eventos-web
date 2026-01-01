@@ -33,6 +33,17 @@ export class PremiumErrorBoundary extends Component<Props, State> {
 
   static getDerivedStateFromError(error: Error): Partial<State> {
     const errorId = `error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    // Log inmediatamente en getDerivedStateFromError
+    try {
+      console.error('[PremiumErrorBoundary] Error caught:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack?.substring(0, 500),
+        errorId,
+      })
+    } catch (e) {
+      // Si el logging falla, no hacer nada
+    }
     return {
       hasError: true,
       error,
@@ -41,15 +52,34 @@ export class PremiumErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    this.setState({ errorInfo })
+    const errorId = this.state.errorId || `error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     
-    logger.error('PremiumErrorBoundary', 'Caught error', error, {
-      componentStack: errorInfo.componentStack,
-      errorId: this.state.errorId,
+    this.setState({ 
+      errorInfo,
+      errorId, // Asegurar que errorId esté en el state
     })
+    
+    // Log con más contexto
+    try {
+      logger.error('PremiumErrorBoundary', 'Caught error in componentDidCatch', error, {
+        componentStack: errorInfo.componentStack?.substring(0, 1000), // Limitar tamaño
+        errorId,
+        url: typeof window !== 'undefined' ? window.location.href : 'unknown',
+        userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'unknown',
+      })
+    } catch (e) {
+      // Si el logger falla, usar console.error como fallback
+      console.error('[PremiumErrorBoundary] Logger failed, using console.error:', e)
+      console.error('[PremiumErrorBoundary] Original error:', error)
+      console.error('[PremiumErrorBoundary] Error info:', errorInfo)
+    }
 
     if (this.props.onError) {
-      this.props.onError(error, errorInfo)
+      try {
+        this.props.onError(error, errorInfo)
+      } catch (e) {
+        console.error('[PremiumErrorBoundary] onError callback failed:', e)
+      }
     }
   }
 
