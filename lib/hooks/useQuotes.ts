@@ -31,12 +31,12 @@ const fetcher = async (_key: string): Promise<Quote[]> => {
     .from('quotes')
     .select(`
       id,
-      total_price,
+      total_amount,
       status,
       created_at,
       updated_at,
       vendor_id,
-      clients (
+      client:clients (
         name
       )
     `)
@@ -54,22 +54,24 @@ const fetcher = async (_key: string): Promise<Quote[]> => {
     throw error
   }
   
-  // Tipo para respuesta de Supabase (clients puede ser array o objeto)
+  // Tipo para respuesta de Supabase (client puede ser array o objeto)
   type SupabaseQuoteResponse = {
     id: string
-    total_price: number
+    total_amount: number
     status: string
     created_at: string
     updated_at?: string | null
-    clients?: Array<{ name?: string }> | { name?: string } | null
+    vendor_id: string
+    client?: Array<{ name?: string }> | { name?: string } | null
   }
 
-  // Transformar datos para incluir client_name
+  // Transformar datos para incluir client_name y total_price (alias)
   return (data || []).map((quote: SupabaseQuoteResponse) => {
     // Extraer cliente (puede ser array o objeto)
-    const client = quote.clients ? (Array.isArray(quote.clients) ? quote.clients[0] : quote.clients) : null
+    const client = quote.client ? (Array.isArray(quote.client) ? quote.client[0] : quote.client) : null
     return {
       ...quote,
+      total_price: quote.total_amount, // Alias para compatibilidad
       client_name: client?.name || 'Cliente sin nombre',
     }
   }) as Quote[]
