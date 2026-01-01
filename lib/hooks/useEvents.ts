@@ -15,14 +15,40 @@ const fetcher = async (): Promise<Event[]> => {
     throw new Error('Unauthorized')
   }
   
+  // Verificar si el usuario es admin para determinar qué eventos mostrar
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .maybeSingle()
+  
+  const isAdmin = profile?.role === 'admin'
+  
+  // Query base - RLS manejará el filtrado automáticamente
+  // Admins ven todos los eventos, vendors solo los suyos
   const { data, error } = await supabase
     .from('events')
     .select(`
-      *,
+      id,
+      quote_id,
+      status,
+      start_date,
+      end_date,
+      start_time,
+      end_time,
+      location,
+      guest_count,
+      event_type,
+      emergency_contact,
+      emergency_phone,
+      special_requirements,
+      additional_notes,
+      created_at,
       quote:quotes(
         id,
         total_amount,
         status,
+        vendor_id,
         client:clients(
           name,
           email
@@ -32,11 +58,30 @@ const fetcher = async (): Promise<Event[]> => {
     .order('start_date', { ascending: false })
   
   if (error) {
-    logger.error('useEvents', 'Error fetching events', error as Error)
+    logger.error('useEvents', 'Error fetching events', error as Error, {
+      errorCode: error.code,
+      errorMessage: error.message,
+      errorDetails: error.details,
+      isAdmin,
+    })
     throw error
   }
   
-  return (data || []) as Event[]
+  // Procesar datos para normalizar estructura
+  return (data || []).map((event: any) => {
+    // Normalizar quote (puede venir como array o objeto)
+    const quote = Array.isArray(event.quote) ? event.quote[0] : event.quote
+    
+    // Normalizar client dentro de quote
+    if (quote && quote.client) {
+      quote.client = Array.isArray(quote.client) ? quote.client[0] : quote.client
+    }
+    
+    return {
+      ...event,
+      quote: quote || null,
+    } as Event
+  })
 }
 
 export function useEvents() {

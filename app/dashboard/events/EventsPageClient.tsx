@@ -206,15 +206,34 @@ export default function EventsPageClient() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
 
+      // Verificar si es admin para determinar qué eventos mostrar
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle()
+      
+      const isAdmin = profile?.role === 'admin'
+      
       // RLS maneja automáticamente el filtrado por rol
       // Los vendors solo ven sus eventos, los admins ven todos
       const { data, error } = await supabase
         .from('events')
         .select(`
           id,
+          quote_id,
+          status,
           start_date,
           end_date,
-          status,
+          start_time,
+          end_time,
+          location,
+          guest_count,
+          event_type,
+          emergency_contact,
+          emergency_phone,
+          special_requirements,
+          additional_notes,
           created_at,
           quote:quotes(
             id,
@@ -236,43 +255,34 @@ export default function EventsPageClient() {
       }
 
       // Procesar datos para manejar arrays de quotes y clientes
-      interface QuoteClient {
-        name?: string
-        email?: string
-      }
-      
-      interface QuoteData {
-        client?: QuoteClient | QuoteClient[]
-        [key: string]: unknown
-      }
-      
-      interface EventWithQuote {
-        id: string
-        quote?: QuoteData | QuoteData[]
-        [key: string]: unknown
-      }
-      
-      const processedEvents = (data || []).map((event: EventWithQuote) => {
-        // Supabase puede devolver quote como array o objeto
-        const quote = Array.isArray(event.quote) ? event.quote[0] : event.quote
-        
-        if (quote && typeof quote === 'object') {
-          const quoteData = quote as QuoteData
-          const client = Array.isArray(quoteData.client) 
-            ? quoteData.client[0] 
-            : quoteData.client
-          return {
-            ...event,
-            quote: {
-              ...quoteData,
-              client: client || { name: 'Sin cliente', email: '' }
-            }
-          }
+      // Normalizar estructura de datos de Supabase
+      const processedEvents = (data || []).map((event: any) => {
+        // Normalizar quote (puede venir como array o objeto)
+        let quote = event.quote
+        if (Array.isArray(quote)) {
+          quote = quote[0] || null
         }
-        return event
+        
+        // Normalizar client dentro de quote
+        if (quote && quote.client) {
+          if (Array.isArray(quote.client)) {
+            quote.client = quote.client[0] || { name: 'Sin cliente', email: '' }
+          }
+          // Asegurar que client tenga estructura correcta
+          if (!quote.client.name) {
+            quote.client = { name: 'Sin cliente', email: quote.client.email || '' }
+          }
+        } else if (quote) {
+          quote.client = { name: 'Sin cliente', email: '' }
+        }
+        
+        return {
+          ...event,
+          quote: quote || null,
+        } as Event
       })
 
-      setEvents(processedEvents as Event[])
+      setEvents(processedEvents)
     } catch (error) {
       logger.error('EventsPage', 'Unexpected error loading events', error as Error)
       toastError('Error inesperado al cargar los eventos')

@@ -205,26 +205,8 @@ export async function DELETE(
       )
     }
 
-    // Verificar si el usuario tiene cotizaciones asociadas
-    const { data: quotes, error: quotesError } = await supabase
-      .from('quotes')
-      .select('id')
-      .eq('vendor_id', id)
-      .limit(1)
-
-    if (quotesError) {
-      logger.warn('API /admin/users/[id]', 'Error checking quotes', {
-        error: quotesError.message,
-        targetUserId: id,
-      })
-    }
-
-    if (quotes && quotes.length > 0) {
-      return NextResponse.json(
-        { error: 'No se puede eliminar el usuario porque tiene cotizaciones asociadas' },
-        { status: 400 }
-      )
-    }
+    // Admin puede eliminar usuarios incluso si tienen cotizaciones o eventos
+    // Se eliminarán en cascada según las políticas de la base de datos
 
     // Usar service role key para eliminar usuario
     const { createClient: createAdminClient } = await import('@supabase/supabase-js')
