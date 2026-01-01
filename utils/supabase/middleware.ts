@@ -74,6 +74,10 @@ export async function updateSession(request: NextRequest) {
   // Intentar obtener el usuario - si falla, user será null
   let user = null
   try {
+    // Verificar si hay cookies de Supabase antes de intentar getUser
+    const cookies = request.cookies.getAll()
+    const hasAuthCookie = cookies.some(c => c.name.includes('sb-') || c.name.includes('auth'))
+    
     const {
       data: { user: authUser },
       error: userError,
@@ -85,15 +89,25 @@ export async function updateSession(request: NextRequest) {
         error: userError.message,
         pathname: request.nextUrl.pathname,
         errorCode: userError.status,
+        hasAuthCookie,
+        cookieCount: cookies.length,
       })
     } else {
       user = authUser
+      // Si hay cookies pero no usuario, podría ser un problema de formato
+      if (hasAuthCookie && !authUser) {
+        logger.warn('Middleware', 'Cookies present but no user found', {
+          pathname: request.nextUrl.pathname,
+          cookieNames: cookies.map(c => c.name),
+        })
+      }
     }
   } catch (error) {
     // Si hay excepción, loguear pero no bloquear
     logger.warn('Middleware', 'Exception getting user in middleware', {
       error: error instanceof Error ? error.message : String(error),
       pathname: request.nextUrl.pathname,
+      stack: error instanceof Error ? error.stack : undefined,
     })
   }
 
