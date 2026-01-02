@@ -18,6 +18,8 @@ export interface PartialPayment {
   is_deposit?: boolean
   due_date?: string | null
   reminder_sent?: boolean
+  is_cancelled?: boolean
+  cancellation_reason?: string | null
   created_by: string
   created_at: string
   updated_at?: string | null
@@ -44,6 +46,7 @@ const fetcher = async (key: string): Promise<PartialPayment[]> => {
     .from('partial_payments')
     .select('*')
     .eq('quote_id', quoteId)
+    .eq('is_cancelled', false) // Solo pagos no cancelados
     .order('payment_date', { ascending: false })
   
   if (error) {

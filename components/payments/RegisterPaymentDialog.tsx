@@ -106,30 +106,34 @@ function RegisterPaymentDialog({
       return
     }
 
+    if (data.amount <= 0) {
+      toastError('El monto debe ser mayor a 0')
+      return
+    }
+
     setIsSubmitting(true)
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!user) {
-        toastError('Usuario no autenticado')
-        return
-      }
-
-      const { error } = await supabase.from('partial_payments').insert({
-        quote_id: quoteId,
-        amount: data.amount,
-        payment_date: data.payment_date,
-        payment_method: data.payment_method,
-        reference_number: data.reference_number || null,
-        notes: data.notes || null,
-        is_deposit: data.is_deposit || false,
-        due_date: data.due_date || null,
-        created_by: user.id,
+      // Usar API route para registrar pago con validaciones del servidor
+      const response = await fetch('/api/payments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          quote_id: quoteId,
+          amount: data.amount,
+          payment_date: data.payment_date,
+          payment_method: data.payment_method,
+          reference_number: data.reference_number || null,
+          notes: data.notes || null,
+        }),
       })
 
-      if (error) throw error
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Error al registrar el pago')
+      }
 
       // Track analytics
       try {
