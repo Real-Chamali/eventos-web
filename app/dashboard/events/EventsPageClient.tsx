@@ -467,7 +467,7 @@ export default function EventsPageClient() {
   ]
 
   return (
-    <div className="space-y-8 p-6 lg:p-8">
+    <div className="space-y-6 sm:space-y-8 p-4 sm:p-6 lg:p-8">
       {/* Premium Header */}
       <div className="flex items-center justify-between">
         <div className="space-y-1">
@@ -554,15 +554,15 @@ export default function EventsPageClient() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <div className="flex gap-3">
-              <div className="flex items-center space-x-2">
-                <Filter className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex items-center space-x-2 flex-1 sm:flex-initial">
+                <Filter className="h-4 w-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                 <select
                   id="events-status-filter"
                   name="statusFilter"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-                  className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-all"
+                  className="flex-1 sm:flex-initial px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-all touch-manipulation"
                 >
                   {statusFilters.map((filter) => (
                     <option key={filter.value} value={filter.value}>
@@ -571,14 +571,14 @@ export default function EventsPageClient() {
                   ))}
                 </select>
               </div>
-              <div className="flex items-center space-x-2">
-                <CalendarIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
+              <div className="flex items-center space-x-2 flex-1 sm:flex-initial">
+                <CalendarIcon className="h-4 w-4 text-gray-500 dark:text-gray-400 flex-shrink-0" />
                 <select
                   id="events-date-filter"
                   name="dateFilter"
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value as typeof dateFilter)}
-                  className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-all"
+                  className="flex-1 sm:flex-initial px-4 py-2.5 min-h-[44px] rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-all touch-manipulation"
                 >
                   {dateFilters.map((filter) => (
                     <option key={filter.value} value={filter.value}>

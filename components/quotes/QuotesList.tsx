@@ -69,53 +69,56 @@ const QuoteRow = memo(function QuoteRow({
   getStatusBadge: (status: string) => React.ReactNode
 }) {
   return (
-    <div className="group border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-      <div className="grid grid-cols-12 gap-4 px-6 py-4 items-center">
-        <div className="col-span-3">
-          <Link
-            href={`/dashboard/quotes/${quote.id}`}
-            className="font-semibold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200"
-          >
-            {quote.client_name || 'Cliente sin nombre'}
-          </Link>
-        </div>
-        <div className="col-span-2">{getStatusBadge(quote.status)}</div>
-        <div className="col-span-2 text-right">
-          <span className="font-bold text-gray-900 dark:text-white">
-            {new Intl.NumberFormat('es-MX', {
-              style: 'currency',
-              currency: 'MXN',
-              minimumFractionDigits: 2,
-            }).format(quote.total_price || 0)}
-          </span>
-        </div>
-        <div className="col-span-2 text-gray-600 dark:text-gray-400">
-          {format(new Date(quote.created_at), "d 'de' MMMM, yyyy", { locale: es })}
-        </div>
-        <div className="col-span-3 text-right">
-          <div className="flex items-center justify-end gap-2">
-            <Link href={`/dashboard/quotes/${quote.id}`}>
-              <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                Ver detalles
-              </Button>
+    <>
+      {/* Mobile Card View */}
+      <div className="lg:hidden">
+        <Card variant="elevated" className="mb-4 active:scale-[0.98] transition-transform touch-manipulation">
+          <CardContent className="p-4">
+            <Link href={`/dashboard/quotes/${quote.id}`} className="block">
+              <div className="flex items-start justify-between mb-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-base text-gray-900 dark:text-white truncate mb-1">
+                    {quote.client_name || 'Cliente sin nombre'}
+                  </h3>
+                  <div className="flex items-center gap-2 mb-2">
+                    {getStatusBadge(quote.status)}
+                  </div>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                    {new Intl.NumberFormat('es-MX', {
+                      style: 'currency',
+                      currency: 'MXN',
+                      minimumFractionDigits: 2,
+                    }).format(quote.total_price || 0)}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    {format(new Date(quote.created_at), "d 'de' MMMM, yyyy", { locale: es })}
+                  </p>
+                </div>
+              </div>
             </Link>
-            {!adminLoading && isAdmin && (
-              <>
-                <Link href={`/dashboard/quotes/${quote.id}/edit`}>
-                  <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                </Link>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
-                    >
-                      <Trash2 className="h-4 w-4" />
+            <div className="flex items-center gap-2 pt-3 border-t border-gray-200 dark:border-gray-800">
+              <Link href={`/dashboard/quotes/${quote.id}`} className="flex-1">
+                <Button variant="outline" size="md" className="w-full min-h-[44px]">
+                  Ver detalles
+                </Button>
+              </Link>
+              {!adminLoading && isAdmin && (
+                <>
+                  <Link href={`/dashboard/quotes/${quote.id}/edit`}>
+                    <Button variant="ghost" size="md" className="min-w-[44px] min-h-[44px]">
+                      <Edit className="h-5 w-5" />
                     </Button>
-                  </AlertDialogTrigger>
+                  </Link>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="md" 
+                        className="min-w-[44px] min-h-[44px] text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 active:bg-red-100 dark:active:bg-red-900/30"
+                      >
+                        <Trash2 className="h-5 w-5" />
+                      </Button>
+                    </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>¿Eliminar cotización?</AlertDialogTitle>
@@ -137,9 +140,83 @@ const QuoteRow = memo(function QuoteRow({
               </>
             )}
           </div>
+        </CardContent>
+      </Card>
+      </div>
+
+      {/* Desktop Table View */}
+      <div className="hidden lg:block group border-b border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+        <div className="grid grid-cols-12 gap-4 px-6 py-4 items-center">
+          <div className="col-span-3">
+            <Link
+              href={`/dashboard/quotes/${quote.id}`}
+              className="font-semibold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors duration-200"
+            >
+              {quote.client_name || 'Cliente sin nombre'}
+            </Link>
+          </div>
+          <div className="col-span-2">{getStatusBadge(quote.status)}</div>
+          <div className="col-span-2 text-right">
+            <span className="font-bold text-gray-900 dark:text-white">
+              {new Intl.NumberFormat('es-MX', {
+                style: 'currency',
+                currency: 'MXN',
+                minimumFractionDigits: 2,
+              }).format(quote.total_price || 0)}
+            </span>
+          </div>
+          <div className="col-span-2 text-gray-600 dark:text-gray-400">
+            {format(new Date(quote.created_at), "d 'de' MMMM, yyyy", { locale: es })}
+          </div>
+          <div className="col-span-3 text-right">
+            <div className="flex items-center justify-end gap-2">
+              <Link href={`/dashboard/quotes/${quote.id}`}>
+                <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  Ver detalles
+                </Button>
+              </Link>
+              {!adminLoading && isAdmin && (
+                <>
+                  <Link href={`/dashboard/quotes/${quote.id}/edit`}>
+                    <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>¿Eliminar cotización?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Esta acción eliminará permanentemente la cotización. Esta acción no se puede deshacer.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => onDelete(quote.id)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Eliminar
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   )
 })
 

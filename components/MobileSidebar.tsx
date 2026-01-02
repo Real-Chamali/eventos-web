@@ -165,11 +165,11 @@ export default function MobileSidebar({
                     href={item.href}
                     onClick={onClose}
                     className={cn(
-                      'group relative flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200',
-                      'hover:scale-[1.02] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2',
+                      'group relative flex items-center space-x-3 px-4 py-3.5 min-h-[56px] rounded-xl text-base sm:text-sm font-medium transition-all duration-200',
+                      'active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 touch-manipulation',
                       isActive
                         ? 'bg-gradient-to-r from-indigo-50 to-violet-50 text-indigo-700 shadow-sm dark:from-indigo-950/30 dark:to-violet-950/30 dark:text-indigo-300'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-white'
+                        : 'text-gray-600 dark:text-gray-400 active:bg-gray-100 dark:active:bg-gray-800/70 hover:bg-gray-50 dark:hover:bg-gray-800/50 hover:text-gray-900 dark:hover:text-white'
                     )}
                     aria-current={isActive ? 'page' : undefined}
                   >
@@ -195,11 +195,11 @@ export default function MobileSidebar({
             <div className="p-4 border-t border-gray-200/60 dark:border-gray-800/60">
               <Button
                 variant="ghost"
-                size="md"
+                size="lg"
                 onClick={handleLogout}
-                className="w-full justify-start text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                className="w-full justify-start text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-800/50 active:bg-gray-100 dark:active:bg-gray-700/50 min-h-[56px] text-base sm:text-sm"
               >
-                <LogOut className="mr-2 h-4 w-4" />
+                <LogOut className="mr-2 h-5 w-5 sm:h-4 sm:w-4" />
                 Cerrar sesión
               </Button>
             </div>

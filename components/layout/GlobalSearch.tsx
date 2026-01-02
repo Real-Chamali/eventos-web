@@ -150,10 +150,12 @@ export default function GlobalSearch() {
 
   return (
     <>
-      {/* Trigger Button */}
+      {/* Trigger Button - Desktop */}
       <button
         onClick={() => setIsOpen(true)}
-        className="hidden lg:flex items-center space-x-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300 transition-colors"
+        data-mobile-search-trigger
+        className="hidden md:flex items-center space-x-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 min-h-[44px] text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700 active:bg-gray-200 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:active:bg-gray-600 dark:hover:text-gray-300 transition-colors touch-manipulation"
+        aria-label="Buscar"
       >
         <Search className="h-4 w-4" />
         <span>Buscar...</span>
@@ -164,9 +166,9 @@ export default function GlobalSearch() {
 
       {/* Search Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-2xl p-0">
-          <div className="flex items-center border-b border-gray-200 dark:border-gray-800 px-4">
-            <Search className="h-5 w-5 text-gray-400 mr-3" />
+        <DialogContent className="sm:max-w-2xl p-0 max-h-[90vh] sm:max-h-[80vh] flex flex-col">
+          <div className="flex items-center border-b border-gray-200 dark:border-gray-800 px-3 sm:px-4 min-h-[56px]">
+            <Search className="h-5 w-5 text-gray-400 mr-2 sm:mr-3 flex-shrink-0" />
             <input
               id="global-search-input"
               name="search"
@@ -175,68 +177,69 @@ export default function GlobalSearch() {
               placeholder="Buscar cotizaciones, clientes, eventos..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="flex-1 py-4 bg-transparent outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
+              className="flex-1 py-3 sm:py-4 bg-transparent outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500 text-base sm:text-sm"
               autoComplete="off"
             />
             {query && (
               <button
                 onClick={() => setQuery('')}
-                className="ml-2 rounded p-1 hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="ml-2 rounded p-2 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-gray-100 active:bg-gray-200 dark:hover:bg-gray-800 dark:active:bg-gray-700 touch-manipulation"
+                aria-label="Limpiar búsqueda"
               >
-                <X className="h-4 w-4 text-gray-400" />
+                <X className="h-5 w-5 text-gray-400" />
               </button>
             )}
           </div>
 
-          <div className="max-h-96 overflow-y-auto p-2">
+          <div className="flex-1 overflow-y-auto p-2 sm:p-3 min-h-0">
             {loading ? (
-              <div className="flex items-center justify-center py-8 text-sm text-gray-500">
+              <div className="flex items-center justify-center py-8 sm:py-12 text-sm text-gray-500">
                 Buscando...
               </div>
             ) : results.length === 0 && query.length >= 2 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-sm text-gray-500">
+              <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-sm text-gray-500 px-4">
                 <p>No se encontraron resultados</p>
                 <p className="text-xs text-gray-400 mt-1">Intenta con otros términos</p>
               </div>
             ) : query.length < 2 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-sm text-gray-500">
-                <p>Escribe al menos 2 caracteres para buscar</p>
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-gray-100 px-3 py-1 text-xs dark:bg-gray-800">
+              <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-sm text-gray-500 px-4">
+                <p className="text-center">Escribe al menos 2 caracteres para buscar</p>
+                <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                  <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs dark:bg-gray-800">
                     Cotizaciones
                   </span>
-                  <span className="rounded-full bg-gray-100 px-3 py-1 text-xs dark:bg-gray-800">
+                  <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs dark:bg-gray-800">
                     Clientes
                   </span>
-                  <span className="rounded-full bg-gray-100 px-3 py-1 text-xs dark:bg-gray-800">
+                  <span className="rounded-full bg-gray-100 px-3 py-1.5 text-xs dark:bg-gray-800">
                     Eventos
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="space-y-1">
+              <div className="space-y-1 sm:space-y-2">
                 {results.map((result) => (
                   <button
                     key={`${result.type}-${result.id}`}
                     onClick={() => handleSelect(result)}
                     className={cn(
-                      'flex w-full items-center space-x-3 rounded-lg px-3 py-2 text-left hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors'
+                      'flex w-full items-center space-x-3 rounded-lg px-3 sm:px-4 py-3 sm:py-2.5 min-h-[56px] sm:min-h-[44px] text-left hover:bg-gray-100 active:bg-gray-200 dark:hover:bg-gray-800 dark:active:bg-gray-700 transition-colors touch-manipulation'
                     )}
                   >
-                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+                    <div className="flex h-10 w-10 sm:h-8 sm:w-8 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 flex-shrink-0">
                       {getIcon(result.type)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                      <p className="text-sm sm:text-sm font-medium text-gray-900 dark:text-white truncate">
                         {result.title}
                       </p>
                       {result.subtitle && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">
                           {result.subtitle}
                         </p>
                       )}
                     </div>
-                    <span className="text-xs text-gray-400 capitalize">{result.type}</span>
+                    <span className="text-xs text-gray-400 capitalize flex-shrink-0 ml-2">{result.type}</span>
                   </button>
                 ))}
               </div>

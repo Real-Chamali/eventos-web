@@ -113,22 +113,22 @@ export default function Navbar() {
       />
 
       <nav className="sticky top-0 z-40 w-full border-b border-gray-200/60 bg-white/80 backdrop-blur-xl dark:border-gray-800/60 dark:bg-gray-900/80">
-        <div className="mx-auto flex h-20 max-w-[1920px] items-center justify-between px-6 lg:px-8">
+        <div className="mx-auto flex h-16 md:h-20 max-w-[1920px] items-center justify-between px-3 sm:px-4 md:px-6 lg:px-8 gap-2 md:gap-4">
           {/* Logo & Mobile Menu */}
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-2 sm:space-x-4 md:space-x-6 flex-shrink-0">
             <button
               onClick={toggleSidebar}
-              className="inline-flex items-center justify-center rounded-xl p-2.5 text-gray-700 hover:bg-gray-100/80 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:text-gray-300 dark:hover:bg-gray-800/80 lg:hidden transition-all duration-200"
+              className="inline-flex items-center justify-center rounded-xl p-2.5 min-w-[44px] min-h-[44px] text-gray-700 hover:bg-gray-100/80 active:bg-gray-200/80 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:text-gray-300 dark:hover:bg-gray-800/80 dark:active:bg-gray-700/80 lg:hidden transition-all duration-200 touch-manipulation"
               aria-label={isOpen ? 'Cerrar menú' : 'Abrir menú'}
               aria-expanded={isOpen}
             >
               {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-          <Link href="/dashboard" className="flex items-center space-x-3 group">
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-105">
-              <Sparkles className="h-5 w-5 text-white" />
+          <Link href="/dashboard" className="flex items-center space-x-2 sm:space-x-3 group flex-shrink-0">
+            <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-2xl bg-gradient-to-br from-indigo-600 via-violet-600 to-purple-600 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200 group-hover:scale-105">
+              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
-            <div className="hidden sm:flex flex-col">
+            <div className="hidden xs:flex flex-col">
               <span className="font-bold text-gray-900 dark:text-white text-sm tracking-tight">Eventos</span>
               <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Premium</span>
             </div>
@@ -155,15 +155,36 @@ export default function Navbar() {
           )}
         </div>
 
-        {/* Search Bar - Desktop */}
-        <div className="hidden flex-1 max-w-md mx-8 lg:flex items-center justify-center">
+        {/* Search Bar - Mobile & Desktop */}
+        <div className="hidden md:flex flex-1 max-w-md mx-4 lg:mx-8 items-center justify-center">
           <GlobalSearch />
         </div>
 
+        {/* Mobile Search Button */}
+        <button
+          onClick={() => {
+            // Trigger search on mobile
+            const searchButton = document.querySelector('[data-mobile-search-trigger]') as HTMLElement
+            if (searchButton) {
+              searchButton.click()
+            } else {
+              // Fallback: open search dialog programmatically
+              const event = new KeyboardEvent('keydown', { key: 'k', metaKey: true, ctrlKey: true })
+              window.dispatchEvent(event)
+            }
+          }}
+          className="md:hidden inline-flex items-center justify-center rounded-xl p-2.5 min-w-[44px] min-h-[44px] text-gray-700 hover:bg-gray-100/80 active:bg-gray-200/80 dark:text-gray-300 dark:hover:bg-gray-800/80 dark:active:bg-gray-700/80 transition-all duration-200 touch-manipulation"
+          aria-label="Buscar"
+        >
+          <Search className="h-5 w-5" />
+        </button>
+
         {/* Right Side Actions */}
-        <div className="flex items-center space-x-3">
-          {/* Quick Actions */}
-          <QuickActions />
+        <div className="flex items-center space-x-1 sm:space-x-2 md:space-x-3 flex-shrink-0">
+          {/* Quick Actions - Hidden on mobile, shown on tablet+ */}
+          <div className="hidden sm:block">
+            <QuickActions />
+          </div>
           
           {/* Notifications */}
           <NotificationCenter />
@@ -171,16 +192,16 @@ export default function Navbar() {
           {/* User Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center space-x-3 rounded-xl p-2 text-gray-700 hover:bg-gray-100/80 dark:text-gray-300 dark:hover:bg-gray-800/80 transition-all duration-200 hover:scale-105 active:scale-95">
+              <button className="flex items-center space-x-2 sm:space-x-3 rounded-xl p-1.5 sm:p-2 min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0 text-gray-700 hover:bg-gray-100/80 active:bg-gray-200/80 dark:text-gray-300 dark:hover:bg-gray-800/80 dark:active:bg-gray-700/80 transition-all duration-200 hover:scale-105 active:scale-95 touch-manipulation">
                 <div className={cn(
-                  "h-9 w-9 rounded-xl flex items-center justify-center shadow-md transition-all duration-200 hover:shadow-lg",
+                  "h-8 w-8 sm:h-9 sm:w-9 rounded-xl flex items-center justify-center shadow-md transition-all duration-200 hover:shadow-lg",
                   pathname?.startsWith('/admin')
                     ? "bg-gradient-to-br from-purple-500 to-purple-600"
                     : "bg-gradient-to-br from-indigo-500 to-violet-600"
                 )}>
                   <User className="h-4 w-4 text-white" />
                 </div>
-                <span className="hidden text-sm font-medium sm:inline-block text-gray-900 dark:text-white">
+                <span className="hidden text-sm font-medium md:inline-block text-gray-900 dark:text-white">
                   {userEmail?.split('@')[0] || 'Usuario'}
                 </span>
               </button>

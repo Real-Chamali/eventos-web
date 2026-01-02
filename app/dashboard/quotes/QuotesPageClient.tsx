@@ -38,19 +38,19 @@ export default function QuotesPageClient() {
   ]
 
   return (
-    <div className="space-y-8 p-6 lg:p-8">
+    <div className="space-y-6 sm:space-y-8 p-4 sm:p-6 lg:p-8">
       {/* Premium Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
+          <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white">
             Cotizaciones
           </h1>
-          <p className="text-gray-600 dark:text-gray-400 text-lg">
+          <p className="text-gray-600 dark:text-gray-400 text-base sm:text-lg">
             Gestiona todas tus cotizaciones
           </p>
         </div>
-        <Link href="/dashboard/quotes/new">
-          <Button variant="premium" size="lg" className="shadow-lg hover:shadow-xl">
+        <Link href="/dashboard/quotes/new" className="w-full sm:w-auto">
+          <Button variant="premium" size="lg" className="w-full sm:w-auto shadow-lg hover:shadow-xl min-h-[48px] sm:min-h-[44px]">
             <Plus className="mr-2 h-5 w-5" />
             Nueva Cotización
           </Button>
@@ -58,7 +58,7 @@ export default function QuotesPageClient() {
       </div>
 
       {/* Premium Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <Card variant="elevated" className="group hover:scale-[1.02] transition-all duration-200">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
