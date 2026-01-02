@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
       `)
       .gte('start_date', tomorrow.toISOString().split('T')[0])
       .lt('start_date', new Date(tomorrow.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0])
-      .eq('status', 'confirmed')
+      .eq('status', 'CONFIRMED')
 
     if (errorTomorrow) {
       logger.error('Events Reminders', 'Error fetching events for tomorrow', errorTomorrow)
@@ -69,7 +69,7 @@ export async function GET(request: NextRequest) {
       `)
       .gte('start_date', nextWeek.toISOString().split('T')[0])
       .lt('start_date', new Date(nextWeek.getTime() + 24 * 60 * 60 * 1000).toISOString().split('T')[0])
-      .eq('status', 'confirmed')
+      .eq('status', 'CONFIRMED')
 
     if (errorNextWeek) {
       logger.error('Events Reminders', 'Error fetching events for next week', errorNextWeek)

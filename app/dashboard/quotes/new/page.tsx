@@ -460,12 +460,16 @@ export default function NewQuotePage() {
         },
         mutateFn: async () => {
           // Crear la cotización real
+          // Mapear status del frontend a la base de datos
+          const { mapQuoteStatusToDB } = await import('@/lib/utils/statusMapper')
+          const dbStatus = mapQuoteStatusToDB('draft') // 'draft' -> 'DRAFT'
+          
           const { data: quote, error } = await supabase
             .from('quotes')
             .insert({
               client_id: selectedClient.id,
               vendor_id: user.id,
-              status: 'draft',
+              status: dbStatus,
               total_price: total,
             })
             .select(`

@@ -90,7 +90,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const { data: events } = await supabase
       .from('events')
       .select('id, start_date, updated_at')
-      .eq('status', 'confirmed')
+      .eq('status', 'CONFIRMED')
       .order('start_date', { ascending: false })
       .limit(100)
 

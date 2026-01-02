@@ -5,6 +5,7 @@
 import useSWR from 'swr'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
+import { mapEventStatusFromDB } from '@/lib/utils/statusMapper'
 import type { Event } from '@/types'
 
 const fetcher = async (): Promise<Event[]> => {
@@ -77,8 +78,12 @@ const fetcher = async (): Promise<Event[]> => {
       quote.client = Array.isArray(quote.client) ? quote.client[0] : quote.client
     }
     
+    // Mapear status de BD a frontend
+    const frontendStatus = mapEventStatusFromDB(event.status || 'CONFIRMED')
+    
     return {
       ...event,
+      status: frontendStatus,
       quote: quote || null,
     } as Event
   })

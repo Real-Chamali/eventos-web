@@ -128,9 +128,13 @@ export default function QuoteDetailPageClient({ initialQuote }: QuoteDetailPageC
         return
       }
 
+      // Mapear status del frontend a la base de datos
+      const { mapQuoteStatusToDB } = await import('@/lib/utils/statusMapper')
+      const dbStatus = mapQuoteStatusToDB('confirmed') // 'confirmed' -> 'APPROVED'
+      
       const { error } = await supabase
         .from('quotes')
-        .update({ status: 'confirmed' })
+        .update({ status: dbStatus })
         .eq('id', quoteId)
 
       if (error) throw error

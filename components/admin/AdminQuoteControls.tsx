@@ -87,9 +87,14 @@ function AdminQuoteControls({
 
     try {
       setChangingStatus(true)
+      
+      // Mapear status del frontend a la base de datos
+      const { mapQuoteStatusToDB } = await import('@/lib/utils/statusMapper')
+      const dbStatus = mapQuoteStatusToDB(newStatus)
+      
       const { error } = await supabase
         .from('quotes')
-        .update({ status: newStatus, updated_at: new Date().toISOString() })
+        .update({ status: dbStatus, updated_at: new Date().toISOString() })
         .eq('id', quoteId)
 
       if (error) {

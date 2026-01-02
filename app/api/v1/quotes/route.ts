@@ -184,7 +184,13 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1)
 
     if (status) {
-      query = query.eq('status', status)
+      // Mapear status del frontend a la base de datos si es necesario
+      const { mapQuoteStatusToDB } = await import('@/lib/utils/statusMapper')
+      // Si viene en formato frontend (minúsculas), mapearlo
+      const dbStatus = ['draft', 'pending', 'confirmed', 'cancelled'].includes(status.toLowerCase())
+        ? mapQuoteStatusToDB(status.toLowerCase() as 'draft' | 'pending' | 'confirmed' | 'cancelled')
+        : status.toUpperCase() // Si ya viene en formato BD, usar directamente
+      query = query.eq('status', dbStatus)
     }
 
     const { data, error } = await query

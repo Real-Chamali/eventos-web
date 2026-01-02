@@ -372,12 +372,17 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
 
       // 1. Crear cotización
       const finalTotal = customTotal !== null ? customTotal : total
+      
+      // Mapear status del frontend a la base de datos
+      const { mapQuoteStatusToDB } = await import('@/lib/utils/statusMapper')
+      const dbStatus = mapQuoteStatusToDB('confirmed') // 'confirmed' -> 'APPROVED'
+      
       const { data: quote, error: quoteError } = await supabase
         .from('quotes')
         .insert({
           client_id: selectedClient.id,
           vendor_id: user.id,
-          status: 'confirmed',
+          status: dbStatus,
           total_amount: finalTotal,
           event_date: eventDate,
           notes: notes || null,
@@ -402,13 +407,17 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
       if (servicesError) throw servicesError
 
       // 3. Crear evento con todos los detalles
+      // Mapear status del frontend a la base de datos
+      const { mapEventStatusToDB } = await import('@/lib/utils/statusMapper')
+      const eventDbStatus = mapEventStatusToDB('confirmed') // 'confirmed' -> 'CONFIRMED'
+      
       const eventData: Record<string, unknown> = {
         quote_id: quote.id,
         start_date: format(startDateTime, 'yyyy-MM-dd'),
         end_date: endDateTime ? format(endDateTime, 'yyyy-MM-dd') : null,
         start_time: eventTime || null,
         end_time: eventEndTime || null,
-        status: 'confirmed',
+        status: eventDbStatus,
       }
       
       // Agregar campos opcionales si tienen valor

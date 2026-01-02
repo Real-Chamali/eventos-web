@@ -126,12 +126,16 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient()
 
     // Create quote
+    // Mapear status del frontend a la base de datos
+    const { mapQuoteStatusToDB } = await import('@/lib/utils/statusMapper')
+    const dbStatus = mapQuoteStatusToDB('draft') // 'draft' -> 'DRAFT'
+    
     const { data, error } = await supabase
       .from('quotes')
       .insert({
         vendor_id: auth.userId,
         client_id: payload.client_id,
-        status: 'draft',
+        status: dbStatus,
         total_price: payload.total_price,
         created_at: new Date().toISOString(),
       })

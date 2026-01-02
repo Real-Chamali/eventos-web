@@ -6,6 +6,7 @@
 import useSWR from 'swr'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
+import { mapQuoteStatusFromDB } from '@/lib/utils/statusMapper'
 import type { Quote } from '@/types'
 
 const fetcher = async (): Promise<Quote[]> => {
@@ -75,11 +76,13 @@ const fetcher = async (): Promise<Quote[]> => {
   return (data || []).map((quote: SupabaseQuoteResponse) => {
     // Extraer cliente (puede ser array o objeto)
     const client = quote.client ? (Array.isArray(quote.client) ? quote.client[0] : quote.client) : null
+    // Mapear status de BD a frontend
+    const frontendStatus = mapQuoteStatusFromDB(quote.status)
     return {
       id: quote.id,
       total_amount: quote.total_amount,
       total_price: quote.total_amount, // Alias para compatibilidad
-      status: quote.status,
+      status: frontendStatus,
       created_at: quote.created_at,
       updated_at: quote.updated_at,
       vendor_id: quote.vendor_id,
