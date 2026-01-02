@@ -12,7 +12,7 @@ import listPlugin from '@fullcalendar/list'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import PaymentModal from '@/components/payments/PaymentModal'
-import { DollarSign, Calendar as CalendarIcon, CheckCircle2, AlertCircle, XCircle, Clock } from 'lucide-react'
+import { DollarSign, Calendar as CalendarIcon, CheckCircle2, AlertCircle, XCircle, Clock, MoreVertical } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
 import Button from '@/components/ui/Button'
 
@@ -229,8 +229,16 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
     toastSuccess(`Fecha seleccionada: ${format(dateClickInfo.date, 'PPP', { locale: es })}`)
   }, [toastSuccess])
 
+  const handleRegisterPayment = useCallback((quoteId: string, totalAmount: number, e?: React.MouseEvent) => {
+    e?.stopPropagation() // Prevenir que se active el click del evento
+    setSelectedQuoteId(quoteId)
+    setSelectedQuoteTotal(totalAmount)
+    setPaymentModalOpen(true)
+  }, [])
+
   const eventContent = useCallback((eventInfo: any) => {
     const props = eventInfo.event.extendedProps as CalendarEvent['extendedProps']
+    const canRegisterPayment = props.balanceDue > 0 && props.financialStatus !== 'CANCELLED'
     
     return (
       <div className="p-1 text-xs">
@@ -257,9 +265,23 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
             <span>Liquidado</span>
           </div>
         )}
+        {canRegisterPayment && (
+          <button
+            onClick={(e) => handleRegisterPayment(props.quoteId, props.totalAmount, e)}
+            className="mt-1.5 w-full flex items-center justify-center gap-1 px-2 py-1 text-[10px] font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 rounded-md transition-colors duration-200 shadow-sm hover:shadow-md active:scale-95 touch-manipulation"
+            aria-label={`Registrar pago para ${props.clientName}`}
+            title={`Registrar pago - Saldo: ${new Intl.NumberFormat('es-MX', {
+              style: 'currency',
+              currency: 'MXN',
+            }).format(props.balanceDue)}`}
+          >
+            <DollarSign className="h-3 w-3" />
+            <span>Registrar Pago</span>
+          </button>
+        )}
       </div>
     )
-  }, [])
+  }, [handleRegisterPayment])
 
   return (
     <div className="space-y-4">
