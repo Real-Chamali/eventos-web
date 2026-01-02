@@ -1043,6 +1043,8 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
                   Notas Adicionales
                 </label>
                 <textarea
+                  id="event-notes"
+                  name="notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder="Agregar notas sobre el evento..."

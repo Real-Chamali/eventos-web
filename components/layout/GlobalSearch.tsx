@@ -168,12 +168,15 @@ export default function GlobalSearch() {
           <div className="flex items-center border-b border-gray-200 dark:border-gray-800 px-4">
             <Search className="h-5 w-5 text-gray-400 mr-3" />
             <input
+              id="global-search-input"
+              name="search"
               ref={inputRef}
               type="text"
               placeholder="Buscar cotizaciones, clientes, eventos..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="flex-1 py-4 bg-transparent outline-none placeholder:text-gray-400 dark:placeholder:text-gray-500"
+              autoComplete="off"
             />
             {query && (
               <button
