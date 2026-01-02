@@ -26,6 +26,7 @@ const inter = Inter({
 });
 
 import { generateMetadata as generateSEOMetadata } from '@/lib/utils/seo'
+import type { Viewport } from 'next'
 
 export const metadata: Metadata = {
   ...generateSEOMetadata({
@@ -34,18 +35,10 @@ export const metadata: Metadata = {
     path: "/",
   }),
   manifest: "/manifest.json",
-  themeColor: "#6366f1",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
     title: "Eventos CRM",
-  },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 5,
-    userScalable: true,
-    viewportFit: "cover",
   },
   icons: {
     icon: [
@@ -57,6 +50,15 @@ export const metadata: Metadata = {
       { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
   },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
+  viewportFit: "cover",
+  themeColor: "#6366f1",
 };
 
 export default function RootLayout({
