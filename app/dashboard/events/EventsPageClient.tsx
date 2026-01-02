@@ -558,6 +558,8 @@ export default function EventsPageClient() {
               <div className="flex items-center space-x-2">
                 <Filter className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 <select
+                  id="events-status-filter"
+                  name="statusFilter"
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
                   className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-all"
@@ -572,6 +574,8 @@ export default function EventsPageClient() {
               <div className="flex items-center space-x-2">
                 <CalendarIcon className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                 <select
+                  id="events-date-filter"
+                  name="dateFilter"
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value as typeof dateFilter)}
                   className="px-4 py-2 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 transition-all"

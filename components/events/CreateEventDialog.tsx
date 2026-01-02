@@ -609,16 +609,22 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
                     required
                   />
                   <Input
+                    id="new-client-email"
+                    name="newClientEmail"
                     type="email"
                     placeholder="Email (opcional)"
                     value={newClientEmail}
                     onChange={(e) => setNewClientEmail(e.target.value)}
+                    autoComplete="email"
                   />
                   <Input
+                    id="new-client-phone"
+                    name="newClientPhone"
                     type="tel"
                     placeholder="Teléfono (opcional)"
                     value={newClientPhone}
                     onChange={(e) => setNewClientPhone(e.target.value)}
+                    autoComplete="tel"
                   />
                   <Button
                     onClick={handleCreateClient}
@@ -689,12 +695,16 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
                     </Button>
                   </div>
                   <Input
+                    id="new-service-name"
+                    name="newServiceName"
                     placeholder="Nombre del servicio *"
                     value={newServiceName}
                     onChange={(e) => setNewServiceName(e.target.value)}
                     required
                   />
                   <Input
+                    id="new-service-price"
+                    name="newServicePrice"
                     type="number"
                     placeholder="Precio base (MXN) *"
                     value={newServicePrice}
@@ -954,6 +964,8 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
                     Número de Invitados
                   </label>
                   <Input
+                    id="event-guest-count"
+                    name="guestCount"
                     type="number"
                     value={guestCount}
                     onChange={(e) => setGuestCount(e.target.value ? parseInt(e.target.value) : '')}
@@ -987,11 +999,14 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
                     Contacto de Emergencia
                   </label>
                   <Input
+                    id="event-emergency-contact"
+                    name="emergencyContact"
                     type="text"
                     value={emergencyContact}
                     onChange={(e) => setEmergencyContact(e.target.value)}
                     placeholder="Nombre del contacto"
                     className="w-full"
+                    autoComplete="name"
                   />
                 </div>
                 <div>
@@ -999,11 +1014,14 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
                     Teléfono de Emergencia
                   </label>
                   <Input
+                    id="event-emergency-phone"
+                    name="emergencyPhone"
                     type="tel"
                     value={emergencyPhone}
                     onChange={(e) => setEmergencyPhone(e.target.value)}
                     placeholder="Ej: +52 123 456 7890"
                     className="w-full"
+                    autoComplete="tel"
                   />
                 </div>
               </div>
@@ -1012,6 +1030,8 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
                   Requisitos Especiales
                 </label>
                 <textarea
+                  id="event-special-requirements"
+                  name="specialRequirements"
                   value={specialRequirements}
                   onChange={(e) => setSpecialRequirements(e.target.value)}
                   placeholder="Ej: Acceso para silla de ruedas, catering vegetariano, equipo de sonido especial..."

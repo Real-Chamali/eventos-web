@@ -607,11 +607,14 @@ export default function AdminVendorsPage() {
                 Nombre Completo
               </label>
               <input
+                id="edit-user-name"
+                name="name"
                 type="text"
                 value={editForm.name}
                 onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="Nombre completo"
+                autoComplete="name"
               />
             </div>
             <div>
@@ -619,11 +622,14 @@ export default function AdminVendorsPage() {
                 Email
               </label>
               <input
+                id="edit-user-email"
+                name="email"
                 type="email"
                 value={editForm.email}
                 onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 placeholder="email@ejemplo.com"
+                autoComplete="email"
               />
             </div>
             <div>
@@ -632,11 +638,14 @@ export default function AdminVendorsPage() {
               </label>
               <div className="relative">
                 <input
+                  id="edit-user-password"
+                  name="password"
                   type="password"
                   value={editForm.password}
                   onChange={(e) => setEditForm({ ...editForm, password: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   placeholder="Dejar vacío para no cambiar"
+                  autoComplete="new-password"
                 />
                 <Lock className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
               </div>

@@ -115,11 +115,14 @@ export default function EditClientDialog({ open, onClose, onSuccess, client }: E
                   Nombre *
                 </label>
                 <Input
+                  id="edit-client-name"
+                  name="name"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Nombre del cliente"
                   required
+                  autoComplete="name"
                 />
               </div>
               <div>
@@ -128,10 +131,13 @@ export default function EditClientDialog({ open, onClose, onSuccess, client }: E
                   Email
                 </label>
                 <Input
+                  id="edit-client-email"
+                  name="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="email@ejemplo.com"
+                  autoComplete="email"
                 />
               </div>
               <div>
@@ -140,10 +146,13 @@ export default function EditClientDialog({ open, onClose, onSuccess, client }: E
                   Teléfono
                 </label>
                 <Input
+                  id="edit-client-phone"
+                  name="phone"
                   type="tel"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+52 123 456 7890"
+                  autoComplete="tel"
                 />
               </div>
             </CardContent>
