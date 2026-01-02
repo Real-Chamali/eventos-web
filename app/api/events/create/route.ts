@@ -109,7 +109,10 @@ export async function POST(request: NextRequest) {
       .neq('status', 'NO_SHOW')
 
     if (overlapError) {
-      logger.warn('API /events/create', 'Error checking overlapping events', overlapError as Error)
+      logger.warn('API /events/create', 'Error checking overlapping events', {
+        error: overlapError.message,
+        code: overlapError.code,
+      })
       // Continuar aunque haya error en la verificación
     } else if (overlappingEvents && overlappingEvents.length > 0) {
       // Verificar solapamiento real

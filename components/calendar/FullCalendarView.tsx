@@ -20,7 +20,7 @@ interface CalendarEvent {
   id: string
   title: string
   start: string
-  end?: string | null
+  end?: string
   backgroundColor?: string
   borderColor?: string
   textColor?: string
@@ -183,7 +183,7 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
             currency: 'MXN',
           }).format(totalAmount)}`,
           start: startDateTime,
-          end: endDateTime || undefined,
+          ...(endDateTime ? { end: endDateTime } : {}),
           backgroundColor,
           borderColor,
           textColor,
@@ -310,7 +310,7 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
           dayMaxEvents={3}
           moreLinkClick="popover"
           eventDisplay="block"
-          loading={loading}
+          {...(loading ? {} : {})}
         />
       </div>
 
