@@ -14,7 +14,10 @@ import { z } from 'zod'
 const PaymentSchema = z.object({
   quote_id: z.string().uuid('ID de cotización inválido'),
   amount: z.number().positive('El monto debe ser mayor a 0'),
-  payment_date: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)),
+  payment_date: z.string().refine(
+    (val) => /^\d{4}-\d{2}-\d{2}$/.test(val) || !isNaN(Date.parse(val)),
+    'Fecha debe estar en formato YYYY-MM-DD o ISO datetime'
+  ),
   payment_method: z.enum(['cash', 'transfer', 'card', 'check', 'other']),
   reference_number: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
@@ -50,6 +53,12 @@ export async function POST(request: NextRequest) {
 
     const { quote_id, amount, payment_date, payment_method, reference_number, notes } = validation.data
 
+    // Convertir fecha a formato ISO timestamp si es solo fecha
+    let paymentDateISO = payment_date
+    if (/^\d{4}-\d{2}-\d{2}$/.test(payment_date)) {
+      paymentDateISO = new Date(payment_date + 'T00:00:00').toISOString()
+    }
+
     // Verificar que la cotización existe y el usuario tiene acceso
     const { data: quote, error: quoteError } = await supabase
       .from('quotes')
@@ -81,7 +90,7 @@ export async function POST(request: NextRequest) {
       p_quote_id: quote_id,
       p_amount: amount,
       p_created_by: user.id,
-      p_payment_date: payment_date,
+      p_payment_date: paymentDateISO,
       p_payment_method: payment_method,
       p_reference_number: reference_number || null,
       p_notes: notes || null,

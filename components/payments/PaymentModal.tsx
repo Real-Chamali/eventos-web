@@ -105,7 +105,9 @@ export default function PaymentModal({
       const result = await response.json()
 
       if (!response.ok) {
-        throw new Error(result.error || 'Error al registrar el pago')
+        const errorMessage = result.error || result.message || 'Error al registrar el pago'
+        const errorDetails = result.details ? `\n${JSON.stringify(result.details, null, 2)}` : ''
+        throw new Error(`${errorMessage}${errorDetails}`)
       }
 
       toastSuccess('Pago registrado exitosamente')

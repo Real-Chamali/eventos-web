@@ -64,7 +64,7 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
     try {
       setLoading(true)
       
-      // Obtener eventos con información completa
+      // Obtener eventos con información completa (solo eventos con quote_id y start_date)
       const { data: eventsData, error: eventsError } = await supabase
         .from('events')
         .select(`
@@ -75,29 +75,38 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
           end_time,
           status,
           quote_id,
-          quote:quotes!inner (
+          quotes!inner (
             id,
             total_amount,
             status,
             client_id,
-            client:clients!inner (
+            clients!inner (
               id,
               name
             )
           )
         `)
         .not('start_date', 'is', null)
+        .not('quote_id', 'is', null)
         .order('start_date', { ascending: true })
 
       if (eventsError) {
-        logger.error('FullCalendarView', 'Error loading events', eventsError as Error)
-        throw eventsError
+        const errorObj = eventsError as any
+        logger.error('FullCalendarView', 'Error loading events', new Error(eventsError.message || String(eventsError)))
+        toastError(`Error al cargar eventos: ${errorObj.message || eventsError.message || 'Error desconocido'}`)
+        setEvents([])
+        return
+      }
+
+      if (!eventsData || eventsData.length === 0) {
+        setEvents([])
+        return
       }
 
       // Obtener resumen financiero para cada cotización
       const quoteIds = (eventsData || [])
         .map((e: any) => {
-          const quote = Array.isArray(e.quote) ? e.quote[0] : e.quote
+          const quote = Array.isArray(e.quotes) ? e.quotes[0] : e.quotes
           return quote?.id
         })
         .filter(Boolean)
@@ -118,9 +127,10 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
 
       // Procesar eventos para FullCalendar
       const calendarEvents: CalendarEvent[] = (eventsData || []).map((eventRaw: any) => {
-        const quote = Array.isArray(eventRaw.quote) ? eventRaw.quote[0] : eventRaw.quote
-        const client = quote?.client 
-          ? (Array.isArray(quote.client) ? quote.client[0] : quote.client)
+        // El !inner garantiza que siempre hay quote y client
+        const quote = Array.isArray(eventRaw.quotes) ? eventRaw.quotes[0] : eventRaw.quotes
+        const client = quote?.clients 
+          ? (Array.isArray(quote.clients) ? quote.clients[0] : quote.clients)
           : null
 
         const totalAmount = quote?.total_amount || 0
@@ -189,7 +199,7 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
           textColor,
           extendedProps: {
             eventId: eventRaw.id,
-            quoteId: quote?.id || '',
+            quoteId: quote.id,
             clientName: client?.name || 'Sin cliente',
             totalAmount,
             totalPaid,
@@ -202,8 +212,10 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
 
       setEvents(calendarEvents)
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
       logger.error('FullCalendarView', 'Error loading events', error instanceof Error ? error : new Error(String(error)))
-      toastError('Error al cargar eventos')
+      toastError(`Error al cargar eventos: ${errorMessage}`)
+      setEvents([])
     } finally {
       setLoading(false)
     }
