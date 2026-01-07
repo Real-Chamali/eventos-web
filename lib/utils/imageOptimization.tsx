@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * Utilidades Premium para Optimización de Imágenes
  * 

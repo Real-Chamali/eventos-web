@@ -105,7 +105,7 @@ Se han implementado mejoras premium en:
 
 ### Utilidades Premium
 
-**Archivo:** `lib/utils/imageOptimization.ts`
+**Archivo:** `lib/utils/imageOptimization.tsx`
 
 **Funcionalidades implementadas:**
 - ✅ Componente `OptimizedImage` con lazy loading
