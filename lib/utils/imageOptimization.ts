@@ -5,8 +5,8 @@
  * y formatos modernos (WebP/AVIF)
  */
 
+import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { useState, useEffect } from 'react'
 
 export interface OptimizedImageProps {
   src: string
