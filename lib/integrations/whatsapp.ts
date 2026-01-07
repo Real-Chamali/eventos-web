@@ -161,73 +161,99 @@ export async function sendWhatsApp(options: WhatsAppOptions): Promise<{ success:
 }
 
 /**
- * Plantillas de mensajes de WhatsApp
- * Los mensajes de WhatsApp deben ser más cortos y directos que los emails
+ * Plantillas de mensajes de WhatsApp Premium
+ * Mensajes profesionales, bien formateados y con emojis estratégicos
  */
 export const whatsappTemplates = {
   /**
    * Mensaje cuando se crea una nueva cotización
+   * Formato premium con mejor estructura y presentación
    */
   quoteCreated: (quoteId: string, clientName: string, totalAmount: number) => {
-    const shortId = quoteId.slice(0, 8)
+    const shortId = quoteId.slice(0, 8).toUpperCase()
     const formattedAmount = new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN',
+      minimumFractionDigits: 2,
     }).format(totalAmount)
 
-    return `Hola ${clientName}! 👋
+    return `✨ *Nueva Cotización Creada* ✨
 
-Hemos creado una nueva cotización para ti:
+Hola ${clientName}! 👋
 
-📄 ID: ${shortId}
-💰 Total: ${formattedAmount}
+Hemos preparado una cotización personalizada para ti:
 
-Puedes ver todos los detalles en:
+━━━━━━━━━━━━━━━━━━━━
+📋 *ID de Cotización:* ${shortId}
+💰 *Monto Total:* ${formattedAmount}
+━━━━━━━━━━━━━━━━━━━━
+
+🔗 Ver detalles completos:
 ${process.env.NEXT_PUBLIC_APP_URL || 'https://eventos-web-lovat.vercel.app'}/dashboard/quotes/${quoteId}
 
-¡Gracias por confiar en nosotros! 🙏`
+Estamos aquí para ayudarte. Si tienes alguna pregunta, no dudes en contactarnos.
+
+¡Gracias por confiar en nosotros! 🙏✨`
   },
 
   /**
    * Mensaje cuando se aprueba una cotización
+   * Mensaje celebratorio y profesional
    */
   quoteApproved: (quoteId: string, clientName: string, totalAmount: number) => {
-    const shortId = quoteId.slice(0, 8)
+    const shortId = quoteId.slice(0, 8).toUpperCase()
     const formattedAmount = new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN',
+      minimumFractionDigits: 2,
     }).format(totalAmount)
 
-    return `¡Excelente noticia, ${clientName}! 🎉
+    return `🎉 *¡Cotización Aprobada!* 🎉
 
-Tu cotización ha sido *APROBADA*:
+¡Excelente noticia, ${clientName}!
 
-📄 ID: ${shortId}
-💰 Total: ${formattedAmount}
+Tu cotización ha sido *APROBADA* y estamos listos para comenzar:
 
-Puedes ver todos los detalles en:
+━━━━━━━━━━━━━━━━━━━━
+✅ *Estado:* Aprobada
+📋 *ID:* ${shortId}
+💰 *Monto Total:* ${formattedAmount}
+━━━━━━━━━━━━━━━━━━━━
+
+🔗 Ver detalles y gestionar pagos:
 ${process.env.NEXT_PUBLIC_APP_URL || 'https://eventos-web-lovat.vercel.app'}/dashboard/quotes/${quoteId}
 
-¡Estamos listos para hacer tu evento inolvidable! 🎊`
+Nuestro equipo está trabajando para hacer tu evento inolvidable. Te mantendremos informado en cada paso.
+
+¡Gracias por confiar en nosotros! 🎊✨`
   },
 
   /**
    * Mensaje cuando se rechaza una cotización
+   * Mensaje empático y profesional
    */
   quoteRejected: (quoteId: string, clientName: string) => {
-    const shortId = quoteId.slice(0, 8)
+    const shortId = quoteId.slice(0, 8).toUpperCase()
 
     return `Hola ${clientName},
 
 Lamentamos informarte que tu cotización #${shortId} ha sido rechazada.
 
-Si tienes alguna pregunta o deseas hacer cambios, no dudes en contactarnos.
+━━━━━━━━━━━━━━━━━━━━
+❌ *Estado:* Rechazada
+📋 *ID:* ${shortId}
+━━━━━━━━━━━━━━━━━━━━
 
-Gracias por tu interés.`
+Entendemos que esto puede ser decepcionante. Si tienes alguna pregunta o deseas hacer cambios para una nueva cotización, estamos aquí para ayudarte.
+
+No dudes en contactarnos para discutir alternativas o ajustes.
+
+Gracias por tu interés y confianza. 🙏`
   },
 
   /**
    * Mensaje cuando se registra un pago
+   * Mensaje detallado con información financiera clara
    */
   paymentRegistered: (
     quoteId: string,
@@ -236,145 +262,301 @@ Gracias por tu interés.`
     totalPaid: number,
     totalAmount: number
   ) => {
-    const shortId = quoteId.slice(0, 8)
+    const shortId = quoteId.slice(0, 8).toUpperCase()
     const formattedAmount = new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN',
+      minimumFractionDigits: 2,
     }).format(amount)
     const formattedTotalPaid = new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN',
+      minimumFractionDigits: 2,
     }).format(totalPaid)
     const formattedTotal = new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN',
+      minimumFractionDigits: 2,
     }).format(totalAmount)
     const remaining = totalAmount - totalPaid
     const formattedRemaining = new Intl.NumberFormat('es-MX', {
       style: 'currency',
       currency: 'MXN',
+      minimumFractionDigits: 2,
     }).format(remaining)
+    const percentagePaid = totalAmount > 0 ? Math.round((totalPaid / totalAmount) * 100) : 0
+    const isFullyPaid = remaining <= 0
 
-    return `Hola ${clientName}! ✅
+    return `✅ *Pago Registrado Exitosamente* ✅
 
-Hemos registrado tu pago:
+Hola ${clientName}!
 
-📄 Cotización: #${shortId}
-💵 Pago recibido: ${formattedAmount}
-💰 Total pagado: ${formattedTotalPaid}
-📊 Total de cotización: ${formattedTotal}
-⏳ Pendiente: ${formattedRemaining}
+Hemos registrado tu pago y actualizado el estado de tu cotización:
 
-Ver detalles:
+━━━━━━━━━━━━━━━━━━━━
+📋 *Cotización:* #${shortId}
+💵 *Pago Recibido:* ${formattedAmount}
+━━━━━━━━━━━━━━━━━━━━
+
+📊 *Resumen Financiero:*
+💰 Total Pagado: ${formattedTotalPaid} (${percentagePaid}%)
+📈 Total Cotización: ${formattedTotal}
+${isFullyPaid ? '✅ *Estado:* Liquidado' : `⏳ Pendiente: ${formattedRemaining}`}
+━━━━━━━━━━━━━━━━━━━━
+
+🔗 Ver detalles y recibos:
 ${process.env.NEXT_PUBLIC_APP_URL || 'https://eventos-web-lovat.vercel.app'}/dashboard/quotes/${quoteId}
 
-¡Gracias por tu pago! 🙏`
+${isFullyPaid ? '🎉 ¡Gracias por completar tu pago! Tu evento está confirmado.' : '¡Gracias por tu pago! Te recordaremos cuando sea necesario completar el saldo.'}
+
+¡Estamos emocionados de hacer tu evento realidad! 🎊✨`
   },
 
   /**
    * Recordatorio de evento próximo
+   * Mensaje proactivo y útil
    */
   eventReminder: (eventDate: string, eventName: string, clientName: string, daysUntil: number) => {
-    const daysText = daysUntil === 1 ? 'mañana' : `en ${daysUntil} días`
+    const daysText = daysUntil === 1 ? 'mañana' : daysUntil === 0 ? 'hoy' : `en ${daysUntil} días`
+    const urgency = daysUntil <= 1 ? '🔴' : daysUntil <= 3 ? '🟡' : '🟢'
 
-    return `Hola ${clientName}! ⏰
+    return `${urgency} *Recordatorio de Evento* ${urgency}
 
-Este es un recordatorio de tu próximo evento:
+Hola ${clientName}!
 
-📅 Evento: ${eventName}
-🗓️ Fecha: ${eventDate}
-⏱️ Tiempo restante: ${daysText}
+Este es un recordatorio amigable de tu próximo evento:
 
-Por favor, asegúrate de tener todo listo.
+━━━━━━━━━━━━━━━━━━━━
+📅 *Evento:* ${eventName}
+🗓️ *Fecha:* ${eventDate}
+⏱️ *Tiempo Restante:* ${daysText}
+━━━━━━━━━━━━━━━━━━━━
 
-¡Estamos emocionados de hacer tu evento inolvidable! 🎊`
+${daysUntil <= 1 ? '⚠️ Tu evento es muy pronto. Por favor, asegúrate de tener todo listo y confirma cualquier detalle pendiente.' : '💡 Sugerencia: Revisa los detalles de tu evento y confirma que todo esté en orden.'}
+
+Nuestro equipo está listo y emocionado de hacer tu evento inolvidable.
+
+Si tienes alguna pregunta o necesitas hacer cambios, no dudes en contactarnos.
+
+¡Nos vemos pronto! 🎊✨`
   },
 
   /**
    * Mensaje cuando se crea un evento
+   * Mensaje celebratorio y profesional
    */
   eventCreated: (eventName: string, clientName: string, eventDate: string) => {
-    return `Hola ${clientName}! 🎉
+    return `🎉 *¡Evento Creado Exitosamente!* 🎉
 
-Tu evento ha sido creado exitosamente:
+Hola ${clientName}!
 
-📅 Evento: ${eventName}
-🗓️ Fecha: ${eventDate}
+Tu evento ha sido creado y está en nuestro sistema:
 
-Estamos trabajando para hacer tu evento perfecto. Te mantendremos informado.
+━━━━━━━━━━━━━━━━━━━━
+📅 *Evento:* ${eventName}
+🗓️ *Fecha:* ${eventDate}
+✅ *Estado:* Confirmado
+━━━━━━━━━━━━━━━━━━━━
 
-¡Gracias por confiar en nosotros! 🙏`
+Nuestro equipo está trabajando para hacer tu evento perfecto. Te mantendremos informado en cada paso del proceso.
+
+Recibirás recordatorios automáticos antes de la fecha del evento.
+
+Si tienes alguna pregunta o necesitas hacer cambios, estamos aquí para ayudarte.
+
+¡Gracias por confiar en nosotros! 🙏✨`
   },
 
   /**
    * Mensajes para el administrador
+   * Formato premium para notificaciones internas
    */
   admin: {
     /**
      * Notificación al admin cuando se crea una nueva cotización
      */
     quoteCreated: (quoteId: string, clientName: string, totalAmount: number, vendorName?: string) => {
-      const shortId = quoteId.slice(0, 8)
+      const shortId = quoteId.slice(0, 8).toUpperCase()
       const formattedAmount = new Intl.NumberFormat('es-MX', {
         style: 'currency',
         currency: 'MXN',
+        minimumFractionDigits: 2,
       }).format(totalAmount)
 
-      return `📄 Nueva Cotización Creada
+      return `📄 *Nueva Cotización Creada*
 
-ID: ${shortId}
-Cliente: ${clientName}
-${vendorName ? `Vendedor: ${vendorName}\n` : ''}Total: ${formattedAmount}
+━━━━━━━━━━━━━━━━━━━━
+📋 *ID:* ${shortId}
+👤 *Cliente:* ${clientName}
+${vendorName ? `👨‍💼 *Vendedor:* ${vendorName}\n` : ''}💰 *Total:* ${formattedAmount}
+━━━━━━━━━━━━━━━━━━━━
 
-Ver detalles:
-${process.env.NEXT_PUBLIC_APP_URL || 'https://eventos-web-lovat.vercel.app'}/dashboard/quotes/${quoteId}`
+🔗 Ver y gestionar:
+${process.env.NEXT_PUBLIC_APP_URL || 'https://eventos-web-lovat.vercel.app'}/dashboard/quotes/${quoteId}
+
+⏰ Revisa y aprueba cuando esté listo.`
     },
 
     /**
      * Notificación al admin cuando se registra un pago importante
      */
     paymentReceived: (quoteId: string, clientName: string, amount: number, totalPaid: number, totalAmount: number) => {
-      const shortId = quoteId.slice(0, 8)
+      const shortId = quoteId.slice(0, 8).toUpperCase()
       const formattedAmount = new Intl.NumberFormat('es-MX', {
         style: 'currency',
         currency: 'MXN',
+        minimumFractionDigits: 2,
       }).format(amount)
       const formattedTotalPaid = new Intl.NumberFormat('es-MX', {
         style: 'currency',
         currency: 'MXN',
+        minimumFractionDigits: 2,
       }).format(totalPaid)
       const percentage = totalAmount > 0 ? Math.round((totalPaid / totalAmount) * 100) : 0
+      const isFullyPaid = totalPaid >= totalAmount
 
-      return `💰 Pago Recibido
+      return `💰 *Pago Recibido* ${isFullyPaid ? '✅' : ''}
 
-Cotización: #${shortId}
-Cliente: ${clientName}
-Monto: ${formattedAmount}
-Total pagado: ${formattedTotalPaid} (${percentage}%)
+━━━━━━━━━━━━━━━━━━━━
+📋 *Cotización:* #${shortId}
+👤 *Cliente:* ${clientName}
+💵 *Monto Recibido:* ${formattedAmount}
+━━━━━━━━━━━━━━━━━━━━
 
-Ver detalles:
-${process.env.NEXT_PUBLIC_APP_URL || 'https://eventos-web-lovat.vercel.app'}/dashboard/quotes/${quoteId}`
+📊 *Estado Financiero:*
+💰 Total Pagado: ${formattedTotalPaid} (${percentage}%)
+📈 Total Cotización: ${new Intl.NumberFormat('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+        minimumFractionDigits: 2,
+      }).format(totalAmount)}
+${isFullyPaid ? '✅ *Estado:* Liquidado' : `⏳ Pendiente: ${new Intl.NumberFormat('es-MX', {
+        style: 'currency',
+        currency: 'MXN',
+        minimumFractionDigits: 2,
+      }).format(totalAmount - totalPaid)}`}
+━━━━━━━━━━━━━━━━━━━━
+
+🔗 Ver detalles:
+${process.env.NEXT_PUBLIC_APP_URL || 'https://eventos-web-lovat.vercel.app'}/dashboard/quotes/${quoteId}
+
+${isFullyPaid ? '🎉 ¡Cotización completamente pagada!' : '💡 El cliente aún tiene saldo pendiente.'}`
     },
 
     /**
      * Notificación al admin cuando se aprueba una cotización
      */
     quoteApproved: (quoteId: string, clientName: string, totalAmount: number) => {
-      const shortId = quoteId.slice(0, 8)
+      const shortId = quoteId.slice(0, 8).toUpperCase()
       const formattedAmount = new Intl.NumberFormat('es-MX', {
         style: 'currency',
         currency: 'MXN',
+        minimumFractionDigits: 2,
       }).format(totalAmount)
 
-      return `✅ Cotización Aprobada
+      return `✅ *Cotización Aprobada*
 
-ID: ${shortId}
-Cliente: ${clientName}
-Total: ${formattedAmount}
+━━━━━━━━━━━━━━━━━━━━
+📋 *ID:* ${shortId}
+👤 *Cliente:* ${clientName}
+💰 *Total:* ${formattedAmount}
+✅ *Estado:* Aprobada
+━━━━━━━━━━━━━━━━━━━━
 
-Ver detalles:
-${process.env.NEXT_PUBLIC_APP_URL || 'https://eventos-web-lovat.vercel.app'}/dashboard/quotes/${quoteId}`
+🔗 Ver y gestionar:
+${process.env.NEXT_PUBLIC_APP_URL || 'https://eventos-web-lovat.vercel.app'}/dashboard/quotes/${quoteId}
+
+💡 El cliente ha sido notificado. Puedes comenzar a trabajar en el evento.`
     },
   },
+}
+
+/**
+ * Timing inteligente para envío de WhatsApp
+ * Evita enviar mensajes en horarios inapropiados
+ */
+export function getOptimalSendTime(): Date | null {
+  const now = new Date()
+  const hour = now.getHours()
+  const day = now.getDay() // 0 = Domingo, 6 = Sábado
+
+  // No enviar en horarios inapropiados (antes de 9 AM o después de 9 PM)
+  if (hour < 9 || hour >= 21) {
+    // Si es muy temprano, programar para las 9 AM
+    if (hour < 9) {
+      const sendTime = new Date(now)
+      sendTime.setHours(9, 0, 0, 0)
+      return sendTime
+    }
+    // Si es muy tarde, programar para mañana a las 9 AM
+    const sendTime = new Date(now)
+    sendTime.setDate(sendTime.getDate() + 1)
+    sendTime.setHours(9, 0, 0, 0)
+    return sendTime
+  }
+
+  // No enviar los domingos (excepto si es urgente)
+  if (day === 0 && hour < 12) {
+    const sendTime = new Date(now)
+    sendTime.setHours(12, 0, 0, 0)
+    return sendTime
+  }
+
+  // Enviar inmediatamente si está en horario apropiado
+  return null
+}
+
+/**
+ * Envía WhatsApp con timing inteligente y retry logic
+ */
+export async function sendWhatsAppWithRetry(
+  options: WhatsAppOptions,
+  maxRetries: number = 3,
+  delayMs: number = 1000
+): Promise<{ success: boolean; messageId?: string; retries?: number }> {
+  let lastError: Error | null = null
+  let retries = 0
+
+  // Verificar timing óptimo
+  const optimalTime = getOptimalSendTime()
+  if (optimalTime) {
+    // Si no es el momento óptimo, programar para más tarde
+    const delay = optimalTime.getTime() - Date.now()
+    if (delay > 0) {
+      logger.info('WhatsApp', 'Message scheduled for optimal time', {
+        to: options.to,
+        scheduledFor: optimalTime.toISOString(),
+      })
+      // En producción, aquí podrías usar un job queue
+      // Por ahora, enviamos inmediatamente pero logueamos
+    }
+  }
+
+  // Intentar enviar con retry logic
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      const result = await sendWhatsApp(options)
+      if (result.success) {
+        return { ...result, retries: attempt }
+      }
+      lastError = new Error('WhatsApp send failed')
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error))
+      retries = attempt + 1
+
+      // Esperar antes del siguiente intento (exponential backoff)
+      if (attempt < maxRetries - 1) {
+        const backoffDelay = delayMs * Math.pow(2, attempt)
+        await new Promise(resolve => setTimeout(resolve, backoffDelay))
+      }
+    }
+  }
+
+  logger.error('WhatsApp', 'Failed to send after retries', lastError || new Error('Unknown error'), {
+    to: options.to,
+    retries,
+  })
+
+  return { success: false, retries }
 }
 

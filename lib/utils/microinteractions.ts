@@ -285,3 +285,107 @@ export function animateNumber(
   update()
 }
 
+/**
+ * Variantes premium para hover effects avanzados
+ */
+export const premiumHoverVariants = {
+  hover: {
+    scale: 1.03,
+    y: -4,
+    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+    transition: {
+      type: 'spring',
+      stiffness: 400,
+      damping: 17,
+    },
+  },
+  tap: {
+    scale: 0.97,
+    transition: {
+      duration: 0.1,
+    },
+  },
+}
+
+/**
+ * Variantes para efectos de glow
+ */
+export const glowVariants = {
+  initial: {
+    boxShadow: '0 0 0px rgba(99, 102, 241, 0)',
+  },
+  hover: {
+    boxShadow: '0 0 20px rgba(99, 102, 241, 0.5), 0 0 40px rgba(99, 102, 241, 0.3)',
+    transition: {
+      duration: 0.3,
+    },
+  },
+}
+
+/**
+ * Variantes para animaciones de entrada escalonadas
+ */
+export const staggerContainer = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1,
+    },
+  },
+}
+
+export const staggerItem = {
+  hidden: { opacity: 0, y: 20 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: 'spring',
+      stiffness: 300,
+      damping: 24,
+    },
+  },
+}
+
+/**
+ * Hook para animación de entrada con spring
+ */
+export function useSpringIn(delay = 0) {
+  return {
+    initial: { opacity: 0, scale: 0.8, y: 20 },
+    animate: { 
+      opacity: 1, 
+      scale: 1, 
+      y: 0,
+    },
+    transition: {
+      type: 'spring',
+      stiffness: 300,
+      damping: 25,
+      delay,
+    },
+  }
+}
+
+/**
+ * Hook para animación de hover premium
+ */
+export function usePremiumHover() {
+  return {
+    whileHover: {
+      scale: 1.02,
+      y: -2,
+      transition: {
+        type: 'spring',
+        stiffness: 400,
+        damping: 17,
+      },
+    },
+    whileTap: {
+      scale: 0.98,
+    },
+  }
+}
+
