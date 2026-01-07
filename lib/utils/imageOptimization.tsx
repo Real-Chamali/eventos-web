@@ -217,5 +217,5 @@ export function useLazyImage(src: string, options?: IntersectionObserverInit): {
 }
 
 // Re-export Image de next/image para uso directo
-export { Image as NextImage } from 'next/image'
+export { default as NextImage } from 'next/image'
 
