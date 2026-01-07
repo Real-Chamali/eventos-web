@@ -18,7 +18,7 @@ describe('DashboardStats', () => {
 
   it('shows loading skeletons when loading', () => {
     mockUseDashboardStats.mockReturnValue({
-      stats: null,
+      stats: undefined,
       loading: true,
       error: null,
     })
@@ -138,9 +138,9 @@ describe('DashboardStats', () => {
     })
   })
 
-  it('does not render stats when stats is null and not loading', () => {
+  it('does not render stats when stats is undefined and not loading', () => {
     mockUseDashboardStats.mockReturnValue({
-      stats: null,
+      stats: undefined,
       loading: false,
       error: null,
     })

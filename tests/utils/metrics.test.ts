@@ -11,39 +11,52 @@ describe('Metrics utilities', () => {
   })
 
   describe('trackPerformance', () => {
-    it('tracks performance metrics', async () => {
-      const fn = jest.fn().mockResolvedValue('result')
-      const trackedFn = metrics.trackPerformance('test-operation', fn)
+    it('tracks performance metrics', () => {
+      const start = Date.now()
+      metrics.trackPerformance('test-operation', 100, { test: true })
+      const duration = Date.now() - start
 
-      const result = await trackedFn()
+      const performanceMetrics = metrics.getPerformanceMetrics()
+      const lastMetric = performanceMetrics[performanceMetrics.length - 1]
 
-      expect(result).toBe('result')
-      expect(fn).toHaveBeenCalledTimes(1)
+      expect(lastMetric).toBeDefined()
+      expect(lastMetric.name).toBe('test-operation')
+      expect(lastMetric.duration).toBeGreaterThanOrEqual(0)
+      expect(lastMetric.metadata?.test).toBe(true)
     })
 
-    it('records performance data', async () => {
-      const fn = jest.fn().mockImplementation(() => {
-        return new Promise(resolve => setTimeout(() => resolve('done'), 50))
-      })
+    it('records performance data with metadata', () => {
+      metrics.trackPerformance('test-operation', 50, { count: 1 })
 
-      const trackedFn = metrics.trackPerformance('test-operation', fn)
-      await trackedFn()
+      const performanceMetrics = metrics.getPerformanceMetrics()
+      const lastMetric = performanceMetrics[performanceMetrics.length - 1]
 
-      // Verificar que la métrica fue registrada (si está implementado)
-      // Por ahora solo verificamos que no falla
-      expect(fn).toHaveBeenCalled()
+      expect(lastMetric).toBeDefined()
+      expect(lastMetric.name).toBe('test-operation')
+      expect(lastMetric.duration).toBe(50)
+      expect(lastMetric.metadata?.count).toBe(1)
     })
   })
 
-  describe('trackBusinessMetric', () => {
+  describe('trackBusiness', () => {
     it('tracks business metrics', () => {
-      metrics.trackBusinessMetric('quotes.created', { count: 1 })
+      metrics.trackBusiness('quote_created', 1, { count: 1 })
 
-      // Verificar que la métrica fue registrada (si está implementado)
-      // Por ahora solo verificamos que no falla
-      expect(() => {
-        metrics.trackBusinessMetric('quotes.created', { count: 1 })
-      }).not.toThrow()
+      const businessMetrics = metrics.getBusinessMetrics()
+      const lastMetric = businessMetrics[businessMetrics.length - 1]
+
+      expect(lastMetric).toBeDefined()
+      expect(lastMetric.type).toBe('quote_created')
+      expect(lastMetric.value).toBe(1)
+      expect(lastMetric.metadata?.count).toBe(1)
+    })
+
+    it('tracks multiple business metrics', () => {
+      metrics.trackBusiness('quote_created', 1)
+      metrics.trackBusiness('quote_confirmed', 2)
+
+      const businessMetrics = metrics.getBusinessMetrics()
+      expect(businessMetrics.length).toBeGreaterThanOrEqual(2)
     })
   })
 
