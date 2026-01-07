@@ -6,6 +6,7 @@ import { createClient } from '@/utils/supabase/client'
 import confetti from 'canvas-confetti'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
+import { usePaymentSummary } from '@/lib/hooks/usePartialPayments'
 import PageHeader from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
@@ -13,7 +14,8 @@ import Badge from '@/components/ui/Badge'
 import Skeleton from '@/components/ui/Skeleton'
 import EventTimeline from '@/components/events/EventTimeline'
 import EventChecklist from '@/components/events/EventChecklist'
-import { CheckCircle2, Calendar, DollarSign, ArrowLeft, FileText, User, Sparkles, PartyPopper } from 'lucide-react'
+import RegisterPaymentDialog from '@/components/payments/RegisterPaymentDialog'
+import { CheckCircle2, Calendar, DollarSign, ArrowLeft, FileText, User, Sparkles, PartyPopper, CreditCard, TrendingUp } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Link from 'next/link'
@@ -47,7 +49,12 @@ export default function EventPage() {
   const [event, setEvent] = useState<Event | null>(null)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
-  const { error: toastError } = useToast()
+  const { error: toastError, success: toastSuccess } = useToast()
+  
+  // Obtener información de pagos si hay cotización
+  const quoteId = event?.quote?.id || null
+  const totalAmount = event?.quote?.total_amount || 0
+  const { summary: paymentSummary, loading: paymentsLoading } = usePaymentSummary(quoteId, totalAmount)
 
   useEffect(() => {
     // Mostrar confeti al cargar la página
@@ -196,6 +203,8 @@ export default function EventPage() {
   }
 
   const servicesCount = event.quote?.quote_services?.length || 0
+  const hasBalanceDue = paymentSummary.balance_due > 0
+  const isFullyPaid = paymentSummary.balance_due === 0 && paymentSummary.total_paid > 0
 
   // Timeline items basados en el evento
   const timelineItems = [
@@ -222,15 +231,21 @@ export default function EventPage() {
     },
   ]
 
-  // Checklist items
+  // Checklist items (actualizado con estado de pagos)
   const checklistItems = [
     { id: '1', label: 'Cotización aprobada por el cliente', completed: true, required: true },
-    { id: '2', label: 'Pago recibido', completed: false, required: true },
+    { id: '2', label: isFullyPaid ? 'Pago completo recibido' : hasBalanceDue ? 'Pago parcial recibido' : 'Pago recibido', completed: isFullyPaid || paymentSummary.total_paid > 0, required: true },
     { id: '3', label: 'Servicios confirmados', completed: true, required: true },
     { id: '4', label: 'Fecha del evento confirmada', completed: false, required: true },
     { id: '5', label: 'Equipo asignado', completed: false, required: false },
     { id: '6', label: 'Materiales preparados', completed: false, required: false },
   ]
+
+  const handlePaymentSuccess = () => {
+    toastSuccess('Pago registrado exitosamente')
+    // Recargar evento para actualizar información
+    loadEvent()
+  }
 
   return (
     <div className="space-y-8 p-6 lg:p-8">
@@ -399,13 +414,88 @@ export default function EventPage() {
                     </p>
                   </div>
                 </div>
+                
+                {/* Información de Pagos */}
+                {!paymentsLoading && (
+                  <>
+                    <div className="flex items-start gap-4">
+                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 flex items-center justify-center">
+                        <TrendingUp className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold text-gray-900 dark:text-white">
+                          Total Pagado
+                        </p>
+                        <p className="text-xl font-bold text-blue-600 dark:text-blue-400 mt-1">
+                          {formatCurrency(paymentSummary.total_paid)}
+                        </p>
+                        {paymentSummary.payments_count > 0 && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                            {paymentSummary.payments_count} {paymentSummary.payments_count === 1 ? 'pago' : 'pagos'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    {hasBalanceDue && (
+                      <div className="flex items-start gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 flex items-center justify-center">
+                          <CreditCard className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-gray-900 dark:text-white">
+                            Saldo Pendiente
+                          </p>
+                          <p className="text-xl font-bold text-amber-600 dark:text-amber-400 mt-1">
+                            {formatCurrency(paymentSummary.balance_due)}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {isFullyPaid && (
+                      <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                        <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                          ✅ Pago completo recibido
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+                
                 <div className="pt-4 border-t border-gray-200 dark:border-gray-800">
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center mb-4">
                     <span className="text-sm font-medium text-gray-600 dark:text-gray-400">
                       Servicios incluidos:
                     </span>
                     <Badge variant="info" size="sm">{servicesCount} servicios</Badge>
                   </div>
+                  
+                  {/* Botón para registrar pago */}
+                  {event.quote && hasBalanceDue && (
+                    <RegisterPaymentDialog
+                      quoteId={event.quote.id}
+                      totalPrice={event.quote.total_amount}
+                      currentPaid={paymentSummary.total_paid}
+                      onSuccess={handlePaymentSuccess}
+                      trigger={
+                        <Button variant="premium" className="w-full gap-2">
+                          <CreditCard className="h-4 w-4" />
+                          Registrar Pago
+                        </Button>
+                      }
+                    />
+                  )}
+                  
+                  {isFullyPaid && (
+                    <div className="text-center py-2">
+                      <Badge variant="success" size="lg">
+                        <CheckCircle2 className="h-4 w-4 mr-2" />
+                        Liquidado
+                      </Badge>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

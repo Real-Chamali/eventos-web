@@ -370,7 +370,8 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
         })
       }
 
-      // 1. Crear cotización
+      // 1. Crear cotización AUTOMÁTICAMENTE al crear evento
+      // Esto asegura que cada evento tenga una cotización asociada
       const finalTotal = customTotal !== null ? customTotal : total
       
       // Mapear status del frontend a la base de datos
@@ -390,7 +391,18 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
         .select()
         .single()
 
-      if (quoteError) throw quoteError
+      if (quoteError) {
+        logger.error('CreateEventDialog', 'Error creating quote for event', quoteError as Error, {
+          clientId: selectedClient.id,
+          total: finalTotal,
+        })
+        throw quoteError
+      }
+      
+      // Verificar que la cotización se creó correctamente
+      if (!quote || !quote.id) {
+        throw new Error('Error: La cotización no se creó correctamente')
+      }
 
       // 2. Crear servicios de la cotización
       const quoteServicesData = quoteServices.map((qs) => ({
