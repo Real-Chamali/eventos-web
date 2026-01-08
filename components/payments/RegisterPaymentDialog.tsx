@@ -219,43 +219,6 @@ function RegisterPaymentDialog({
                 })
               }
             }
-
-            // PREMIUM: Enviar email automático al cliente
-            try {
-              const { data: clientEmailData } = await supabase
-                .from('clients')
-                .select('email, name')
-                .eq('id', quoteData.client_id)
-                .single()
-
-              if (clientEmailData?.email) {
-                const { sendEmail, emailTemplates } = await import('@/lib/integrations/email')
-                const emailTemplate = emailTemplates.paymentRegistered(
-                  quoteId,
-                  clientEmailData.name || 'Cliente',
-                  data.amount,
-                  totalPaid,
-                  quoteData.total_amount || 0
-                )
-                
-                await sendEmail({
-                  to: clientEmailData.email,
-                  subject: emailTemplate.subject,
-                  html: emailTemplate.html,
-                })
-                
-                logger.info('RegisterPaymentDialog', 'Email sent to client for payment', {
-                  quoteId,
-                  clientEmail: clientEmailData.email,
-                })
-              }
-            } catch (emailError) {
-              // No fallar si hay error en email
-              logger.warn('RegisterPaymentDialog', 'Error sending email to client', {
-                error: emailError instanceof Error ? emailError.message : String(emailError),
-                quoteId,
-              })
-            }
           }
         }
       } catch (whatsappError) {

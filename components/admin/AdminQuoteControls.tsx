@@ -200,56 +200,6 @@ function AdminQuoteControls({
                 }
               }
 
-              // PREMIUM: Enviar email automático al cliente
-              try {
-                const { data: clientEmailData } = await supabase
-                  .from('clients')
-                  .select('email, name')
-                  .eq('id', quoteData.client_id)
-                  .single()
-
-                if (clientEmailData?.email) {
-                  const { sendEmail, emailTemplates } = await import('@/lib/integrations/email')
-                  
-                  if (isApproved) {
-                    const emailTemplate = emailTemplates.quoteApproved(
-                      quoteId,
-                      clientEmailData.name || 'Cliente',
-                      quoteData.total_amount || 0
-                    )
-                    
-                    await sendEmail({
-                      to: clientEmailData.email,
-                      subject: emailTemplate.subject,
-                      html: emailTemplate.html,
-                    })
-                  } else if (isRejected) {
-                    const emailTemplate = emailTemplates.quoteRejected(
-                      quoteId,
-                      clientEmailData.name || 'Cliente'
-                    )
-                    
-                    await sendEmail({
-                      to: clientEmailData.email,
-                      subject: emailTemplate.subject,
-                      html: emailTemplate.html,
-                    })
-                  }
-                  
-                  logger.info('AdminQuoteControls', 'Email sent to client for status change', {
-                    quoteId,
-                    status: newStatus,
-                    clientEmail: clientEmailData.email,
-                  })
-                }
-              } catch (emailError) {
-                // No fallar si hay error en email
-                logger.warn('AdminQuoteControls', 'Error sending email to client', {
-                  error: emailError instanceof Error ? emailError.message : String(emailError),
-                  quoteId,
-                })
-              }
-
               // Track analytics después de obtener los datos
               if (isApproved) {
                 try {

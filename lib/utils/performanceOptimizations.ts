@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useMemo, useCallback, useEffect, useRef, useState, lazy, type ComponentType, type RefObject } from 'react'
+import { useMemo, useCallback, useEffect, useRef, useState, lazy, type ComponentType, type RefObject, type DependencyList } from 'react'
 import * as React from 'react'
 
 /**
@@ -52,7 +52,7 @@ export function useThrottle<T extends (...args: any[]) => any>(
  */
 export function useMemoizedCalculation<T>(
   calculation: () => T,
-  dependencies: React.DependencyList
+  dependencies: DependencyList
 ): T {
   return useMemo(calculation, dependencies)
 }
@@ -62,7 +62,7 @@ export function useMemoizedCalculation<T>(
  */
 export function createLazyComponent<T extends ComponentType<any>>(
   importFunc: () => Promise<{ default: T }>
-): React.LazyExoticComponent<T> {
+) {
   return lazy(importFunc)
 }
 
