@@ -65,18 +65,16 @@ const PremiumBadge = forwardRef<HTMLSpanElement, PremiumBadgeProps>(
     return (
       <motion.span
         initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.2, ease: 'easeOut' }}
-        whileHover={{ scale: 1.05 }}
         animate={pulse ? {
           scale: [1, 1.1, 1],
           opacity: [1, 0.8, 1],
-        } : {}}
+        } : { opacity: 1, scale: 1 }}
         transition={pulse ? {
           duration: 2,
           repeat: Infinity,
           ease: 'easeInOut',
-        } : {}}
+        } : { duration: 0.2, ease: 'easeOut' }}
+        whileHover={{ scale: 1.05 }}
       >
         {badgeContent}
       </motion.span>
