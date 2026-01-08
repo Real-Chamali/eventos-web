@@ -88,6 +88,9 @@ const PremiumButton = forwardRef<HTMLButtonElement, PremiumButtonProps>(
     const showIconLeft = iconPosition === 'left' && iconElement
     const showIconRight = iconPosition === 'right' && iconElement
 
+    // Filtrar props que no son compatibles con motion.button
+    const { onDrag, onDragStart, onDragEnd, ...motionProps } = props
+
     return (
       <motion.button
         ref={ref}
@@ -103,7 +106,7 @@ const PremiumButton = forwardRef<HTMLButtonElement, PremiumButtonProps>(
         whileHover={!disabled && !isLoading ? { scale: 1.02 } : {}}
         whileTap={!disabled && !isLoading ? { scale: 0.98 } : {}}
         transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-        {...props}
+        {...motionProps}
       >
         {/* Ripple Effect */}
         <AnimatePresence>
