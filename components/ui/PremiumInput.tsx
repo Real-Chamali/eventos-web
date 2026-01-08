@@ -86,6 +86,17 @@ const PremiumInput = forwardRef<HTMLInputElement, PremiumInputProps>(
       setIsFocused(true)
     }
 
+    // Filtrar props que no son compatibles con motion.input
+    const { 
+      onDrag, 
+      onDragStart, 
+      onDragEnd,
+      onAnimationStart,
+      onAnimationEnd,
+      onAnimationIteration,
+      ...motionProps 
+    } = props
+
     return (
       <div className="w-full">
         {label && (
@@ -123,7 +134,7 @@ const PremiumInput = forwardRef<HTMLInputElement, PremiumInputProps>(
             onChange={handleChange}
             animate={animated && isFocused ? { scale: 1.01 } : { scale: 1 }}
             transition={{ duration: 0.2 }}
-            {...props}
+            {...motionProps}
             value={value}
           />
           {isPassword && (
