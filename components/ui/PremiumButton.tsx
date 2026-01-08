@@ -89,7 +89,15 @@ const PremiumButton = forwardRef<HTMLButtonElement, PremiumButtonProps>(
     const showIconRight = iconPosition === 'right' && iconElement
 
     // Filtrar props que no son compatibles con motion.button
-    const { onDrag, onDragStart, onDragEnd, ...motionProps } = props
+    const { 
+      onDrag, 
+      onDragStart, 
+      onDragEnd,
+      onAnimationStart,
+      onAnimationEnd,
+      onAnimationIteration,
+      ...motionProps 
+    } = props
 
     return (
       <motion.button
