@@ -84,7 +84,7 @@ export const premiumFutureDateSchema = premiumDateSchema.refine(
 export function formatZodErrors(error: z.ZodError): Record<string, string> {
   const formatted: Record<string, string> = {}
   
-  error.errors.forEach((err) => {
+  error.issues.forEach((err) => {
     const path = err.path.join('.')
     formatted[path] = err.message
   })
