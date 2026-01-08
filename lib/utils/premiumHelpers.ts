@@ -27,14 +27,14 @@ export function formatDatePremium(
   locale: string = 'es-MX'
 ): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date
-  const options: Intl.DateTimeFormatOptions = {
+  const formatOptions: Record<string, Intl.DateTimeFormatOptions> = {
     short: { year: 'numeric', month: 'short', day: 'numeric' },
     medium: { year: 'numeric', month: 'long', day: 'numeric' },
     long: { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' },
     full: { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' },
   }
 
-  return new Intl.DateTimeFormat(locale, options[format]).format(dateObj)
+  return new Intl.DateTimeFormat(locale, formatOptions[format]).format(dateObj)
 }
 
 /**
