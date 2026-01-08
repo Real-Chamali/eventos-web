@@ -365,7 +365,7 @@ export default function AuditLogsPage() {
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
                           {getActionBadge(log.action)}
-                          <Badge variant="outline" size="sm" className="flex items-center gap-1">
+                          <Badge variant="info" size="sm" className="flex items-center gap-1">
                             <Database className="w-3 h-3" />
                             {log.table_name}
                           </Badge>
