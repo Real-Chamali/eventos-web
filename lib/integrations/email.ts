@@ -204,6 +204,87 @@ export const emailTemplates = {
     `,
   }),
 
+  quoteRejected: (quoteId: string, clientName: string) => ({
+    subject: `Cotización Rechazada #${quoteId.slice(0, 8)}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+            .button { display: inline-block; padding: 12px 24px; background: #ef4444; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+            .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Cotización Rechazada</h1>
+            </div>
+            <div class="content">
+              <p>Hola ${sanitizeForEmail(clientName)},</p>
+              <p>Lamentamos informarte que tu cotización ha sido rechazada:</p>
+              <ul>
+                <li><strong>ID:</strong> ${sanitizeForEmail(quoteId.slice(0, 8))}</li>
+              </ul>
+              <p>Entendemos que esto puede ser decepcionante. Si tienes alguna pregunta o deseas hacer cambios para una nueva cotización, estamos aquí para ayudarte.</p>
+              <a href="${sanitizeForEmail(process.env.NEXT_PUBLIC_APP_URL || 'https://eventos-web-lovat.vercel.app')}/dashboard/quotes/${sanitizeForEmail(quoteId)}" class="button">Ver Cotización</a>
+            </div>
+            <div class="footer">
+              <p>Este es un email automático, por favor no responder.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
+  paymentRegistered: (quoteId: string, clientName: string, amount: number, totalPaid: number, totalAmount: number) => ({
+    subject: `Pago Registrado #${quoteId.slice(0, 8)}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9fafb; padding: 30px; border-radius: 0 0 10px 10px; }
+            .button { display: inline-block; padding: 12px 24px; background: #10b981; color: white; text-decoration: none; border-radius: 6px; margin-top: 20px; }
+            .footer { text-align: center; margin-top: 30px; color: #6b7280; font-size: 12px; }
+            .amount-box { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #10b981; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Pago Registrado</h1>
+            </div>
+            <div class="content">
+              <p>Hola ${sanitizeForEmail(clientName)},</p>
+              <p>Hemos registrado tu pago exitosamente:</p>
+              <div class="amount-box">
+                <p><strong>Pago recibido:</strong> $${sanitizeForEmail(amount.toLocaleString('es-MX', { minimumFractionDigits: 2 }))}</p>
+                <p><strong>Total pagado:</strong> $${sanitizeForEmail(totalPaid.toLocaleString('es-MX', { minimumFractionDigits: 2 }))}</p>
+                <p><strong>Total cotización:</strong> $${sanitizeForEmail(totalAmount.toLocaleString('es-MX', { minimumFractionDigits: 2 }))}</p>
+                ${totalPaid >= totalAmount ? '<p style="color: #10b981; font-weight: bold;">✅ Cotización completamente pagada</p>' : ''}
+              </div>
+              <a href="${sanitizeForEmail(process.env.NEXT_PUBLIC_APP_URL || 'https://eventos-web-lovat.vercel.app')}/dashboard/quotes/${sanitizeForEmail(quoteId)}" class="button">Ver Detalles</a>
+            </div>
+            <div class="footer">
+              <p>Este es un email automático, por favor no responder.</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `,
+  }),
+
   eventReminder: (eventDate: string, eventName: string, clientName: string) => ({
     subject: `Recordatorio: Evento ${eventName}`,
     html: `

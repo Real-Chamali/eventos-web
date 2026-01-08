@@ -236,6 +236,41 @@ export async function POST(request: NextRequest) {
             quoteId: data.id,
           })
         }
+
+        // PREMIUM: Enviar email automático al cliente
+        try {
+          const { sendEmail, emailTemplates } = await import('@/lib/integrations/email')
+          const { data: clientEmailData } = await supabase
+            .from('clients')
+            .select('email, name')
+            .eq('id', payload.client_id)
+            .single()
+
+          if (clientEmailData?.email) {
+            const emailTemplate = emailTemplates.quoteCreated(
+              data.id,
+              clientEmailData.name || 'Cliente',
+              data.total_amount || 0
+            )
+            
+            await sendEmail({
+              to: clientEmailData.email,
+              subject: emailTemplate.subject,
+              html: emailTemplate.html,
+            })
+            
+            logger.info('API', 'Email sent to client for new quote', {
+              quoteId: data.id,
+              clientEmail: clientEmailData.email,
+            })
+          }
+        } catch (emailError) {
+          // No fallar si hay error en email
+          logger.warn('API', 'Error sending email to client', {
+            error: emailError instanceof Error ? emailError.message : String(emailError),
+            quoteId: data.id,
+          })
+        }
       }
     } catch (notificationError) {
       // No fallar si hay error en notificaciones
