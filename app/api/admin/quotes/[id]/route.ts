@@ -106,6 +106,12 @@ export async function DELETE(
       }
     }
 
+    // Nota: Las notificaciones no se eliminan automáticamente porque:
+    // 1. Tienen quote_id en metadata JSONB (difícil de consultar eficientemente)
+    // 2. No bloquean la eliminación de la cotización (no hay foreign key)
+    // 3. Pueden ser útiles para historial incluso después de eliminar la cotización
+    // Si se necesita limpiar notificaciones, hacerlo manualmente o con un job programado
+
     // Eliminar pagos parciales asociados
     const { error: paymentsError } = await adminClient
       .from('partial_payments')
@@ -169,9 +175,20 @@ export async function DELETE(
       message: 'Cotización eliminada exitosamente',
     })
   } catch (error) {
-    logger.error('API /admin/quotes/[id]', 'Unexpected error', error as Error)
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    const errorStack = error instanceof Error ? error.stack : undefined
+    
+    logger.error('API /admin/quotes/[id]', 'Unexpected error', error instanceof Error ? error : new Error(errorMessage), {
+      quoteId: id,
+      errorMessage,
+      errorStack,
+    })
+    
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
+      { 
+        error: 'Error interno del servidor',
+        details: process.env.NODE_ENV === 'development' ? errorMessage : undefined
+      },
       { status: 500 }
     )
   }
