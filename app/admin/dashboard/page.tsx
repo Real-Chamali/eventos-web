@@ -25,7 +25,10 @@ import {
   Eye,
   Clock,
   Target,
+  Plus,
+  CreditCard,
 } from 'lucide-react'
+import EventsCalendar from '@/components/calendar/EventsCalendar'
 import {
   getOwnerKPIs,
   getVendorPerformance,
@@ -139,6 +142,50 @@ export default function OwnerDashboardPage() {
         title="Dashboard del Dueño"
         description="Control total del negocio - Toma decisiones con datos, no con intuición"
       />
+
+      {/* Calendario de Eventos - Primero y más visible */}
+      <EventsCalendar />
+
+      {/* Acciones Rápidas */}
+      <Card variant="elevated">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            Acciones Rápidas
+          </CardTitle>
+          <CardDescription>
+            Accesos directos a las funciones más utilizadas
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link href="/dashboard/quotes/new">
+              <Button variant="premium" className="w-full gap-2 h-auto py-4 flex-col">
+                <FileText className="h-6 w-6" />
+                <span>Nueva Cotización</span>
+              </Button>
+            </Link>
+            <Link href="/dashboard/events">
+              <Button variant="outline" className="w-full gap-2 h-auto py-4 flex-col">
+                <Calendar className="h-6 w-6" />
+                <span>Ver Eventos</span>
+              </Button>
+            </Link>
+            <Link href="/admin/finance">
+              <Button variant="outline" className="w-full gap-2 h-auto py-4 flex-col">
+                <DollarSign className="h-6 w-6" />
+                <span>Finanzas</span>
+              </Button>
+            </Link>
+            <Link href="/admin/clients">
+              <Button variant="outline" className="w-full gap-2 h-auto py-4 flex-col">
+                <Users className="h-6 w-6" />
+                <span>Clientes</span>
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* KPIs Principales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

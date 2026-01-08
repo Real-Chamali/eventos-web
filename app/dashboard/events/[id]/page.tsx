@@ -472,17 +472,21 @@ export default function EventPage() {
                     <Badge variant="info" size="sm">{servicesCount} servicios</Badge>
                   </div>
                   
-                  {/* Botón para registrar pago - Mostrar siempre que haya cotización y no esté completamente pagado */}
-                  {event.quote && !isFullyPaid && (
+                  {/* Botón para registrar pago - Mostrar siempre que haya cotización */}
+                  {event.quote && (
                     <RegisterPaymentDialog
                       quoteId={event.quote.id}
                       totalPrice={event.quote.total_amount}
                       currentPaid={paymentSummary.total_paid}
                       onSuccess={handlePaymentSuccess}
                       trigger={
-                        <Button variant="premium" className="w-full gap-2">
+                        <Button 
+                          variant="premium" 
+                          className="w-full gap-2"
+                          disabled={isFullyPaid}
+                        >
                           <CreditCard className="h-4 w-4" />
-                          Registrar Pago
+                          {isFullyPaid ? 'Pago Completo' : 'Registrar Pago'}
                         </Button>
                       }
                     />
