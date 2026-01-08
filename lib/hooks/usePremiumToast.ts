@@ -4,7 +4,7 @@
 
 'use client'
 
-import { useCallback } from 'react'
+import React, { useCallback } from 'react'
 import { toast } from 'react-hot-toast'
 import { CheckCircle2, XCircle, AlertCircle, Info, Sparkles } from 'lucide-react'
 
@@ -19,17 +19,11 @@ interface ToastOptions {
 }
 
 export function usePremiumToast() {
-  const defaultSuccessIcon = <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-  const defaultErrorIcon = <XCircle className="w-5 h-5 text-red-500" />
-  const defaultWarningIcon = <AlertCircle className="w-5 h-5 text-amber-500" />
-  const defaultInfoIcon = <Info className="w-5 h-5 text-blue-500" />
-  const defaultPremiumIcon = <Sparkles className="w-5 h-5 text-purple-500" />
-
   const success = useCallback((message: string, options?: ToastOptions) => {
     return toast.success(message, {
       duration: options?.duration || 4000,
       position: options?.position || 'top-right',
-      icon: options?.icon || defaultSuccessIcon,
+      icon: options?.icon || React.createElement(CheckCircle2, { className: "w-5 h-5 text-emerald-500" }),
       style: {
         background: 'white',
         color: '#1f2937',
@@ -46,7 +40,7 @@ export function usePremiumToast() {
     return toast.error(message, {
       duration: options?.duration || 5000,
       position: options?.position || 'top-right',
-      icon: options?.icon || defaultErrorIcon,
+      icon: options?.icon || React.createElement(XCircle, { className: "w-5 h-5 text-red-500" }),
       style: {
         background: 'white',
         color: '#1f2937',
@@ -63,7 +57,7 @@ export function usePremiumToast() {
     return toast(message, {
       duration: options?.duration || 4000,
       position: options?.position || 'top-right',
-      icon: options?.icon || defaultWarningIcon,
+      icon: options?.icon || React.createElement(AlertCircle, { className: "w-5 h-5 text-amber-500" }),
       style: {
         background: 'white',
         color: '#1f2937',
@@ -80,7 +74,7 @@ export function usePremiumToast() {
     return toast(message, {
       duration: options?.duration || 4000,
       position: options?.position || 'top-right',
-      icon: options?.icon || defaultInfoIcon,
+      icon: options?.icon || React.createElement(Info, { className: "w-5 h-5 text-blue-500" }),
       style: {
         background: 'white',
         color: '#1f2937',
@@ -97,7 +91,7 @@ export function usePremiumToast() {
     return toast(message, {
       duration: options?.duration || 4000,
       position: options?.position || 'top-right',
-      icon: options?.icon || defaultPremiumIcon,
+      icon: options?.icon || React.createElement(Sparkles, { className: "w-5 h-5 text-purple-500" }),
       style: {
         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
         color: 'white',
