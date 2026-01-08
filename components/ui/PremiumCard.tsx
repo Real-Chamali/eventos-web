@@ -83,76 +83,91 @@ const PremiumCard = forwardRef<HTMLDivElement, PremiumCardProps>(
 PremiumCard.displayName = 'PremiumCard'
 
 const PremiumCardHeader = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <motion.div
-      ref={ref}
-      className={cn('flex flex-col space-y-1.5 p-6 pb-4', className)}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.1 }}
-      {...props}
-    />
-  )
+  ({ className, ...props }, ref) => {
+    const { onDrag, onDragStart, onDragEnd, onAnimationStart, onAnimationEnd, onAnimationIteration, ...motionProps } = props
+    return (
+      <motion.div
+        ref={ref}
+        className={cn('flex flex-col space-y-1.5 p-6 pb-4', className)}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.1 }}
+        {...motionProps}
+      />
+    )
+  }
 )
 
 PremiumCardHeader.displayName = 'PremiumCardHeader'
 
 const PremiumCardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadingElement>>(
-  ({ className, ...props }, ref) => (
-    <motion.h3
-      ref={ref}
-      className={cn('text-xl font-semibold leading-tight tracking-tight text-gray-900 dark:text-white', className)}
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: 0.2 }}
-      {...props}
-    />
-  )
+  ({ className, ...props }, ref) => {
+    const { onDrag, onDragStart, onDragEnd, onAnimationStart, onAnimationEnd, onAnimationIteration, ...motionProps } = props
+    return (
+      <motion.h3
+        ref={ref}
+        className={cn('text-xl font-semibold leading-tight tracking-tight text-gray-900 dark:text-white', className)}
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 0.2 }}
+        {...motionProps}
+      />
+    )
+  }
 )
 
 PremiumCardTitle.displayName = 'PremiumCardTitle'
 
 const PremiumCardDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLParagraphElement>>(
-  ({ className, ...props }, ref) => (
-    <motion.p
-      ref={ref}
-      className={cn('text-sm leading-relaxed text-gray-600 dark:text-gray-400', className)}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.3 }}
-      {...props}
-    />
-  )
+  ({ className, ...props }, ref) => {
+    const { onDrag, onDragStart, onDragEnd, onAnimationStart, onAnimationEnd, onAnimationIteration, ...motionProps } = props
+    return (
+      <motion.p
+        ref={ref}
+        className={cn('text-sm leading-relaxed text-gray-600 dark:text-gray-400', className)}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+        {...motionProps}
+      />
+    )
+  }
 )
 
 PremiumCardDescription.displayName = 'PremiumCardDescription'
 
 const PremiumCardContent = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <motion.div
-      ref={ref}
-      className={cn('p-6 pt-0', className)}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ delay: 0.2 }}
-      {...props}
-    />
-  )
+  ({ className, ...props }, ref) => {
+    const { onDrag, onDragStart, onDragEnd, onAnimationStart, onAnimationEnd, onAnimationIteration, ...motionProps } = props
+    return (
+      <motion.div
+        ref={ref}
+        className={cn('p-6 pt-0', className)}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.2 }}
+        {...motionProps}
+      />
+    )
+  }
 )
 
 PremiumCardContent.displayName = 'PremiumCardContent'
 
 const PremiumCardFooter = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <motion.div
-      ref={ref}
-      className={cn('flex items-center p-6 pt-0 gap-2', className)}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3 }}
-      {...props}
-    />
-  )
+  ({ className, ...props }, ref) => {
+    const { onDrag, onDragStart, onDragEnd, onAnimationStart, onAnimationEnd, onAnimationIteration, ...motionProps } = props
+    return (
+      <motion.div
+        ref={ref}
+        className={cn('flex items-center p-6 pt-0 gap-2', className)}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        {...motionProps}
+      />
+    )
+  }
 )
 
 PremiumCardFooter.displayName = 'PremiumCardFooter'
