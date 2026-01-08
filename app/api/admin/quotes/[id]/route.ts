@@ -67,6 +67,59 @@ export async function DELETE(
       },
     })
 
+    // Verificar si hay eventos asociados a esta cotización
+    const { data: associatedEvents, error: eventsCheckError } = await adminClient
+      .from('events')
+      .select('id, name, event_date, status')
+      .eq('quote_id', id)
+
+    if (eventsCheckError) {
+      logger.warn('API /admin/quotes/[id]', 'Error checking associated events', {
+        error: eventsCheckError.message,
+        quoteId: id,
+      })
+    }
+
+    // Si hay eventos asociados, eliminarlos primero
+    if (associatedEvents && associatedEvents.length > 0) {
+      logger.info('API /admin/quotes/[id]', 'Deleting associated events before quote', {
+        quoteId: id,
+        eventsCount: associatedEvents.length,
+      })
+
+      const { error: eventsDeleteError } = await adminClient
+        .from('events')
+        .delete()
+        .eq('quote_id', id)
+
+      if (eventsDeleteError) {
+        logger.error('API /admin/quotes/[id]', 'Error deleting associated events', eventsDeleteError as Error, {
+          quoteId: id,
+        })
+        return NextResponse.json(
+          { 
+            error: 'No se pueden eliminar los eventos asociados. La cotización no puede ser eliminada mientras tenga eventos vinculados.',
+            details: `Hay ${associatedEvents.length} evento(s) asociado(s) a esta cotización.`
+          },
+          { status: 400 }
+        )
+      }
+    }
+
+    // Eliminar pagos parciales asociados
+    const { error: paymentsError } = await adminClient
+      .from('partial_payments')
+      .delete()
+      .eq('quote_id', id)
+
+    if (paymentsError) {
+      logger.warn('API /admin/quotes/[id]', 'Error deleting payments', {
+        error: paymentsError.message,
+        quoteId: id,
+      })
+      // Continuar aunque haya error, puede que no existan pagos
+    }
+
     // Eliminar servicios de la cotización primero (CASCADE debería hacerlo automáticamente, pero por seguridad)
     const { error: servicesError } = await adminClient
       .from('quote_services')
@@ -91,8 +144,15 @@ export async function DELETE(
       logger.error('API /admin/quotes/[id]', 'Error deleting quote', deleteError as Error, {
         quoteId: id,
       })
+      
+      // Mensaje de error más claro
+      let errorMessage = 'Error al eliminar la cotización: ' + deleteError.message
+      if (deleteError.message.includes('foreign key constraint')) {
+        errorMessage = 'No se puede eliminar la cotización porque tiene eventos, pagos u otros registros asociados. Por favor, elimina primero los registros relacionados.'
+      }
+      
       return NextResponse.json(
-        { error: 'Error al eliminar la cotización: ' + deleteError.message },
+        { error: errorMessage },
         { status: 500 }
       )
     }

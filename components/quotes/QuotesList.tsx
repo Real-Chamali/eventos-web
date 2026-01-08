@@ -241,20 +241,31 @@ export function QuotesList({ searchTerm = '', statusFilter = 'all' }: QuotesList
     }
 
     try {
-      const { error } = await supabase
-        .from('quotes')
-        .delete()
-        .eq('id', quoteId)
+      // Usar la API route que maneja la eliminación en cascada
+      const response = await fetch(`/api/admin/quotes/${quoteId}`, {
+        method: 'DELETE',
+      })
 
-      if (error) throw error
+      const data = await response.json()
 
-      toastSuccess('Cotización eliminada exitosamente')
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al eliminar la cotización')
+      }
+
+      toastSuccess(data.message || 'Cotización eliminada exitosamente')
       router.refresh()
     } catch (err) {
       logger.error('QuotesList', 'Error deleting quote', err as Error)
-      toastError('Error al eliminar la cotización')
+      const errorMessage = err instanceof Error ? err.message : 'Error al eliminar la cotización'
+      
+      // Mensaje más descriptivo
+      if (errorMessage.includes('foreign key constraint') || errorMessage.includes('eventos')) {
+        toastError('No se puede eliminar: La cotización tiene eventos asociados. Por favor, elimina primero los eventos relacionados.')
+      } else {
+        toastError(errorMessage)
+      }
     }
-  }, [isAdmin, supabase, toastSuccess, toastError, router])
+  }, [isAdmin, toastSuccess, toastError, router])
   
   // Filtrar cotizaciones localmente con debounce
   const filteredQuotes = useMemo(() => {

@@ -249,12 +249,36 @@ function AdminQuoteControls({
         .eq('id', quoteId)
         .single()
 
-      const { error } = await supabase
-        .from('quotes')
-        .delete()
-        .eq('id', quoteId)
+      // Verificar si hay eventos asociados
+      const { data: associatedEvents } = await supabase
+        .from('events')
+        .select('id, name')
+        .eq('quote_id', quoteId)
 
-      if (error) throw error
+      if (associatedEvents && associatedEvents.length > 0) {
+        // Usar la API route que maneja la eliminación en cascada
+        const response = await fetch(`/api/admin/quotes/${quoteId}`, {
+          method: 'DELETE',
+        })
+
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Error al eliminar la cotización')
+        }
+
+        toastSuccess(`Cotización eliminada exitosamente (${associatedEvents.length} evento(s) asociado(s) también fueron eliminados)`)
+      } else {
+        // Si no hay eventos, eliminar directamente
+        const { error } = await supabase
+          .from('quotes')
+          .delete()
+          .eq('id', quoteId)
+
+        if (error) throw error
+
+        toastSuccess('Cotización eliminada exitosamente')
+      }
 
       // Log acción crítica (eliminación)
       const { data: { user } } = await supabase.auth.getUser()
@@ -271,11 +295,17 @@ function AdminQuoteControls({
         )
       }
 
-      toastSuccess('Cotización eliminada exitosamente')
       onDelete?.()
     } catch (error) {
       logger.error('AdminQuoteControls', 'Error deleting quote', error as Error)
-      toastError('Error al eliminar la cotización')
+      const errorMessage = error instanceof Error ? error.message : 'Error al eliminar la cotización'
+      
+      // Mensaje más descriptivo
+      if (errorMessage.includes('foreign key constraint') || errorMessage.includes('eventos')) {
+        toastError('No se puede eliminar: La cotización tiene eventos asociados. Por favor, elimina primero los eventos relacionados.')
+      } else {
+        toastError(errorMessage)
+      }
     } finally {
       setDeleteConfirmOpen(false)
     }
