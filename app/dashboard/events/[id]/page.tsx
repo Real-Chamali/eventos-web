@@ -472,8 +472,8 @@ export default function EventPage() {
                     <Badge variant="info" size="sm">{servicesCount} servicios</Badge>
                   </div>
                   
-                  {/* Botón para registrar pago */}
-                  {event.quote && hasBalanceDue && (
+                  {/* Botón para registrar pago - Mostrar siempre que haya cotización y no esté completamente pagado */}
+                  {event.quote && !isFullyPaid && (
                     <RegisterPaymentDialog
                       quoteId={event.quote.id}
                       totalPrice={event.quote.total_amount}
