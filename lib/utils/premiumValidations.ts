@@ -107,7 +107,7 @@ export function validateInput(value: string, schema: z.ZodString): {
     if (error instanceof z.ZodError) {
       return {
         isValid: false,
-        error: error.errors[0]?.message || 'Valor inválido',
+        error: error.issues[0]?.message || 'Valor inválido',
       }
     }
     return { isValid: false, error: 'Error de validación' }
