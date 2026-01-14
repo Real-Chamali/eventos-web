@@ -17,15 +17,11 @@ interface NextData {
   router?: NextRouter
 }
 
-interface WindowWithNextData extends Window {
-  __NEXT_DATA__?: NextData
-}
-
 export function prefetchRoute(href: string) {
   if (typeof window === 'undefined') return
   
   // Usar el router de Next.js si está disponible
-  const windowWithNext = window as unknown as WindowWithNextData
+  const windowWithNext = window as Window & { __NEXT_DATA__?: NextData }
   const router = windowWithNext.__NEXT_DATA__?.router
   if (router && router.prefetch) {
     router.prefetch(href)

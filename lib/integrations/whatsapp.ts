@@ -1,8 +1,7 @@
 import { logger } from '@/lib/utils/logger'
 
 // Importar Twilio solo cuando sea necesario (solo en servidor)
-type TwilioModule = typeof import('twilio')
-let twilioModule: TwilioModule | null = null
+let twilioModule: any = null
 
 const getTwilio = async () => {
   if (typeof window !== 'undefined') {
@@ -31,7 +30,7 @@ const getTwilioClient = async () => {
   }
 
   // Twilio se importa como namespace, usar el constructor directamente
-  const Twilio = twilioModule.default || (twilioModule as unknown as { default: typeof import('twilio').default })
+  const Twilio = twilioModule.default || twilioModule
   return {
     client: Twilio(accountSid, authToken),
     from: whatsappNumber,
