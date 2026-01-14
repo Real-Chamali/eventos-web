@@ -178,12 +178,22 @@ export function generateQuoteStructuredData(quote: {
     }
     status: string
     dateCreated?: string
+    scheduledPaymentDate?: string
+    dateModified?: string
     paymentStatus?: string
     itemListElement?: Array<{
       '@type': string
-      name: string
-      quantity: number
-      price: number
+      position: number
+      item: {
+        '@type': string
+        name: string
+        quantity: number
+        price: {
+          '@type': string
+          currency: string
+          value: number
+        }
+      }
     }>
   }
 
