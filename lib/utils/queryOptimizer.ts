@@ -3,12 +3,11 @@
  * Incluye helpers para usar índices correctamente y evitar queries innecesarias
  */
 
-import type { PostgrestQueryBuilder } from '@supabase/postgrest-js'
-
 /**
  * Tipo genérico para queries de Supabase
+ * Usamos any para evitar problemas con tipos complejos de PostgrestQueryBuilder
  */
-type SupabaseQuery<T = unknown> = PostgrestQueryBuilder<T, unknown, unknown, unknown>
+type SupabaseQuery<T = any> = any
 
 /**
  * Optimizar query para usar índices de fecha
