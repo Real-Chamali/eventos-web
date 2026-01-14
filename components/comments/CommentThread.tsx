@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
+import { sanitizeHTMLSync } from '@/lib/utils/security'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { Send, AtSign, User } from 'lucide-react'
@@ -127,12 +128,20 @@ export default function CommentThread({ entityType, entityId }: CommentThreadPro
   }
 
   const formatMentionedText = (text: string, mentions?: string[]) => {
-    if (!mentions || mentions.length === 0) return text
+    if (!mentions || mentions.length === 0) {
+      // Sanitizar el texto si no hay menciones
+      return sanitizeHTMLSync(text)
+    }
 
-    let formatted = text
+    // Primero sanitizar el texto base para prevenir XSS
+    let formatted = sanitizeHTMLSync(text)
+    
+    // Luego aplicar formato a las menciones (ya sanitizadas)
     mentions.forEach((mention) => {
-      const regex = new RegExp(`@${mention}`, 'g')
-      formatted = formatted.replace(regex, `<span class="font-semibold text-blue-600 dark:text-blue-400">@${mention}</span>`)
+      // Sanitizar el mention también
+      const sanitizedMention = sanitizeHTMLSync(mention)
+      const regex = new RegExp(`@${sanitizedMention.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`, 'g')
+      formatted = formatted.replace(regex, `<span class="font-semibold text-blue-600 dark:text-blue-400">@${sanitizedMention}</span>`)
     })
     return formatted
   }

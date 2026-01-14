@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
@@ -8,10 +8,11 @@ import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertCircle } from 'lucide-react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths, startOfWeek, endOfWeek } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths, startOfWeek, endOfWeek, isValid } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils/cn'
 import Link from 'next/link'
+import { safeCreateDate } from '@/lib/utils/premiumHelpers'
 
 interface EventDate {
   date: string
@@ -29,11 +30,7 @@ export default function EventsCalendar() {
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
-  useEffect(() => {
-    loadEvents()
-  }, [currentDate])
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -72,6 +69,13 @@ export default function EventsCalendar() {
       eventsData?.forEach((event: any) => {
         if (!event.start_date) return
 
+        // Validar fecha de inicio
+        const startDate = safeCreateDate(event.start_date)
+        if (!startDate) {
+          logger.warn('EventsCalendar', 'Invalid start_date', { eventId: event.id, start_date: event.start_date })
+          return
+        }
+
         // Obtener nombre del cliente
         const client = event.quote?.client
         const clientName = Array.isArray(client) 
@@ -79,12 +83,23 @@ export default function EventsCalendar() {
           : client?.name || 'Sin cliente'
 
         // Procesar rango de fechas si hay end_date
-        const startDate = new Date(event.start_date)
-        const endDate = event.end_date ? new Date(event.end_date) : startDate
+        const endDate = event.end_date ? safeCreateDate(event.end_date) : startDate
+        if (!endDate) {
+          logger.warn('EventsCalendar', 'Invalid end_date', { eventId: event.id, end_date: event.end_date })
+          return
+        }
         
         // Agregar evento para cada día del rango
         const currentDate = new Date(startDate)
-        while (currentDate <= endDate) {
+        const endDateObj = new Date(endDate)
+        
+        while (currentDate <= endDateObj) {
+          // Validar que la fecha actual sea válida antes de formatear
+          if (!isValid(currentDate)) {
+            logger.warn('EventsCalendar', 'Invalid date in range', { eventId: event.id, currentDate })
+            break
+          }
+          
           const dateKey = format(currentDate, 'yyyy-MM-dd')
           
           if (!eventMap.has(dateKey)) {
@@ -114,7 +129,11 @@ export default function EventsCalendar() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [currentDate, supabase])
+
+  useEffect(() => {
+    loadEvents()
+  }, [loadEvents])
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)

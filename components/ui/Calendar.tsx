@@ -1,12 +1,13 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths, startOfWeek, endOfWeek, addDays, addWeeks, subWeeks } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths, startOfWeek, endOfWeek, addDays, addWeeks, subWeeks, isValid } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils/cn'
+import { safeCreateDate } from '@/lib/utils/premiumHelpers'
 import Badge from './Badge'
 import Skeleton from './Skeleton'
 import Button from './Button'
@@ -33,25 +34,7 @@ export default function Calendar() {
   const [view, setView] = useState<CalendarView>('month')
   const supabase = createClient()
 
-  useEffect(() => {
-    loadEvents()
-    
-    // Refrescar eventos cada 30 segundos
-    const interval = setInterval(() => {
-      loadEvents()
-    }, 30000)
-    
-    return () => clearInterval(interval)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // Recargar cuando cambia el mes para mostrar eventos del mes actual
-  useEffect(() => {
-    loadEvents()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentDate])
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -129,8 +112,12 @@ export default function Calendar() {
             const availability = await getDateAvailability(startDate, endDate)
             
             // Agregar todas las fechas del rango con disponibilidad real
-            const start = new Date(startDate)
-            const end = new Date(endDate)
+            const start = safeCreateDate(startDate)
+            const end = safeCreateDate(endDate)
+            if (!start || !end) {
+              logger.warn('Calendar', 'Invalid dates in event', { eventId: event.id, startDate, endDate })
+              continue
+            }
             const days = eachDayOfInterval({ start, end })
             
             days.forEach(day => {
@@ -164,8 +151,12 @@ export default function Calendar() {
           } catch (availError) {
             logger.error('Calendar', 'Error getting availability', availError instanceof Error ? availError : new Error(String(availError)))
             // Fallback: procesar sin disponibilidad pero con relaciones correctas
-            const start = new Date(startDate)
-            const end = new Date(endDate)
+            const start = safeCreateDate(startDate)
+            const end = safeCreateDate(endDate)
+            if (!start || !end) {
+              logger.warn('Calendar', 'Invalid dates in event (fallback)', { eventId: event.id, startDate, endDate })
+              continue
+            }
             const days = eachDayOfInterval({ start, end })
             
             days.forEach(day => {
@@ -203,7 +194,16 @@ export default function Calendar() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase])
+
+  useEffect(() => {
+    loadEvents()
+  }, [loadEvents])
+
+  // Recargar cuando cambia el mes para mostrar eventos del mes actual
+  useEffect(() => {
+    loadEvents()
+  }, [currentDate, loadEvents])
 
   const monthStart = startOfMonth(currentDate)
   const monthEnd = endOfMonth(currentDate)

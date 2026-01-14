@@ -4,6 +4,7 @@
 
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
+import { safeCreateDate } from '@/lib/utils/premiumHelpers'
 
 export interface EventDateRange {
   quote_id: string
@@ -24,8 +25,16 @@ export async function checkDuplicateEvent(range: EventDateRange): Promise<{
   try {
     const supabase = createClient()
     
-    const startDate = new Date(range.start_date)
-    const endDate = range.end_date ? new Date(range.end_date) : startDate
+    // Validar fechas antes de procesar
+    const startDate = safeCreateDate(range.start_date)
+    if (!startDate) {
+      throw new Error(`Fecha de inicio inválida: ${range.start_date}`)
+    }
+    
+    const endDate = range.end_date ? safeCreateDate(range.end_date) : startDate
+    if (!endDate) {
+      throw new Error(`Fecha de fin inválida: ${range.end_date}`)
+    }
     
     // Verificar eventos existentes que se solapen
     const { data: existingEvents, error } = await supabase
@@ -45,8 +54,17 @@ export async function checkDuplicateEvent(range: EventDateRange): Promise<{
     
     // Verificar solapamientos
     for (const event of existingEvents) {
-      const eventStart = new Date(event.start_date)
-      const eventEnd = event.end_date ? new Date(event.end_date) : eventStart
+      const eventStart = safeCreateDate(event.start_date)
+      if (!eventStart) {
+        logger.warn('eventValidation', 'Invalid start_date in existing event', { eventId: event.id, start_date: event.start_date })
+        continue
+      }
+      
+      const eventEnd = event.end_date ? safeCreateDate(event.end_date) : eventStart
+      if (!eventEnd) {
+        logger.warn('eventValidation', 'Invalid end_date in existing event', { eventId: event.id, end_date: event.end_date })
+        continue
+      }
       
       // Verificar si hay solapamiento
       const overlaps = 

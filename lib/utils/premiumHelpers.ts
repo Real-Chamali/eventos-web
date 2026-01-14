@@ -2,6 +2,8 @@
  * Helpers Premium - Funciones utilitarias avanzadas
  */
 
+import { isValid } from 'date-fns'
+
 /**
  * Formatear moneda con estilo premium
  */
@@ -19,6 +21,28 @@ export function formatCurrencyPremium(
 }
 
 /**
+ * Crear objeto Date de manera segura con validación
+ */
+export function safeCreateDate(dateInput: string | Date | null | undefined): Date | null {
+  if (!dateInput) return null
+  if (dateInput instanceof Date) {
+    return isValid(dateInput) ? dateInput : null
+  }
+  const date = new Date(dateInput)
+  return isValid(date) ? date : null
+}
+
+/**
+ * Validar si una fecha es válida
+ */
+export function isValidDate(dateInput: string | Date | null | undefined): boolean {
+  if (!dateInput) return false
+  if (dateInput instanceof Date) return isValid(dateInput)
+  const date = new Date(dateInput)
+  return isValid(date)
+}
+
+/**
  * Formatear fecha con estilo premium
  */
 export function formatDatePremium(
@@ -27,6 +51,9 @@ export function formatDatePremium(
   locale: string = 'es-MX'
 ): string {
   const dateObj = typeof date === 'string' ? new Date(date) : date
+  if (!isValid(dateObj)) {
+    return 'Fecha inválida'
+  }
   const formatOptions: Record<string, Intl.DateTimeFormatOptions> = {
     short: { year: 'numeric', month: 'short', day: 'numeric' },
     medium: { year: 'numeric', month: 'long', day: 'numeric' },
@@ -41,7 +68,10 @@ export function formatDatePremium(
  * Calcular tiempo relativo (hace X tiempo)
  */
 export function getRelativeTime(date: Date | string): string {
-  const dateObj = typeof date === 'string' ? new Date(date) : date
+  const dateObj = typeof date === 'string' ? safeCreateDate(date) : date
+  if (!dateObj || !isValid(dateObj)) {
+    return 'Fecha inválida'
+  }
   const now = new Date()
   const diffInSeconds = Math.floor((now.getTime() - dateObj.getTime()) / 1000)
 

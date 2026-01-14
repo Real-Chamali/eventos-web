@@ -8,6 +8,7 @@
  */
 
 import { useMemo, useCallback } from 'react'
+import { logger } from './logger'
 
 /**
  * Memoiza un cálculo costoso con dependencias
@@ -70,7 +71,7 @@ export async function lazyLoadComponent<T>(
     const module = await importFn()
     return module.default
   } catch (error) {
-    console.error('Error lazy loading component:', error)
+    logger.error('Performance', 'Error lazy loading component', error as Error)
     throw error
   }
 }

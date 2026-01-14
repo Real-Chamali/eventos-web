@@ -163,7 +163,31 @@ export function generateQuoteStructuredData(quote: {
     price: number
   }>
 }) {
-  const structuredData: any = {
+  interface StructuredData {
+    '@context': string
+    '@type': string
+    identifier: string
+    customer: {
+      '@type': string
+      name: string
+    }
+    totalPaymentDue: {
+      '@type': string
+      currency: string
+      value: number
+    }
+    status: string
+    dateCreated?: string
+    paymentStatus?: string
+    itemListElement?: Array<{
+      '@type': string
+      name: string
+      quantity: number
+      price: number
+    }>
+  }
+
+  const structuredData: StructuredData = {
     '@context': 'https://schema.org',
     '@type': 'Invoice',
     identifier: quote.id,

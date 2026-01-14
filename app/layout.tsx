@@ -117,19 +117,24 @@ export default function RootLayout({
                   window.fetch = function(...args) {
                     const url = typeof args[0] === 'string' ? args[0] : (args[0]?.url || '');
                     const urlLower = url.toLowerCase();
+                    // Detectar URLs de Sentry de manera más amplia
                     if (urlLower.includes('sentry.io') || 
                         urlLower.includes('ingest.us.sentry.io') || 
+                        urlLower.includes('ingest.sentry.io') ||
                         urlLower.includes('o4510508203704320') || 
-                        urlLower.includes('4510508220088320')) {
+                        urlLower.includes('4510508220088320') ||
+                        urlLower.includes('sentry_key=') ||
+                        urlLower.includes('sentry_client=')) {
                       // Silenciar completamente - retornar promesa que nunca resuelve
                       return new Promise(() => {});
                     }
                     try {
                       return originalFetch.apply(this, args).catch(function(error) {
                         // Silenciar errores de Sentry bloqueados
-                        const errorStr = (error?.message || '').toLowerCase();
+                        const errorStr = (error?.message || String(error) || '').toLowerCase();
                         if (errorStr.includes('blocked') || 
                             errorStr.includes('sentry') ||
+                            errorStr.includes('err_blocked_by_client') ||
                             urlLower.includes('sentry')) {
                           return new Promise(() => {});
                         }
@@ -137,7 +142,8 @@ export default function RootLayout({
                       });
                     } catch (e) {
                       // Si fetch mismo falla, silenciar si es Sentry
-                      if (urlLower.includes('sentry')) {
+                      const errorStr = (e?.message || String(e) || '').toLowerCase();
+                      if (urlLower.includes('sentry') || errorStr.includes('sentry')) {
                         return new Promise(() => {});
                       }
                       throw e;
@@ -147,10 +153,14 @@ export default function RootLayout({
                   // Interceptar XMLHttpRequest MUY TEMPRANO
                   XMLHttpRequest.prototype.open = function(method, url, ...rest) {
                     const urlLower = (typeof url === 'string' ? url : '').toLowerCase();
+                    // Detectar URLs de Sentry de manera más amplia
                     if (urlLower.includes('sentry.io') || 
                         urlLower.includes('ingest.us.sentry.io') || 
+                        urlLower.includes('ingest.sentry.io') ||
                         urlLower.includes('o4510508203704320') || 
-                        urlLower.includes('4510508220088320')) {
+                        urlLower.includes('4510508220088320') ||
+                        urlLower.includes('sentry_key=') ||
+                        urlLower.includes('sentry_client=')) {
                       this._shouldIgnore = true;
                       // Prevenir todos los eventos de error
                       const ignoreError = function(e) {
@@ -161,6 +171,8 @@ export default function RootLayout({
                         }
                       };
                       this.addEventListener('error', ignoreError, true);
+                      this.addEventListener('abort', ignoreError, true);
+                      this.addEventListener('timeout', ignoreError, true);
                       this.addEventListener('loadend', function() {}, true);
                     }
                     return originalXHROpen.apply(this, [method, url, ...rest]);
@@ -187,20 +199,27 @@ export default function RootLayout({
                     if (!message || typeof message !== 'string') return false;
                     const lowerMessage = message.toLowerCase();
                     
-                    // Silenciar errores de Sentry bloqueados
+                    // Silenciar errores de Sentry bloqueados - patrones más amplios
                     if (lowerMessage.includes('err_blocked_by_client') ||
                         lowerMessage.includes('net::err_blocked_by_client') ||
+                        lowerMessage.includes('blocked by client') ||
                         lowerMessage.includes('sentry.io') ||
                         lowerMessage.includes('ingest.us.sentry.io') ||
+                        lowerMessage.includes('ingest.sentry.io') ||
                         lowerMessage.includes('o4510508203704320') ||
                         lowerMessage.includes('4510508220088320') ||
-                        lowerMessage.includes('failed to load resource')) {
+                        lowerMessage.includes('sentry_key=') ||
+                        lowerMessage.includes('sentry_client=') ||
+                        (lowerMessage.includes('failed to load resource') && lowerMessage.includes('sentry')) ||
+                        (lowerMessage.includes('failed to load resource') && lowerMessage.includes('ingest'))) {
                       return true;
                     }
                     
                     // Silenciar warnings de PWA install prompt - capturar todas las variantes
                     if (lowerMessage.includes('banner not shown') ||
-                        (lowerMessage.includes('beforeinstallprompt') && (lowerMessage.includes('preventdefault') || lowerMessage.includes('prevent default'))) ||
+                        lowerMessage.includes('beforeinstallprompt') ||
+                        (lowerMessage.includes('preventdefault') && lowerMessage.includes('prompt')) ||
+                        (lowerMessage.includes('prevent default') && lowerMessage.includes('prompt')) ||
                         (lowerMessage.includes('the page must call') && lowerMessage.includes('prompt')) ||
                         (lowerMessage.includes('must call') && lowerMessage.includes('prompt') && (lowerMessage.includes('banner') || lowerMessage.includes('beforeinstallprompt')))) {
                       return true;
@@ -259,12 +278,30 @@ export default function RootLayout({
                   // Interceptar errores de window MUY TEMPRANO (captura fase)
                   window.addEventListener('error', function(e) {
                     const errorMessage = (e.message || '').toLowerCase();
-                    const errorSource = ((e.filename || e.target?.src || '')).toLowerCase();
-                    if (shouldSilenceMessage(errorMessage) || shouldSilenceMessage(errorSource)) {
+                    const errorSource = ((e.filename || e.target?.src || e.target?.href || '')).toLowerCase();
+                    const errorTarget = (e.target?.tagName || '').toLowerCase();
+                    // También verificar el tipo de error
+                    if (shouldSilenceMessage(errorMessage) || 
+                        shouldSilenceMessage(errorSource) ||
+                        (errorTarget === 'script' && errorSource.includes('sentry'))) {
                       e.preventDefault();
                       e.stopPropagation();
                       e.stopImmediatePropagation();
                       return false;
+                    }
+                  }, true);
+                  
+                  // Interceptar errores de recursos (imágenes, scripts, etc.)
+                  window.addEventListener('error', function(e) {
+                    const target = e.target;
+                    if (target && target !== window) {
+                      const src = (target.src || target.href || '').toLowerCase();
+                      if (shouldSilenceMessage(src)) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                        return false;
+                      }
                     }
                   }, true);
                   

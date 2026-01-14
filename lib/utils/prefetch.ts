@@ -4,14 +4,29 @@
  * Prefetching proactivo de recursos para mejorar la experiencia del usuario
  */
 
+import { logger } from './logger'
+
 /**
  * Prefetch de una ruta Next.js
  */
+interface NextRouter {
+  prefetch?: (href: string) => void
+}
+
+interface NextData {
+  router?: NextRouter
+}
+
+interface WindowWithNextData extends Window {
+  __NEXT_DATA__?: NextData
+}
+
 export function prefetchRoute(href: string) {
   if (typeof window === 'undefined') return
   
   // Usar el router de Next.js si está disponible
-  const router = (window as any).__NEXT_DATA__?.router
+  const windowWithNext = window as unknown as WindowWithNextData
+  const router = windowWithNext.__NEXT_DATA__?.router
   if (router && router.prefetch) {
     router.prefetch(href)
   }
@@ -36,7 +51,7 @@ export async function prefetchData(url: string) {
     }
   } catch (error) {
     // Silenciar errores de prefetch (no crítico)
-    console.debug('Prefetch failed:', url)
+    logger.debug('Prefetch', 'Prefetch failed', { url })
   }
   
   return null

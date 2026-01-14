@@ -51,7 +51,20 @@ export async function sendEmail(options: EmailOptions): Promise<{ success: boole
       return { success: false }
     }
 
-    const emailData: any = {
+    interface ResendEmailData {
+      from: string
+      to: string[]
+      subject: string
+      html: string
+      replyTo?: string
+      attachments?: Array<{
+        filename: string
+        content: Buffer
+        contentType?: string
+      }>
+    }
+
+    const emailData: ResendEmailData = {
       from: options.from || process.env.RESEND_FROM_EMAIL || 'Eventos Web <noreply@eventos-web.com>',
       to: Array.isArray(options.to) ? options.to : [options.to],
       subject: options.subject,

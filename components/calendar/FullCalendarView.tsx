@@ -49,18 +49,7 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
   const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
 
-  useEffect(() => {
-    loadEvents()
-    
-    // Refrescar eventos cada 30 segundos
-    const interval = setInterval(() => {
-      loadEvents()
-    }, 30000)
-    
-    return () => clearInterval(interval)
-  }, [])
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -219,7 +208,18 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase, toastError])
+
+  useEffect(() => {
+    loadEvents()
+    
+    // Refrescar eventos cada 30 segundos
+    const interval = setInterval(() => {
+      loadEvents()
+    }, 30000)
+    
+    return () => clearInterval(interval)
+  }, [loadEvents])
 
   const handleEventClick = useCallback((clickInfo: any) => {
     const event = clickInfo.event

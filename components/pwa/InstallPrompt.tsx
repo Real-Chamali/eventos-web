@@ -39,6 +39,8 @@ export default function InstallPrompt() {
       
       // Prevenir el banner automático del navegador
       // Esto es necesario para mostrar nuestro prompt personalizado
+      // Nota: El navegador puede mostrar un warning si no se llama a prompt(),
+      // pero este warning ya está siendo silenciado en layout.tsx
       e.preventDefault()
       
       // Guardar el evento para mostrarlo cuando el usuario lo solicite
@@ -102,6 +104,14 @@ export default function InstallPrompt() {
     setShowPrompt(false)
     // Guardar en localStorage para no mostrar de nuevo hoy
     localStorage.setItem('pwa-install-dismissed', new Date().toDateString())
+    // Si hay un deferredPrompt y el usuario descarta, limpiarlo para evitar warnings
+    // Nota: El navegador puede mostrar un warning, pero es esperado cuando se previene
+    // el banner automático. Este warning ya está siendo silenciado en layout.tsx
+    if (deferredPrompt) {
+      // No llamar a prompt() aquí porque el usuario descartó explícitamente
+      // El warning es esperado y ya está siendo silenciado
+      setDeferredPrompt(null)
+    }
   }
 
   // No mostrar si ya está instalado o si el usuario lo descartó hoy

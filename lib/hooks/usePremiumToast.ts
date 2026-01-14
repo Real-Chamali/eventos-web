@@ -5,7 +5,7 @@
 'use client'
 
 import React, { useCallback } from 'react'
-import { toast } from 'react-hot-toast'
+import { toast, ToastOptions as ReactHotToastOptions } from 'react-hot-toast'
 import { CheckCircle2, XCircle, AlertCircle, Info, Sparkles } from 'lucide-react'
 
 interface ToastOptions {
@@ -18,9 +18,14 @@ interface ToastOptions {
   }
 }
 
+interface ExtendedToastOptions extends ReactHotToastOptions {
+  icon?: React.ReactNode
+  className?: string
+}
+
 export function usePremiumToast() {
   const success = useCallback((message: string, options?: ToastOptions) => {
-    const toastOptions: any = {
+    const toastOptions: ExtendedToastOptions = {
       duration: options?.duration || 4000,
       position: options?.position || 'top-right',
       style: {
@@ -42,7 +47,7 @@ export function usePremiumToast() {
   }, [])
 
   const error = useCallback((message: string, options?: ToastOptions) => {
-    const toastOptions: any = {
+    const toastOptions: ExtendedToastOptions = {
       duration: options?.duration || 5000,
       position: options?.position || 'top-right',
       style: {
@@ -64,7 +69,7 @@ export function usePremiumToast() {
   }, [])
 
   const warning = useCallback((message: string, options?: ToastOptions) => {
-    const toastOptions: any = {
+    const toastOptions: ExtendedToastOptions = {
       duration: options?.duration || 4000,
       position: options?.position || 'top-right',
       style: {
@@ -86,7 +91,7 @@ export function usePremiumToast() {
   }, [])
 
   const info = useCallback((message: string, options?: ToastOptions) => {
-    const toastOptions: any = {
+    const toastOptions: ExtendedToastOptions = {
       duration: options?.duration || 4000,
       position: options?.position || 'top-right',
       style: {
@@ -108,7 +113,7 @@ export function usePremiumToast() {
   }, [])
 
   const premium = useCallback((message: string, options?: ToastOptions) => {
-    const toastOptions: any = {
+    const toastOptions: ExtendedToastOptions = {
       duration: options?.duration || 4000,
       position: options?.position || 'top-right',
       style: {

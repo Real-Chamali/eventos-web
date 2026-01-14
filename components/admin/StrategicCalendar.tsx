@@ -11,7 +11,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import Badge from '@/components/ui/Badge'
 import { Calendar, TrendingUp, TrendingDown, DollarSign, Target } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
-import { format } from 'date-fns'
+import { format, isValid } from 'date-fns'
 import { es } from 'date-fns/locale'
 import Skeleton from '@/components/ui/Skeleton'
 import { cn } from '@/lib/utils/cn'
@@ -26,6 +26,22 @@ interface DateProfitability {
   totalProfit: number
   averageRevenuePerEvent: number
   averageProfitPerEvent: number
+}
+
+// Función helper para formatear fechas de manera segura
+function safeFormatDate(dateString: string, formatString: string): string {
+  if (!dateString) return 'Fecha inválida'
+  const date = new Date(dateString)
+  if (!isValid(date)) {
+    logger.warn('StrategicCalendar', 'Invalid date string', { dateString })
+    return 'Fecha inválida'
+  }
+  try {
+    return format(date, formatString, { locale: es })
+  } catch (error) {
+    logger.error('StrategicCalendar', 'Error formatting date', error instanceof Error ? error : new Error(String(error)))
+    return 'Fecha inválida'
+  }
 }
 
 export default function StrategicCalendar() {
@@ -53,16 +69,24 @@ export default function StrategicCalendar() {
         return
       }
       
-      setProfitabilityData((data || []).map((item: any) => ({
-        eventDate: item.event_date,
-        eventsCount: Number(item.events_count || 0),
-        confirmedCount: Number(item.confirmed_count || 0),
-        reservedCount: Number(item.reserved_count || 0),
-        totalRevenue: Number(item.total_revenue || 0),
-        totalProfit: Number(item.total_profit || 0),
-        averageRevenuePerEvent: Number(item.average_revenue_per_event || 0),
-        averageProfitPerEvent: Number(item.average_profit_per_event || 0),
-      })))
+      // Filtrar y validar datos, asegurando que las fechas sean válidas
+      setProfitabilityData((data || [])
+        .filter((item: any) => {
+          // Validar que event_date existe y es válido
+          if (!item.event_date) return false
+          const date = new Date(item.event_date)
+          return isValid(date)
+        })
+        .map((item: any) => ({
+          eventDate: item.event_date,
+          eventsCount: Number(item.events_count || 0),
+          confirmedCount: Number(item.confirmed_count || 0),
+          reservedCount: Number(item.reserved_count || 0),
+          totalRevenue: Number(item.total_revenue || 0),
+          totalProfit: Number(item.total_profit || 0),
+          averageRevenuePerEvent: Number(item.average_revenue_per_event || 0),
+          averageProfitPerEvent: Number(item.average_profit_per_event || 0),
+        })))
     } catch (error) {
       logger.error('StrategicCalendar', 'Error loading profitability data', error instanceof Error ? error : new Error(String(error)))
     } finally {
@@ -190,7 +214,7 @@ export default function StrategicCalendar() {
         </div>
 
         {/* Fechas Más Rentables */}
-        {stats.highestRevenueDate && (
+        {stats.highestRevenueDate && isValid(new Date(stats.highestRevenueDate)) && (
           <div className="p-4 rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200 dark:border-emerald-800">
             <div className="flex items-center gap-2 mb-2">
               <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
@@ -199,7 +223,7 @@ export default function StrategicCalendar() {
               </p>
             </div>
             <p className="text-sm text-emerald-700 dark:text-emerald-300">
-              {format(new Date(stats.highestRevenueDate), "EEEE, d 'de' MMMM yyyy", { locale: es })} - 
+              {safeFormatDate(stats.highestRevenueDate, "EEEE, d 'de' MMMM yyyy")} - 
               Ingreso promedio: {new Intl.NumberFormat('es-MX', {
                 style: 'currency',
                 currency: 'MXN',
@@ -234,7 +258,7 @@ export default function StrategicCalendar() {
                   return (
                     <TableRow key={item.eventDate}>
                       <TableCell className="font-medium">
-                        {format(new Date(item.eventDate), "dd MMM yyyy", { locale: es })}
+                        {safeFormatDate(item.eventDate, "dd MMM yyyy")}
                       </TableCell>
                       <TableCell>{item.eventsCount}</TableCell>
                       <TableCell>
