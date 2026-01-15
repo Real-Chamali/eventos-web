@@ -30,7 +30,7 @@ interface CalendarEvent {
     totalPaid: number
     balanceDue: number
     financialStatus: 'PENDING' | 'PARTIAL' | 'PAID' | 'CANCELLED'
-    eventStatus: string
+    eventStatus: string | null
   }
 }
 
