@@ -398,6 +398,13 @@ export default function EventsPageClient() {
     }).format(amount)
   }
 
+  const getEventClientName = (event: Event) => {
+    const quote = Array.isArray(event.quote) ? event.quote[0] : event.quote
+    const client = quote?.client
+    const normalizedClient = Array.isArray(client) ? client[0] : client
+    return normalizedClient?.name || 'Sin cliente'
+  }
+
   const formatDateTime = (dateString: string) => {
     try {
       return format(new Date(dateString), "dd 'de' MMMM, yyyy 'a las' HH:mm", { locale: es })
@@ -789,7 +796,7 @@ export default function EventsPageClient() {
                 <div>
                   <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Cliente</p>
                   <p className="text-base font-semibold text-gray-900 dark:text-white">
-                    {(Array.isArray(selectedEventDetails.quote) ? selectedEventDetails.quote[0]?.client?.name : selectedEventDetails.quote?.client?.name) || 'Sin cliente'}
+                    {getEventClientName(selectedEventDetails)}
                   </p>
                 </div>
                 <div>
