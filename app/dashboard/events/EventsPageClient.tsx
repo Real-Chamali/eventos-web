@@ -30,6 +30,8 @@ interface Event {
   id: string
   start_date: string
   end_date: string | null
+  start_time?: string | null
+  end_time?: string | null
   status: string
   created_at: string
   quote?: {
