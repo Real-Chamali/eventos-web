@@ -5,12 +5,34 @@
  * Mejora el SEO y la visibilidad en motores de búsqueda
  */
 
-import { generateOrganizationSchema, generateEventSchema, generateQuoteSchema, generateWebSiteSchema, generateBreadcrumbSchema } from '@/lib/utils/structuredData'
-
-interface StructuredDataProps {
-  type: 'organization' | 'event' | 'quote' | 'website' | 'breadcrumb'
-  data: unknown
+import {
+  generateOrganizationSchema,
+  generateEventSchema,
+  generateQuoteSchema,
+  generateWebSiteSchema,
+  generateBreadcrumbSchema,
+  type OrganizationStructuredData,
+  type EventStructuredData,
+  type QuoteStructuredData,
+} from '@/lib/utils/structuredData'
+type WebSiteStructuredData = {
+  name: string
+  url: string
+  description?: string
+  potentialAction?: {
+    target: string
+    'query-input': string
+  }
 }
+
+type BreadcrumbItem = { name: string; url: string }
+
+type StructuredDataProps =
+  | { type: 'organization'; data: OrganizationStructuredData }
+  | { type: 'event'; data: EventStructuredData }
+  | { type: 'quote'; data: QuoteStructuredData }
+  | { type: 'website'; data: WebSiteStructuredData }
+  | { type: 'breadcrumb'; data: BreadcrumbItem[] }
 
 export default function StructuredData({ type, data }: StructuredDataProps) {
   let schema: object
