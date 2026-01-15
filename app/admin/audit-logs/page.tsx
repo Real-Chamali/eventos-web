@@ -46,7 +46,7 @@ interface AuditLog {
   created_at: string
   metadata: Record<string, unknown> | null
   user_email?: string
-  user_name?: string
+  user_name?: string | null
 }
 
 type AuditLogRow = AuditLog & {
