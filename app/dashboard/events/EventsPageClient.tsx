@@ -32,6 +32,13 @@ interface Event {
   end_date: string | null
   start_time?: string | null
   end_time?: string | null
+  location?: string | null
+  guest_count?: number | null
+  event_type?: string | null
+  emergency_contact?: string | null
+  emergency_phone?: string | null
+  special_requirements?: string | null
+  additional_notes?: string | null
   status: string
   created_at: string
   quote?: {
