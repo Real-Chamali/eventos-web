@@ -100,10 +100,6 @@ export default function AdminFinancePage() {
     loadFinanceData()
   }, [loadFinanceData])
 
-  useEffect(() => {
-    loadAdvancedData()
-  }, [loadAdvancedData])
-
   const loadAdvancedData = useCallback(async () => {
     try {
       setLoadingAdvanced(true)
@@ -140,6 +136,10 @@ export default function AdminFinancePage() {
       setLoadingAdvanced(false)
     }
   }, [selectedPeriod, toastError])
+
+  useEffect(() => {
+    loadAdvancedData()
+  }, [loadAdvancedData])
 
   const handleEntryAdded = () => {
     toastSuccess('Movimiento agregado correctamente')
