@@ -9,7 +9,6 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import listPlugin from '@fullcalendar/list'
-import type { DateClickArg, EventClickArg, EventContentArg } from '@fullcalendar/core'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import PaymentModal from '@/components/payments/PaymentModal'
@@ -32,6 +31,22 @@ interface CalendarEvent {
     balanceDue: number
     financialStatus: 'PENDING' | 'PARTIAL' | 'PAID' | 'CANCELLED'
     eventStatus: string
+  }
+}
+
+type EventClickArg = {
+  event: {
+    extendedProps: CalendarEvent['extendedProps']
+  }
+}
+
+type DateClickArg = {
+  date: Date
+}
+
+type EventContentArg = {
+  event: {
+    extendedProps: CalendarEvent['extendedProps']
   }
 }
 
