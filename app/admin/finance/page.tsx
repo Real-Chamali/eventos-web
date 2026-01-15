@@ -1,20 +1,15 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
 import PageHeader from '@/components/ui/PageHeader'
-import FinanceSummaryCards from '@/components/finance/FinanceSummaryCards'
-import FinanceLedgerTable, { type FinanceEntry } from '@/components/finance/FinanceLedgerTable'
-import AddFinanceEntryDialog from '@/components/finance/AddFinanceEntryDialog'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import Skeleton from '@/components/ui/Skeleton'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Chart from '@/components/ui/Chart'
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, Download, Calendar, Target, Users, Clock, AlertTriangle } from 'lucide-react'
+import { TrendingUp, DollarSign, BarChart3, Download, Calendar, Target, Users, Clock, AlertTriangle } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils/cn'
@@ -56,10 +51,6 @@ const runInBackground = (callback: () => void | Promise<void>) => {
 }
 
 export default function AdminFinancePage() {
-  // Estados para ledger básico
-  const [financeData, setFinanceData] = useState<FinanceEntry[]>([])
-  const [loadingLedger, setLoadingLedger] = useState(true)
-  const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
 
   // Estados para análisis avanzado
@@ -73,32 +64,6 @@ export default function AdminFinancePage() {
   const [selectedPeriod, setSelectedPeriod] = useState<'30' | '60' | '90'>('90')
   const [isExporting, setIsExporting] = useState(false)
   const [loadingAdvanced, setLoadingAdvanced] = useState(false)
-
-  const loadFinanceData = useCallback(async () => {
-    try {
-      setLoadingLedger(true)
-      const { data, error } = await supabase
-        .from('finance_ledger')
-        .select('*')
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        logger.error('AdminFinancePage', 'Error loading finance data', error as Error)
-        toastError('Error al cargar los datos financieros')
-      } else {
-        setFinanceData(data || [])
-      }
-    } catch (err) {
-      logger.error('AdminFinancePage', 'Unexpected error', err as Error)
-      toastError('Error inesperado al cargar los datos financieros')
-    } finally {
-      setLoadingLedger(false)
-    }
-  }, [supabase, toastError])
-
-  useEffect(() => {
-    loadFinanceData()
-  }, [loadFinanceData])
 
   const loadAdvancedData = useCallback(async () => {
     try {
@@ -140,22 +105,6 @@ export default function AdminFinancePage() {
   useEffect(() => {
     loadAdvancedData()
   }, [loadAdvancedData])
-
-  const handleEntryAdded = () => {
-    toastSuccess('Movimiento agregado correctamente')
-    loadFinanceData()
-  }
-
-  const totalIncome = financeData
-    .filter((entry) => entry.type === 'income')
-    .reduce((sum, entry) => sum + Number(entry.amount), 0)
-
-  const totalExpense = financeData
-    .filter((entry) => entry.type === 'expense')
-    .reduce((sum, entry) => sum + Number(entry.amount), 0)
-
-  const netBalance = totalIncome - totalExpense
-  const balancePercentage = totalIncome > 0 ? (netBalance / totalIncome) * 100 : 0
 
   // Memoizar datos de exportación
   const exportData = useMemo(() => ({
@@ -233,7 +182,7 @@ export default function AdminFinancePage() {
     <div className="space-y-8 p-6 lg:p-8">
       <PageHeader
         title="Finanzas"
-        description="Resumen financiero, análisis avanzado y registro de movimientos"
+        description="Resumen financiero y análisis avanzado"
       />
 
       {/* Alertas Financieras */}
@@ -289,13 +238,13 @@ export default function AdminFinancePage() {
         </div>
       )}
 
-      {/* Tabs con ambas funcionalidades */}
-      <Tabs defaultValue="basic" className="space-y-6">
+      {/* Bloque único: Análisis Avanzado */}
+      <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="basic">Registro Básico</TabsTrigger>
-            <TabsTrigger value="advanced">Análisis Avanzado</TabsTrigger>
-          </TabsList>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Análisis Avanzado</h2>
+            <p className="text-gray-600 dark:text-gray-400">Indicadores y proyecciones financieras</p>
+          </div>
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => handleExport('pdf')} disabled={isExporting}>
               <Download className="h-4 w-4 mr-2" />
@@ -312,166 +261,7 @@ export default function AdminFinancePage() {
           </div>
         </div>
 
-        {/* Tab: Registro Básico */}
-        <TabsContent value="basic" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Registro de Movimientos</h2>
-              <p className="text-gray-600 dark:text-gray-400">Ingresos y gastos básicos</p>
-            </div>
-            <AddFinanceEntryDialog onSuccess={handleEntryAdded} />
-          </div>
-
-          <FinanceSummaryCards
-            totalIncome={totalIncome}
-            totalExpense={totalExpense}
-            netBalance={netBalance}
-            balancePercentage={balancePercentage}
-            loading={loadingLedger}
-          />
-
-          <Card variant="elevated" className="overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-xl">Registro de Movimientos</CardTitle>
-                  <CardDescription className="mt-1">
-                    Historial completo de ingresos y gastos
-                  </CardDescription>
-                </div>
-                <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg">
-                  <BarChart3 className="h-5 w-5 text-white" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <FinanceLedgerTable
-                data={financeData}
-                loading={loadingLedger}
-                onExport={() => handleExport('csv')}
-              />
-            </CardContent>
-          </Card>
-
-          {financeData.length > 0 && (
-            <Card variant="elevated" className="overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-b border-gray-200/60 dark:border-gray-800/60">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="text-xl">Análisis: Ingresos vs Gastos</CardTitle>
-                    <CardDescription className="mt-1">Comparativa visual de movimientos financieros</CardDescription>
-                  </div>
-                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center shadow-lg">
-                    <BarChart3 className="h-5 w-5 text-white" />
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="p-6">
-                <div className="space-y-8">
-                  <div>
-                    <div className="flex justify-between items-center mb-3">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">Ingresos</span>
-                      </div>
-                      <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                        {new Intl.NumberFormat('es-MX', {
-                          style: 'currency',
-                          currency: 'MXN',
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 0,
-                        }).format(totalIncome)}
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-xl h-12 overflow-hidden shadow-inner">
-                      <div
-                        className="bg-gradient-to-r from-emerald-500 to-teal-500 h-12 rounded-xl flex items-center justify-end pr-4 transition-all duration-500 shadow-md"
-                        style={{
-                          width: `${totalIncome > 0 ? Math.min((totalIncome / (totalIncome + totalExpense || 1)) * 100, 100) : 0}%`,
-                        }}
-                      >
-                        {totalIncome > 0 && (
-                          <span className="text-white text-sm font-bold">
-                            {totalIncome + totalExpense > 0
-                              ? ((totalIncome / (totalIncome + totalExpense)) * 100).toFixed(1)
-                              : 0}%
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div>
-                    <div className="flex justify-between items-center mb-3">
-                      <div className="flex items-center gap-2">
-                        <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">Gastos</span>
-                      </div>
-                      <span className="text-lg font-bold text-red-600 dark:text-red-400">
-                        {new Intl.NumberFormat('es-MX', {
-                          style: 'currency',
-                          currency: 'MXN',
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 0,
-                        }).format(totalExpense)}
-                      </span>
-                    </div>
-                    <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-xl h-12 overflow-hidden shadow-inner">
-                      <div
-                        className="bg-gradient-to-r from-red-500 to-rose-500 h-12 rounded-xl flex items-center justify-end pr-4 transition-all duration-500 shadow-md"
-                        style={{
-                          width: `${totalExpense > 0 ? Math.min((totalExpense / (totalIncome + totalExpense || 1)) * 100, 100) : 0}%`,
-                        }}
-                      >
-                        {totalExpense > 0 && (
-                          <span className="text-white text-sm font-bold">
-                            {totalIncome + totalExpense > 0
-                              ? ((totalExpense / (totalIncome + totalExpense)) * 100).toFixed(1)
-                              : 0}%
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="pt-6 border-t border-gray-200 dark:border-gray-800">
-                    <div className="flex justify-between items-center">
-                      <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 dark:from-indigo-950/30 dark:to-violet-950/30 flex items-center justify-center">
-                          <DollarSign className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />
-                        </div>
-                        <div>
-                          <span className="text-lg font-semibold text-gray-900 dark:text-white">Balance Neto:</span>
-                          {totalIncome > 0 && (
-                            <p className="text-sm text-gray-500 dark:text-gray-400">
-                              Margen: {balancePercentage.toFixed(1)}%
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <span
-                        className={cn(
-                          "text-3xl font-bold",
-                          netBalance >= 0
-                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent'
-                            : 'bg-gradient-to-r from-red-600 to-rose-600 bg-clip-text text-transparent'
-                        )}
-                      >
-                        {new Intl.NumberFormat('es-MX', {
-                          style: 'currency',
-                          currency: 'MXN',
-                          minimumFractionDigits: 0,
-                          maximumFractionDigits: 0,
-                        }).format(netBalance)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-
-        {/* Tab: Análisis Avanzado - Copiar contenido de finance-advanced */}
-        <TabsContent value="advanced" className="space-y-6">
+        <div className="space-y-6">
           {loadingAdvanced ? (
             <div className="space-y-6">
               <Skeleton className="h-32 w-full rounded-xl" />
@@ -715,8 +505,8 @@ export default function AdminFinancePage() {
               </Card>
             </>
           )}
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   )
 }

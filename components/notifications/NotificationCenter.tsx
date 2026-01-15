@@ -43,13 +43,6 @@ export default function NotificationCenter() {
   useEffect(() => {
     loadNotifications()
     
-    // Solicitar permiso para notificaciones del navegador
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().catch(() => {
-        // Usuario rechazó, no hacer nada
-      })
-    }
-    
     // Suscribirse a nuevas notificaciones en tiempo real
     let channel: ReturnType<typeof supabase.channel> | null = null
     
@@ -126,6 +119,15 @@ export default function NotificationCenter() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    if (!open) return
+    if (typeof window === 'undefined' || !('Notification' in window)) return
+    if (Notification.permission !== 'default') return
+    Notification.requestPermission().catch(() => {
+      // Usuario rechazó, no hacer nada
+    })
+  }, [open])
 
   const loadNotifications = async () => {
     try {
