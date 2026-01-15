@@ -78,7 +78,7 @@ export default function StrategicCalendar() {
       
       // Filtrar y validar datos, asegurando que las fechas sean válidas
       setProfitabilityData(((data || []) as ProfitabilityRow[])
-        .filter((item) => {
+        .filter((item): item is ProfitabilityRow & { event_date: string } => {
           // Validar que event_date existe y es válido
           if (!item.event_date) return false
           const date = new Date(item.event_date)
