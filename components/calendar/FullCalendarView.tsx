@@ -228,7 +228,7 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
             totalPaid,
             balanceDue,
             financialStatus,
-            eventStatus: eventRaw.status,
+            eventStatus: eventRaw.status ?? null,
           },
         }
       })
