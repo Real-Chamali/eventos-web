@@ -34,22 +34,6 @@ interface CalendarEvent {
   }
 }
 
-type EventClickArg = {
-  event: {
-    extendedProps: CalendarEvent['extendedProps']
-  }
-}
-
-type DateClickArg = {
-  date: Date
-}
-
-type EventContentArg = {
-  event: {
-    extendedProps: CalendarEvent['extendedProps']
-  }
-}
-
 interface QuoteClient {
   id: string
   name: string
@@ -259,9 +243,9 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
     return () => clearInterval(interval)
   }, [loadEvents])
 
-  const handleEventClick = useCallback((clickInfo: EventClickArg) => {
-    const event = clickInfo.event
-    const props = event.extendedProps as CalendarEvent['extendedProps']
+  const handleEventClick = useCallback((clickInfo: unknown) => {
+    const event = (clickInfo as { event: { extendedProps: CalendarEvent['extendedProps'] } }).event
+    const props = event.extendedProps
     
     if (onEventClick) {
       onEventClick(props.eventId, props.quoteId)
@@ -273,10 +257,11 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
     }
   }, [onEventClick])
 
-  const handleDateClick = useCallback((dateClickInfo: DateClickArg) => {
+  const handleDateClick = useCallback((dateClickInfo: unknown) => {
+    const info = dateClickInfo as { date: Date }
     // Permitir crear eventos desde el calendario
     // Por ahora solo mostrar información
-    toastSuccess(`Fecha seleccionada: ${format(dateClickInfo.date, 'PPP', { locale: es })}`)
+    toastSuccess(`Fecha seleccionada: ${format(info.date, 'PPP', { locale: es })}`)
   }, [toastSuccess])
 
   const handleRegisterPayment = useCallback((quoteId: string, totalAmount: number, e?: React.MouseEvent) => {
@@ -286,8 +271,8 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
     setPaymentModalOpen(true)
   }, [])
 
-  const eventContent = useCallback((eventInfo: EventContentArg) => {
-    const props = eventInfo.event.extendedProps as CalendarEvent['extendedProps']
+  const eventContent = useCallback((eventInfo: unknown) => {
+    const props = (eventInfo as { event: { extendedProps: CalendarEvent['extendedProps'] } }).event.extendedProps
     const canRegisterPayment = props.balanceDue > 0 && props.financialStatus !== 'CANCELLED'
     
     return (
