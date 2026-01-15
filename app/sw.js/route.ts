@@ -8,6 +8,7 @@ import { logger } from '@/lib/utils/logger'
  * Esto evita problemas de redirect que bloquean el registro del SW
  */
 export async function GET(request: NextRequest) {
+  void request
   try {
     // Leer el archivo del Service Worker desde public
     const swPath = join(process.cwd(), 'public', 'sw.js')

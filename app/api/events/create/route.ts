@@ -6,7 +6,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { logger } from '@/lib/utils/logger'
-import { checkAdmin } from '@/lib/api/middleware'
 import { sanitizeForLogging } from '@/lib/utils/security'
 import { z } from 'zod'
 import { mapQuoteStatusToDB, mapEventStatusToDB } from '@/lib/utils/statusMapper'
@@ -115,8 +114,9 @@ export async function POST(request: NextRequest) {
       })
       // Continuar aunque haya error en la verificación
     } else if (overlappingEvents && overlappingEvents.length > 0) {
+      const overlapping = overlappingEvents as { start_date: string; end_date: string | null }[]
       // Verificar solapamiento real
-      const hasOverlap = overlappingEvents.some((event: any) => {
+      const hasOverlap = overlapping.some((event) => {
         const eventStart = event.start_date
         const eventEnd = event.end_date || event.start_date
         const newStart = start_date

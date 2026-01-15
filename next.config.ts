@@ -75,10 +75,6 @@ const nextConfig: NextConfig = {
     // Agregar headers CORS para todas las rutas API
     // En producción, los headers se manejan dinámicamente en las rutas API
     // Aquí solo configuramos headers básicos para desarrollo
-    const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || []
-    const defaultOrigin = process.env.NEXT_PUBLIC_APP_URL || 
-                         (process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : '*')
-    
     headers.push({
       source: '/api/:path*',
       headers: [

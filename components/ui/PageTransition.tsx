@@ -2,7 +2,7 @@
 
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import { usePathname } from 'next/navigation'
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode } from 'react'
 
 interface PageTransitionProps {
   children: ReactNode
@@ -58,14 +58,6 @@ const reducedMotionTransition = {
 export default function PageTransition({ children }: PageTransitionProps) {
   const pathname = usePathname()
   const prefersReducedMotion = useReducedMotion()
-  const [isLoading, setIsLoading] = useState(true)
-
-  useEffect(() => {
-    // Pequeño delay para suavizar la transición inicial
-    const timer = setTimeout(() => setIsLoading(false), 100)
-    return () => clearTimeout(timer)
-  }, [pathname])
-
   const variants = prefersReducedMotion ? reducedMotionVariants : pageVariants
   const transition = prefersReducedMotion ? reducedMotionTransition : pageTransition
 

@@ -1,15 +1,15 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useToast } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
-import PageHeader from '@/components/ui/PageHeader'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import Badge from '@/components/ui/Badge'
 import Skeleton from '@/components/ui/Skeleton'
 import SearchInput from '@/components/ui/SearchInput'
-import { Users, Filter, Mail, Phone, TrendingUp, FileText, Shield, Crown, Edit2, Trash2, RefreshCw, Lock } from 'lucide-react'
+import { Users, Filter, Mail, Phone, TrendingUp, FileText, Crown, Edit2, Trash2, RefreshCw, Lock, Plus } from 'lucide-react'
 import Button from '@/components/ui/Button'
 import {
   Dialog,
@@ -62,15 +62,25 @@ export default function AdminVendorsPage() {
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'vendor'>('all')
   const [selectedVendor, setSelectedVendor] = useState<Vendor | null>(null)
   const [showEditDialog, setShowEditDialog] = useState(false)
+  const [showCreateDialog, setShowCreateDialog] = useState(false)
   const [updating, setUpdating] = useState(false)
+  const [creating, setCreating] = useState(false)
   const [editForm, setEditForm] = useState({
     name: '',
     email: '',
     password: '',
     role: 'vendor' as 'admin' | 'vendor',
+    phone: '',
   })
-  const [vendorToDelete, setVendorToDelete] = useState<string | null>(null)
+  const [createForm, setCreateForm] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
+    role: 'vendor' as 'admin' | 'vendor',
+  })
   const { success: toastSuccess, error: toastError } = useToast()
+  const searchParams = useSearchParams()
 
   const loadVendors = useCallback(async () => {
     try {
@@ -133,6 +143,13 @@ export default function AdminVendorsPage() {
     loadVendors()
   }, [loadVendors])
 
+  useEffect(() => {
+    const shouldOpenCreate = searchParams?.get('new') === '1'
+    if (shouldOpenCreate) {
+      setShowCreateDialog(true)
+    }
+  }, [searchParams])
+
   // Función para recargar manualmente
   const handleRefresh = useCallback(() => {
     loadVendors()
@@ -145,8 +162,49 @@ export default function AdminVendorsPage() {
       email: vendor.email,
       password: '',
       role: vendor.role || 'vendor',
+      phone: vendor.raw_user_meta_data?.phone || '',
     })
     setShowEditDialog(true)
+  }
+
+  const handleCreateVendor = async () => {
+    if (!createForm.email || !createForm.password) {
+      toastError('Email y contraseña son requeridos')
+      return
+    }
+
+    try {
+      setCreating(true)
+      const response = await fetch('/api/admin/vendors', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: createForm.name,
+          email: createForm.email,
+          phone: createForm.phone,
+          password: createForm.password,
+          role: createForm.role,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al crear el vendedor')
+      }
+
+      toastSuccess('Vendedor creado exitosamente')
+      setShowCreateDialog(false)
+      setCreateForm({ name: '', email: '', phone: '', password: '', role: 'vendor' })
+      loadVendors()
+    } catch (error) {
+      logger.error('AdminVendorsPage', 'Error creating vendor', error as Error)
+      toastError(error instanceof Error ? error.message : 'Error al crear el vendedor')
+    } finally {
+      setCreating(false)
+    }
   }
 
   const handleUpdateUser = async () => {
@@ -156,7 +214,7 @@ export default function AdminVendorsPage() {
       setUpdating(true)
       
       // Preparar datos para actualizar (solo enviar campos que han cambiado)
-      const updates: { name?: string; email?: string; password?: string } = {}
+      const updates: { name?: string; email?: string; password?: string; phone?: string } = {}
       
       const currentName = selectedVendor.full_name || selectedVendor.raw_user_meta_data?.name || ''
       if (editForm.name !== currentName) {
@@ -165,6 +223,11 @@ export default function AdminVendorsPage() {
       
       if (editForm.email !== selectedVendor.email) {
         updates.email = editForm.email
+      }
+
+      const currentPhone = selectedVendor.raw_user_meta_data?.phone || ''
+      if (editForm.phone !== currentPhone) {
+        updates.phone = editForm.phone
       }
       
       if (editForm.password && editForm.password.length > 0) {
@@ -215,7 +278,7 @@ export default function AdminVendorsPage() {
       toastSuccess('Usuario actualizado exitosamente')
       setShowEditDialog(false)
       setSelectedVendor(null)
-      setEditForm({ name: '', email: '', password: '', role: 'vendor' })
+      setEditForm({ name: '', email: '', password: '', role: 'vendor', phone: '' })
       loadVendors()
     } catch (error) {
       logger.error('AdminVendorsPage', 'Error updating user', error as Error)
@@ -238,7 +301,6 @@ export default function AdminVendorsPage() {
       }
 
       toastSuccess('Usuario eliminado exitosamente')
-      setVendorToDelete(null)
       loadVendors()
     } catch (err) {
       logger.error('AdminVendorsPage', 'Error deleting user', err as Error)
@@ -281,15 +343,25 @@ export default function AdminVendorsPage() {
             </div>
           </div>
         </div>
-        <Button
-          variant="outline"
-          onClick={handleRefresh}
-          disabled={loading}
-          className="gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Cargando...' : 'Recargar'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="premium"
+            onClick={() => setShowCreateDialog(true)}
+            className="gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Nuevo vendedor
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={loading}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Cargando...' : 'Recargar'}
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -542,7 +614,6 @@ export default function AdminVendorsPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => setVendorToDelete(vendor.id)}
                                   className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
                                   title="Eliminar usuario"
                                 >
@@ -562,7 +633,7 @@ export default function AdminVendorsPage() {
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>
                                 <AlertDialogFooter>
-                                  <AlertDialogCancel onClick={() => setVendorToDelete(null)}>Cancelar</AlertDialogCancel>
+                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                   <AlertDialogAction
                                     onClick={() => handleDeleteUser(vendor.id)}
                                     className="bg-red-600 hover:bg-red-700"
@@ -634,6 +705,21 @@ export default function AdminVendorsPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Teléfono
+              </label>
+              <input
+                id="edit-user-phone"
+                name="phone"
+                type="tel"
+                value={editForm.phone}
+                onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="(55) 0000-0000"
+                autoComplete="tel"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Nueva Contraseña (opcional)
               </label>
               <div className="relative">
@@ -697,7 +783,7 @@ export default function AdminVendorsPage() {
             <div className="flex justify-end gap-3 pt-4">
               <Button variant="ghost" onClick={() => {
                 setShowEditDialog(false)
-                setEditForm({ name: '', email: '', password: '', role: 'vendor' })
+                setEditForm({ name: '', email: '', password: '', role: 'vendor', phone: '' })
               }} disabled={updating}>
                 Cancelar
               </Button>
@@ -707,6 +793,131 @@ export default function AdminVendorsPage() {
                 className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700"
               >
                 {updating ? 'Actualizando...' : 'Guardar Cambios'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold flex items-center gap-2">
+              <Plus className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+              Crear nuevo vendedor
+            </DialogTitle>
+            <DialogDescription>
+              Agrega un vendedor con su información y contraseña inicial.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Nombre Completo
+              </label>
+              <input
+                id="create-user-name"
+                name="name"
+                type="text"
+                value={createForm.name}
+                onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="Nombre completo"
+                autoComplete="name"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Email
+              </label>
+              <input
+                id="create-user-email"
+                name="email"
+                type="email"
+                value={createForm.email}
+                onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="email@ejemplo.com"
+                autoComplete="email"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Teléfono
+              </label>
+              <input
+                id="create-user-phone"
+                name="phone"
+                type="tel"
+                value={createForm.phone}
+                onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="(55) 0000-0000"
+                autoComplete="tel"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Contraseña inicial
+              </label>
+              <div className="relative">
+                <input
+                  id="create-user-password"
+                  name="password"
+                  type="password"
+                  value={createForm.password}
+                  onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  placeholder="Mínimo 6 caracteres"
+                  autoComplete="new-password"
+                />
+                <Lock className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Rol
+              </label>
+              <Select
+                value={createForm.role}
+                onValueChange={(value) => setCreateForm({ ...createForm, role: value as 'admin' | 'vendor' })}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="vendor">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4" />
+                      Vendedor
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="admin">
+                    <div className="flex items-center gap-2">
+                      <Crown className="h-4 w-4" />
+                      Administrador
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-3 pt-4">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowCreateDialog(false)
+                  setCreateForm({ name: '', email: '', phone: '', password: '', role: 'vendor' })
+                }}
+                disabled={creating}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleCreateVendor}
+                disabled={creating}
+                className="bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700"
+              >
+                {creating ? 'Creando...' : 'Crear vendedor'}
               </Button>
             </div>
           </div>

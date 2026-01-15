@@ -10,7 +10,6 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import { useInfiniteQuotes } from '@/lib/hooks/useInfiniteQuotes'
 import { useIsAdmin, useDebounce, useWindowSize } from '@/lib/hooks'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
@@ -31,9 +30,9 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/AlertDialog'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
+import { canEditQuote, type QuoteStatus } from '@/lib/utils/quoteStateMachine'
 
 function getStatusBadge(status: string) {
   switch (status) {
@@ -62,12 +61,14 @@ const QuoteRow = memo(function QuoteRow({
   onDelete,
   getStatusBadge,
 }: {
-  quote: { id: string; client_name?: string; status: string; total_price?: number; created_at: string }
+  quote: { id: string; client_name?: string; status: QuoteStatus; total_price?: number; created_at: string }
   isAdmin: boolean
   adminLoading: boolean
   onDelete: (id: string) => void
   getStatusBadge: (status: string) => React.ReactNode
 }) {
+  const canEdit = !adminLoading && canEditQuote(quote.status, isAdmin)
+
   return (
     <>
       {/* Mobile Card View */}
@@ -102,23 +103,26 @@ const QuoteRow = memo(function QuoteRow({
                   Ver detalles
                 </Button>
               </Link>
-              {!adminLoading && isAdmin && (
+              {canEdit && (
                 <>
                   <Link href={`/dashboard/quotes/${quote.id}/edit`}>
                     <Button variant="ghost" size="md" className="min-w-[44px] min-h-[44px]">
                       <Edit className="h-5 w-5" />
                     </Button>
                   </Link>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="md" 
-                        className="min-w-[44px] min-h-[44px] text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 active:bg-red-100 dark:active:bg-red-900/30"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </Button>
-                    </AlertDialogTrigger>
+              </>
+            )}
+              {!adminLoading && isAdmin && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="md" 
+                      className="min-w-[44px] min-h-[44px] text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 active:bg-red-100 dark:active:bg-red-900/30"
+                    >
+                      <Trash2 className="h-5 w-5" />
+                    </Button>
+                  </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
                       <AlertDialogTitle>¿Eliminar cotización?</AlertDialogTitle>
@@ -137,8 +141,7 @@ const QuoteRow = memo(function QuoteRow({
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
-              </>
-            )}
+              )}
           </div>
         </CardContent>
       </Card>
@@ -224,10 +227,8 @@ export function QuotesList({ searchTerm = '', statusFilter = 'all' }: QuotesList
   const { quotes, isLoading, isLoadingMore, isReachingEnd, loadMore, error } = useInfiniteQuotes()
   const { isAdmin, loading: adminLoading } = useIsAdmin()
   const router = useRouter()
-  const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
   const loadMoreRef = useRef<HTMLDivElement>(null)
-  const observerRef = useRef<IntersectionObserver | null>(null)
   const tableContainerRef = useRef<HTMLDivElement>(null)
   const { height: windowHeight } = useWindowSize()
   
@@ -296,13 +297,6 @@ export function QuotesList({ searchTerm = '', statusFilter = 'all' }: QuotesList
   })
   
   // Scroll suave a un elemento específico
-  const scrollToIndex = useCallback((index: number) => {
-    virtualizer.scrollToIndex(index, {
-      align: 'start',
-      behavior: 'smooth',
-    })
-  }, [virtualizer])
-  
   // Integración mejorada con paginación infinita
   useEffect(() => {
     if (isReachingEnd || isLoading) return
@@ -321,13 +315,14 @@ export function QuotesList({ searchTerm = '', statusFilter = 'all' }: QuotesList
       { threshold: 0.1, rootMargin: '100px' }
     )
     
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current)
+    const loadMoreElement = loadMoreRef.current
+    if (loadMoreElement) {
+      observer.observe(loadMoreElement)
     }
     
     return () => {
-      if (loadMoreRef.current) {
-        observer.unobserve(loadMoreRef.current)
+      if (loadMoreElement) {
+        observer.unobserve(loadMoreElement)
       }
     }
   }, [isReachingEnd, isLoading, isLoadingMore, loadMore, virtualizer, filteredQuotes.length])

@@ -7,7 +7,7 @@
 import { ButtonHTMLAttributes, forwardRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils/cn'
-import { Loader2, Check, X, AlertCircle } from 'lucide-react'
+import { Loader2, Check, AlertCircle } from 'lucide-react'
 
 interface PremiumButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'default' | 'outline' | 'ghost' | 'destructive' | 'success' | 'premium' | 'gradient'
@@ -98,6 +98,13 @@ const PremiumButton = forwardRef<HTMLButtonElement, PremiumButtonProps>(
       onAnimationIteration,
       ...motionProps 
     } = props
+
+    void onDrag
+    void onDragStart
+    void onDragEnd
+    void onAnimationStart
+    void onAnimationEnd
+    void onAnimationIteration
 
     return (
       <motion.button

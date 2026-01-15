@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { sendWhatsApp, normalizePhoneNumber } from '@/lib/integrations/whatsapp'
 import { createClient } from '@/utils/supabase/server'
 import { logger } from '@/lib/utils/logger'

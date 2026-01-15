@@ -49,6 +49,38 @@ export interface EventAtRisk {
   riskLevel: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
 }
 
+interface VendorPerformanceRow {
+  vendor_id: string
+  vendor_name?: string | null
+  role: string
+  confirmed_quotes?: number | string | null
+  draft_quotes?: number | string | null
+  total_sales?: number | string | null
+  monthly_sales?: number | string | null
+  average_sale?: number | string | null
+  conversion_rate?: number | string | null
+  total_commissions?: number | string | null
+}
+
+interface MonthlyComparisonRow {
+  month: string
+  confirmed_quotes?: number | string | null
+  total_sales?: number | string | null
+  total_profit?: number | string | null
+  unique_clients?: number | string | null
+}
+
+interface EventAtRiskRow {
+  event_id: string
+  quote_id: string
+  client_name: string
+  total_amount?: number | string | null
+  paid_amount?: number | string | null
+  balance_due?: number | string | null
+  days_overdue?: number | string | null
+  risk_level: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'
+}
+
 export interface CashFlowSummary {
   reportDate: string
   depositsReceived: number
@@ -120,7 +152,7 @@ export async function getVendorPerformance(): Promise<VendorPerformance[]> {
       return []
     }
     
-    return (data || []).map((v: any) => ({
+    return ((data || []) as VendorPerformanceRow[]).map((v) => ({
       vendorId: v.vendor_id,
       vendorName: v.vendor_name || 'Sin nombre',
       role: v.role,
@@ -156,7 +188,7 @@ export async function getMonthlyComparison(): Promise<MonthlyComparison[]> {
       return []
     }
     
-    return (data || []).map((m: any) => ({
+    return ((data || []) as MonthlyComparisonRow[]).map((m) => ({
       month: m.month,
       confirmedQuotes: Number(m.confirmed_quotes || 0),
       totalSales: Number(m.total_sales || 0),
@@ -183,7 +215,7 @@ export async function getEventsAtRisk(): Promise<EventAtRisk[]> {
       return []
     }
     
-    return (data || []).map((e: any) => ({
+    return ((data || []) as EventAtRiskRow[]).map((e) => ({
       eventId: e.event_id,
       quoteId: e.quote_id,
       clientName: e.client_name,

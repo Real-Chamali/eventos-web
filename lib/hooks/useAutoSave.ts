@@ -61,7 +61,7 @@ export function useAutoSave<T extends Record<string, unknown>>({
     } catch (error) {
       logger.error('useAutoSave', 'Error restoring draft', error as Error, { storageKey })
     }
-  }, []) // Solo al montar
+  }, [enabled, onRestore, storageKey]) // Solo al montar si está habilitado
 
   // Auto-guardar cuando cambian los datos
   useEffect(() => {

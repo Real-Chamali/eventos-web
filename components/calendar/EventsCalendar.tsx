@@ -1,14 +1,13 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
-import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
 import Skeleton from '@/components/ui/Skeleton'
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertCircle } from 'lucide-react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths, startOfWeek, endOfWeek, isValid } from 'date-fns'
+import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths, startOfWeek, endOfWeek, isValid } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils/cn'
 import Link from 'next/link'
@@ -22,6 +21,16 @@ interface EventDate {
     client_name: string
     status: string
   }>
+}
+
+interface CalendarEventRow {
+  id: string
+  start_date: string | null
+  end_date: string | null
+  status?: string | null
+  quote?: {
+    client?: { name?: string | null } | { name?: string | null }[] | null
+  } | null
 }
 
 export default function EventsCalendar() {
@@ -66,7 +75,7 @@ export default function EventsCalendar() {
       // Procesar eventos por fecha
       const eventMap = new Map<string, EventDate>()
 
-      eventsData?.forEach((event: any) => {
+      ;(eventsData as CalendarEventRow[] | null | undefined)?.forEach((event) => {
         if (!event.start_date) return
 
         // Validar fecha de inicio
@@ -236,7 +245,7 @@ export default function EventsCalendar() {
 
           {/* Calendario */}
           <div className="grid grid-cols-7 gap-1">
-            {days.map((day, dayIdx) => {
+            {days.map((day) => {
               const isCurrentMonth = isSameMonth(day, currentDate)
               const isCurrentDay = isToday(day)
               const dayEvents = getEventsForDate(day)

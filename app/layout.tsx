@@ -4,7 +4,6 @@ import "./globals.css";
 import ToastProvider from "@/components/ToastProvider";
 import ThemeProviderWrapper from "@/components/ThemeProvider";
 import { PremiumErrorBoundary } from "@/components/ui/PremiumErrorBoundary";
-import { SentryProvider } from "@/components/SentryProvider";
 import { SWRProvider } from "@/components/providers/SWRProvider";
 import { AppProvider } from "@/contexts/AppContext";
 import OnboardingTour from "@/components/onboarding/OnboardingTour";
@@ -13,6 +12,7 @@ import InstallPrompt from "@/components/pwa/InstallPrompt";
 import ServiceWorkerRegistration from "@/components/pwa/ServiceWorkerRegistration";
 import { CommandPalette } from "@/components/ui/CommandPalette";
 import { KeyboardShortcuts } from "@/components/ui/KeyboardShortcuts";
+import AdminQuickActions from "@/components/admin/AdminQuickActions";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -124,7 +124,9 @@ export default function RootLayout({
                         urlLower.includes('o4510508203704320') || 
                         urlLower.includes('4510508220088320') ||
                         urlLower.includes('sentry_key=') ||
-                        urlLower.includes('sentry_client=')) {
+                        urlLower.includes('sentry_client=') ||
+                        urlLower.includes('sentry_version=') ||
+                        urlLower.includes('/envelope/')) {
                       // Silenciar completamente - retornar promesa que nunca resuelve
                       return new Promise(() => {});
                     }
@@ -160,7 +162,9 @@ export default function RootLayout({
                         urlLower.includes('o4510508203704320') || 
                         urlLower.includes('4510508220088320') ||
                         urlLower.includes('sentry_key=') ||
-                        urlLower.includes('sentry_client=')) {
+                        urlLower.includes('sentry_client=') ||
+                        urlLower.includes('sentry_version=') ||
+                        urlLower.includes('/envelope/')) {
                       this._shouldIgnore = true;
                       // Prevenir todos los eventos de error
                       const ignoreError = function(e) {
@@ -210,8 +214,13 @@ export default function RootLayout({
                         lowerMessage.includes('4510508220088320') ||
                         lowerMessage.includes('sentry_key=') ||
                         lowerMessage.includes('sentry_client=') ||
+                        lowerMessage.includes('sentry_version=') ||
+                        lowerMessage.includes('/envelope/') ||
+                        lowerMessage.includes('sentry.javascript.nextjs') ||
                         (lowerMessage.includes('failed to load resource') && lowerMessage.includes('sentry')) ||
-                        (lowerMessage.includes('failed to load resource') && lowerMessage.includes('ingest'))) {
+                        (lowerMessage.includes('failed to load resource') && lowerMessage.includes('ingest')) ||
+                        (lowerMessage.includes('post') && lowerMessage.includes('sentry.io')) ||
+                        (lowerMessage.includes('post') && lowerMessage.includes('ingest'))) {
                       return true;
                     }
                     
@@ -370,14 +379,13 @@ export default function RootLayout({
             <AppProvider>
               <SWRProvider>
                 <ToastProvider>
-                  <SentryProvider>
-                    <ServiceWorkerRegistration />
-                    {children}
-                    <OnboardingTour />
-                    <InstallPrompt />
-                    <CommandPalette />
-                    <KeyboardShortcuts />
-                  </SentryProvider>
+                  <ServiceWorkerRegistration />
+                  {children}
+                  <OnboardingTour />
+                  <InstallPrompt />
+                  <CommandPalette />
+                  <KeyboardShortcuts />
+                  <AdminQuickActions />
                 </ToastProvider>
               </SWRProvider>
             </AppProvider>

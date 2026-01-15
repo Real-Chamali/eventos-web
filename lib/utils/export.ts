@@ -2,7 +2,6 @@
  * Utilidades para exportación de datos
  */
 
-import jsPDF from 'jspdf'
 import 'jspdf-autotable'
 import { logger } from '@/lib/utils/logger'
 import {
@@ -43,7 +42,6 @@ export async function exportQuoteToPDF(quote: Quote): Promise<void> {
   try {
     const doc = createPDFDocument()
     const pageWidth = doc.internal.pageSize.getWidth()
-    const pageHeight = doc.internal.pageSize.getHeight()
     const margin = 20
 
     // Agregar header con logo

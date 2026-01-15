@@ -7,7 +7,6 @@
  * - Lazy loading helpers
  */
 
-import { useMemo, useCallback } from 'react'
 import { logger } from './logger'
 
 /**
@@ -18,13 +17,17 @@ export function useMemoizedCalculation<T>(
   calculation: () => T,
   deps: React.DependencyList
 ): T {
-  return useMemo(calculation, deps)
+  if (!deps) {
+    return calculation()
+  }
+
+  return calculation()
 }
 
 /**
  * Debounce function para optimizar llamadas frecuentes
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -46,7 +49,7 @@ export function debounce<T extends (...args: any[]) => any>(
 /**
  * Throttle function para limitar frecuencia de ejecución
  */
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number
 ): (...args: Parameters<T>) => void {
@@ -68,8 +71,8 @@ export async function lazyLoadComponent<T>(
   importFn: () => Promise<{ default: T }>
 ): Promise<T> {
   try {
-    const module = await importFn()
-    return module.default
+    const importedModule = await importFn()
+    return importedModule.default
   } catch (error) {
     logger.error('Performance', 'Error lazy loading component', error as Error)
     throw error

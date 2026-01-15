@@ -8,7 +8,6 @@
 import { NextRequest } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import {
-  verifyAuth,
   checkAdmin,
   errorResponse,
   successResponse,

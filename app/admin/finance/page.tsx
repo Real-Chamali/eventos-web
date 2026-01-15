@@ -14,7 +14,7 @@ import Skeleton from '@/components/ui/Skeleton'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Chart from '@/components/ui/Chart'
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, Download, Calendar, Target, Users, Package, ArrowUpRight, ArrowDownRight, Clock, FileText, AlertTriangle } from 'lucide-react'
+import { TrendingUp, TrendingDown, DollarSign, BarChart3, Download, Calendar, Target, Users, Clock, AlertTriangle } from 'lucide-react'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils/cn'
@@ -35,13 +35,24 @@ import {
   type ProfitabilityAnalysis,
 } from '@/lib/utils/advancedFinance'
 
+type IdleRequestCallback = (deadline: { didTimeout: boolean; timeRemaining: () => number }) => void
+type WindowWithIdleCallback = Window & {
+  requestIdleCallback?: (callback: IdleRequestCallback, options?: { timeout: number }) => number
+}
+
 // Helper para ejecutar trabajo pesado sin bloquear la UI
 const runInBackground = (callback: () => void | Promise<void>) => {
-  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-    ;(window as any).requestIdleCallback(callback, { timeout: 1000 })
-  } else {
-    setTimeout(callback, 0)
+  if (typeof window !== 'undefined') {
+    const windowWithIdle = window as WindowWithIdleCallback
+    if (windowWithIdle.requestIdleCallback) {
+      windowWithIdle.requestIdleCallback(() => {
+        void callback()
+      }, { timeout: 1000 })
+      return
+    }
   }
+
+  setTimeout(callback, 0)
 }
 
 export default function AdminFinancePage() {
@@ -63,15 +74,7 @@ export default function AdminFinancePage() {
   const [isExporting, setIsExporting] = useState(false)
   const [loadingAdvanced, setLoadingAdvanced] = useState(false)
 
-  useEffect(() => {
-    loadFinanceData()
-  }, [])
-
-  useEffect(() => {
-    loadAdvancedData()
-  }, [selectedPeriod])
-
-  const loadFinanceData = async () => {
+  const loadFinanceData = useCallback(async () => {
     try {
       setLoadingLedger(true)
       const { data, error } = await supabase
@@ -91,7 +94,15 @@ export default function AdminFinancePage() {
     } finally {
       setLoadingLedger(false)
     }
-  }
+  }, [supabase, toastError])
+
+  useEffect(() => {
+    loadFinanceData()
+  }, [loadFinanceData])
+
+  useEffect(() => {
+    loadAdvancedData()
+  }, [loadAdvancedData])
 
   const loadAdvancedData = useCallback(async () => {
     try {
@@ -216,15 +227,6 @@ export default function AdminFinancePage() {
       Neto: cf.netFlow,
       Balance: cf.cumulativeBalance,
     })), [cashFlowProjection]
-  )
-
-  const serviceProfitChartData = useMemo(() => 
-    serviceProfitability.slice(0, 10).map((s) => ({
-      name: s.serviceName.length > 20 ? s.serviceName.substring(0, 20) + '...' : s.serviceName,
-      Utilidad: s.totalProfit,
-      Ventas: s.totalRevenue,
-      Margen: s.marginPercent,
-    })), [serviceProfitability]
   )
 
   return (

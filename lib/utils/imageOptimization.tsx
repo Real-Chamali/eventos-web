@@ -53,7 +53,7 @@ export function generateBlurPlaceholder(width: number = 10, height: number = 10)
       ctx.fillRect(0, 0, width, height)
       return canvas.toDataURL()
     }
-  } catch (e) {
+  } catch {
     // Fallback a SVG
   }
   

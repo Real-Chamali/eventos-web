@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Tests para utilidades de auditoría
  * Verifica funciones de creación y consulta de logs

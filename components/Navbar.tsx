@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
-import { useRouter } from 'next/navigation'
 import { logger } from '@/lib/utils/logger'
 import { Menu, X, User, LogOut, Settings, Sparkles, Shield, Home, FileText, Plus, Calendar, BarChart3, PartyPopper, DollarSign, Users, TrendingUp, Search } from 'lucide-react'
 import { cn } from '@/lib/utils/cn'
@@ -25,7 +24,6 @@ import {
 export default function Navbar() {
   const [userEmail, setUserEmail] = useState<string>('')
   const pathname = usePathname()
-  const router = useRouter()
   const supabase = createClient()
   const { state, actions } = useApp()
   const isOpen = state.sidebarOpen

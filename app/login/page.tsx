@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createClient } from '@/utils/supabase/client'
+import type { User } from '@supabase/supabase-js'
 import { LoginSchema } from '@/lib/validations/schemas'
 import { useToast } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
@@ -32,7 +33,7 @@ type LoginFormData = {
 type PendingLoginData = {
   email: string
   password: string
-  user: any
+  user: User
 }
 
 export default function LoginPage() {

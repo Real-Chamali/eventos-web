@@ -11,6 +11,10 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>
 }
 
+interface NavigatorWithStandalone extends Navigator {
+  standalone?: boolean
+}
+
 export default function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [showPrompt, setShowPrompt] = useState(false)
@@ -25,7 +29,8 @@ export default function InstallPrompt() {
 
     // Verificar si está en iOS
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-    const isInStandaloneMode = ('standalone' in window.navigator) && (window.navigator as any).standalone
+    const navigatorWithStandalone = window.navigator as NavigatorWithStandalone
+    const isInStandaloneMode = ('standalone' in navigatorWithStandalone) && navigatorWithStandalone.standalone
 
     if (isIOS && !isInStandaloneMode) {
       // Mostrar instrucciones para iOS
@@ -196,7 +201,7 @@ export default function InstallPrompt() {
             <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
               <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
             </svg>
-            <span>2. Selecciona "Agregar a pantalla de inicio"</span>
+            <span>2. Selecciona &quot;Agregar a pantalla de inicio&quot;</span>
           </div>
         </div>
       )}

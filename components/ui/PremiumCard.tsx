@@ -85,6 +85,12 @@ PremiumCard.displayName = 'PremiumCard'
 const PremiumCardHeader = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => {
     const { onDrag, onDragStart, onDragEnd, onAnimationStart, onAnimationEnd, onAnimationIteration, ...motionProps } = props
+    void onDrag
+    void onDragStart
+    void onDragEnd
+    void onAnimationStart
+    void onAnimationEnd
+    void onAnimationIteration
     return (
       <motion.div
         ref={ref}
@@ -103,6 +109,12 @@ PremiumCardHeader.displayName = 'PremiumCardHeader'
 const PremiumCardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => {
     const { onDrag, onDragStart, onDragEnd, onAnimationStart, onAnimationEnd, onAnimationIteration, ...motionProps } = props
+    void onDrag
+    void onDragStart
+    void onDragEnd
+    void onAnimationStart
+    void onAnimationEnd
+    void onAnimationIteration
     return (
       <motion.h3
         ref={ref}
@@ -121,6 +133,12 @@ PremiumCardTitle.displayName = 'PremiumCardTitle'
 const PremiumCardDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLParagraphElement>>(
   ({ className, ...props }, ref) => {
     const { onDrag, onDragStart, onDragEnd, onAnimationStart, onAnimationEnd, onAnimationIteration, ...motionProps } = props
+    void onDrag
+    void onDragStart
+    void onDragEnd
+    void onAnimationStart
+    void onAnimationEnd
+    void onAnimationIteration
     return (
       <motion.p
         ref={ref}
@@ -139,6 +157,12 @@ PremiumCardDescription.displayName = 'PremiumCardDescription'
 const PremiumCardContent = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => {
     const { onDrag, onDragStart, onDragEnd, onAnimationStart, onAnimationEnd, onAnimationIteration, ...motionProps } = props
+    void onDrag
+    void onDragStart
+    void onDragEnd
+    void onAnimationStart
+    void onAnimationEnd
+    void onAnimationIteration
     return (
       <motion.div
         ref={ref}
@@ -157,6 +181,12 @@ PremiumCardContent.displayName = 'PremiumCardContent'
 const PremiumCardFooter = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => {
     const { onDrag, onDragStart, onDragEnd, onAnimationStart, onAnimationEnd, onAnimationIteration, ...motionProps } = props
+    void onDrag
+    void onDragStart
+    void onDragEnd
+    void onAnimationStart
+    void onAnimationEnd
+    void onAnimationIteration
     return (
       <motion.div
         ref={ref}

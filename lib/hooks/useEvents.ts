@@ -8,6 +8,16 @@ import { logger } from '@/lib/utils/logger'
 import { mapEventStatusFromDB } from '@/lib/utils/statusMapper'
 import type { Event } from '@/types'
 
+type RawClient = { name: string | null; email: string | null }
+type RawQuote = {
+  id: string
+  total_amount: number | null
+  status: string
+  vendor_id?: string | null
+  client?: RawClient | RawClient[] | null
+}
+type RawEvent = Omit<Event, 'quote'> & { quote?: RawQuote | RawQuote[] | null }
+
 const fetcher = async (): Promise<Event[]> => {
   const supabase = createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
@@ -69,7 +79,7 @@ const fetcher = async (): Promise<Event[]> => {
   }
   
   // Procesar datos para normalizar estructura
-  return (data || []).map((event: any) => {
+  return ((data || []) as RawEvent[]).map((event) => {
     // Normalizar quote (puede venir como array o objeto)
     const quote = Array.isArray(event.quote) ? event.quote[0] : event.quote
     

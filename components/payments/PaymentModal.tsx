@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect } from 'react'
 import { usePaymentSummary } from '@/lib/hooks'
 import { useToast } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
@@ -22,7 +22,7 @@ import {
 import Input from '@/components/ui/Input'
 import Textarea from '@/components/ui/Textarea'
 import Button from '@/components/ui/Button'
-import { DollarSign, CreditCard, Wallet, Building2, FileText, Receipt, TrendingUp, CheckCircle2, AlertCircle } from 'lucide-react'
+import { DollarSign, CreditCard, Wallet, Building2, FileText, Receipt, CheckCircle2, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { cn } from '@/lib/utils/cn'
 
@@ -141,21 +141,6 @@ export default function PaymentModal({
         return <FileText className="h-4 w-4" />
       default:
         return <Receipt className="h-4 w-4" />
-    }
-  }
-
-  const getPaymentMethodLabel = (method: string) => {
-    switch (method) {
-      case 'cash':
-        return 'Efectivo'
-      case 'transfer':
-        return 'Transferencia'
-      case 'card':
-        return 'Tarjeta'
-      case 'check':
-        return 'Cheque'
-      default:
-        return 'Otro'
     }
   }
 

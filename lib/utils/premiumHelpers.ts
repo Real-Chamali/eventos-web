@@ -138,7 +138,7 @@ export function clamp(value: number, min: number, max: number): number {
 /**
  * Debounce function
  */
-export function debounce<T extends (...args: any[]) => any>(
+export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
@@ -160,7 +160,7 @@ export function debounce<T extends (...args: any[]) => any>(
 /**
  * Throttle function
  */
-export function throttle<T extends (...args: any[]) => any>(
+export function throttle<T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number
 ): (...args: Parameters<T>) => void {
@@ -182,7 +182,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text)
     return true
-  } catch (error) {
+  } catch {
     // Fallback para navegadores antiguos
     const textArea = document.createElement('textarea')
     textArea.value = text
@@ -194,7 +194,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
       document.execCommand('copy')
       document.body.removeChild(textArea)
       return true
-    } catch (err) {
+    } catch {
       document.body.removeChild(textArea)
       return false
     }

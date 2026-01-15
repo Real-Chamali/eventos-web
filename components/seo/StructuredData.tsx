@@ -9,7 +9,7 @@ import { generateOrganizationSchema, generateEventSchema, generateQuoteSchema, g
 
 interface StructuredDataProps {
   type: 'organization' | 'event' | 'quote' | 'website' | 'breadcrumb'
-  data: any
+  data: unknown
 }
 
 export default function StructuredData({ type, data }: StructuredDataProps) {

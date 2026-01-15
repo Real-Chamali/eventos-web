@@ -12,7 +12,6 @@ import {
   Settings, 
   Search,
   BarChart3,
-  Sparkles,
   Shield,
   DollarSign,
   TrendingUp,

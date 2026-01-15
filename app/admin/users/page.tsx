@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
@@ -50,11 +50,7 @@ export default function AdminUsersPage() {
   const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
 
-  useEffect(() => {
-    loadUsers()
-  }, [])
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -92,7 +88,11 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase, toastError])
+
+  useEffect(() => {
+    loadUsers()
+  }, [loadUsers])
 
   const handleRoleChange = (user: UserProfile) => {
     // Solo permitir cambiar roles de vendedores, no crear nuevos admins

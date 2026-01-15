@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
 import PageHeader from '@/components/ui/PageHeader'
@@ -14,10 +13,8 @@ import Chart from '@/components/ui/Chart'
 import {
   DollarSign,
   TrendingUp,
-  TrendingDown,
   AlertTriangle,
   BarChart3,
-  PieChart,
   LineChart,
   Download,
   Calendar,
@@ -49,15 +46,26 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils/cn'
 
+type IdleRequestCallback = (deadline: { didTimeout: boolean; timeRemaining: () => number }) => void
+type WindowWithIdleCallback = Window & {
+  requestIdleCallback?: (callback: IdleRequestCallback, options?: { timeout: number }) => number
+}
+
 // Helper para ejecutar trabajo pesado sin bloquear la UI
 const runInBackground = (callback: () => void | Promise<void>) => {
-  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-    // Usar requestIdleCallback si está disponible (mejor rendimiento)
-    ;(window as any).requestIdleCallback(callback, { timeout: 1000 })
-  } else {
-    // Fallback a setTimeout para navegadores que no soportan requestIdleCallback
-    setTimeout(callback, 0)
+  if (typeof window !== 'undefined') {
+    const windowWithIdle = window as WindowWithIdleCallback
+    if (windowWithIdle.requestIdleCallback) {
+      // Usar requestIdleCallback si está disponible (mejor rendimiento)
+      windowWithIdle.requestIdleCallback(() => {
+        void callback()
+      }, { timeout: 1000 })
+      return
+    }
   }
+
+  // Fallback a setTimeout para navegadores que no soportan requestIdleCallback
+  setTimeout(callback, 0)
 }
 
 export default function AdvancedFinancePage() {
@@ -72,10 +80,6 @@ export default function AdvancedFinancePage() {
   const [selectedPeriod, setSelectedPeriod] = useState<'30' | '60' | '90'>('90')
   const [isExporting, setIsExporting] = useState(false)
   const { success: toastSuccess, error: toastError } = useToast()
-
-  useEffect(() => {
-    loadAllData()
-  }, [selectedPeriod])
 
   const loadAllData = useCallback(async () => {
     try {
@@ -113,6 +117,10 @@ export default function AdvancedFinancePage() {
       setLoading(false)
     }
   }, [selectedPeriod, toastError])
+
+  useEffect(() => {
+    loadAllData()
+  }, [loadAllData])
 
   // Memoizar datos de exportación para evitar recálculos
   const exportData = useMemo(() => ({
@@ -170,23 +178,6 @@ export default function AdvancedFinancePage() {
     setSelectedPeriod(period)
   }, [])
 
-  if (loading) {
-    return (
-      <div className="space-y-8 p-6 lg:p-8">
-        <PageHeader
-          title="Finanzas Avanzadas"
-          description="Análisis financiero completo y proyecciones"
-        />
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-32 w-full rounded-xl" />
-          ))}
-        </div>
-        <Skeleton className="h-96 w-full rounded-xl" />
-      </div>
-    )
-  }
-
   // Memoizar datos para gráficos para evitar recálculos innecesarios
   const monthlyChartData = useMemo(() => 
     monthlyComparison.slice(0, 6).reverse().map((m) => ({
@@ -215,6 +206,23 @@ export default function AdvancedFinancePage() {
       Margen: s.marginPercent,
     })), [serviceProfitability]
   )
+
+  if (loading) {
+    return (
+      <div className="space-y-8 p-6 lg:p-8">
+        <PageHeader
+          title="Finanzas Avanzadas"
+          description="Análisis financiero completo y proyecciones"
+        />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="h-96 w-full rounded-xl" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8 p-6 lg:p-8">
@@ -751,7 +759,7 @@ export default function AdvancedFinancePage() {
                     showLegend
                   />
                   <div className="mt-6 space-y-2">
-                    {serviceProfitability.slice(0, 5).map((service, idx) => (
+                    {serviceProfitability.slice(0, 5).map((service) => (
                       <div
                         key={service.serviceId}
                         className="flex items-center justify-between p-4 rounded-lg bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"

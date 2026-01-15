@@ -1,12 +1,11 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useClients, useIsAdmin } from '@/lib/hooks'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import SearchInput from '@/components/ui/SearchInput'
 import Button from '@/components/ui/Button'
-import Badge from '@/components/ui/Badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import { Plus, Users, Mail, Phone, Edit2, Trash2, Shield, Eye } from 'lucide-react'
 import Link from 'next/link'
@@ -46,13 +45,14 @@ export default function AdminClientsPageClient() {
   const [searchTerm, setSearchTerm] = useState('')
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
-  const [clientToDelete, setClientToDelete] = useState<string | null>(null)
 
-  // Si no es admin, redirigir
-  if (!adminLoading && !isAdmin) {
-    router.push('/dashboard/clients')
-    return null
-  }
+  const shouldRedirect = !adminLoading && !isAdmin
+
+  useEffect(() => {
+    if (shouldRedirect) {
+      router.push('/dashboard/clients')
+    }
+  }, [shouldRedirect, router])
 
   const handleDeleteClient = async (clientId: string) => {
     try {
@@ -68,7 +68,6 @@ export default function AdminClientsPageClient() {
 
       toastSuccess('Cliente eliminado exitosamente')
       refresh()
-      setClientToDelete(null)
     } catch (err) {
       logger.error('AdminClientsPage', 'Error deleting client', err as Error)
       toastError(err instanceof Error ? err.message : 'Error al eliminar el cliente')
@@ -108,6 +107,10 @@ export default function AdminClientsPageClient() {
         <Skeleton className="h-96 w-full rounded-xl" />
       </div>
     )
+  }
+
+  if (shouldRedirect) {
+    return null
   }
 
   return (
@@ -282,7 +285,6 @@ export default function AdminClientsPageClient() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => setClientToDelete(client.id)}
                               className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -301,7 +303,7 @@ export default function AdminClientsPageClient() {
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>
-                              <AlertDialogCancel onClick={() => setClientToDelete(null)}>Cancelar</AlertDialogCancel>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
                               <AlertDialogAction
                                 onClick={() => handleDeleteClient(client.id)}
                                 className="bg-red-600 hover:bg-red-700"

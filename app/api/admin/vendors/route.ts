@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server'
 
-// Función helper para devolver errores JSON de forma consistente
-// Esta función NO puede fallar, debe ser lo más simple posible
+// Funci?n helper para devolver errores JSON de forma consistente
+// Esta funci?n NO puede fallar, debe ser lo m?s simple posible
 function errorResponse(error: string, message: string, status: number = 500): NextResponse {
   try {
     const response = NextResponse.json({ error, message }, { status })
     response.headers.set('X-Content-Type-Options', 'nosniff')
     response.headers.set('Content-Type', 'application/json')
     return response
-  } catch (err) {
-    // Si incluso esto falla, crear respuesta básica
+  } catch {
+    // Si incluso esto falla, crear respuesta b?sica
     return new NextResponse(
       JSON.stringify({ error, message }),
       {
@@ -27,13 +27,13 @@ function errorResponse(error: string, message: string, status: number = 500): Ne
  * GET /api/admin/vendors - Get all vendors with statistics
  * Requires admin role
  * 
- * Esta función está diseñada para ser ultra-robusta y siempre devolver JSON,
- * incluso en caso de errores críticos.
+ * Esta funci?n est? dise?ada para ser ultra-robusta y siempre devolver JSON,
+ * incluso en caso de errores cr?ticos.
  */
 export async function GET() {
   // Envolver TODO en try-catch para asegurar que siempre devolvamos JSON
   try {
-    // Importaciones dinámicas para evitar errores de inicialización
+    // Importaciones din?micas para evitar errores de inicializaci?n
     let createClient, createAdminClient, logger, sanitizeForLogging, getUserFromSession, checkAdmin
     
     try {
@@ -59,33 +59,33 @@ export async function GET() {
           logger.error('API /admin/vendors', 'Error importing modules', importError instanceof Error ? importError : new Error(String(importError)))
         }
       } catch {
-        // Fallback si logger no está disponible
+        // Fallback si logger no est? disponible
       }
       return errorResponse(
         'Module import error',
-        importError instanceof Error ? importError.message : 'Error al cargar módulos necesarios',
+        importError instanceof Error ? importError.message : 'Error al cargar m?dulos necesarios',
         500
       )
     }
 
-    // Usar función centralizada para obtener usuario de sesión
+    // Usar funci?n centralizada para obtener usuario de sesi?n
     let user, authError
     try {
       const sessionResult = await getUserFromSession()
       user = sessionResult.user
       authError = sessionResult.error
     } catch (sessionError) {
-      const errorMsg = sessionError instanceof Error ? sessionError.message : 'Error al obtener sesión'
+      const errorMsg = sessionError instanceof Error ? sessionError.message : 'Error al obtener sesi?n'
       try {
         logger.error('API /admin/vendors', 'Error getting session', sessionError as Error)
       } catch {
-        // Fallback silencioso si logger no está disponible
+        // Fallback silencioso si logger no est? disponible
       }
       return errorResponse('Session error', errorMsg, 500)
     }
 
     if (!user || authError) {
-      return errorResponse('Unauthorized', authError || 'No se encontró sesión de usuario', 401)
+      return errorResponse('Unauthorized', authError || 'No se encontr? sesi?n de usuario', 401)
     }
 
     // Verificar que sea admin usando checkAdmin (pasar email para bypass)
@@ -97,7 +97,7 @@ export async function GET() {
       try {
         logger.error('API /admin/vendors', 'Error checking admin role', checkError as Error)
       } catch {
-        // Fallback silencioso si logger no está disponible
+        // Fallback silencioso si logger no est? disponible
       }
       return errorResponse('Authorization error', errorMsg, 500)
     }
@@ -113,12 +113,12 @@ export async function GET() {
       return errorResponse('Forbidden', 'Acceso denegado. Se requiere rol de administrador.', 403)
     }
 
-    // Crear cliente de administración con service role key
+    // Crear cliente de administraci?n con service role key
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
     if (!supabaseUrl || !supabaseServiceKey) {
-      const errorMsg = 'SUPABASE_SERVICE_ROLE_KEY no está configurado. Verifica las variables de entorno en Vercel.'
+      const errorMsg = 'SUPABASE_SERVICE_ROLE_KEY no est? configurado. Verifica las variables de entorno en Vercel.'
       try {
         logger.error('API /admin/vendors', 'Missing service role key', new Error('SUPABASE_SERVICE_ROLE_KEY not set'), sanitizeForLogging({
           hasUrl: !!supabaseUrl,
@@ -139,7 +139,7 @@ export async function GET() {
         },
       })
     } catch (clientError) {
-      const errorMsg = clientError instanceof Error ? clientError.message : 'Error al crear cliente de administración'
+      const errorMsg = clientError instanceof Error ? clientError.message : 'Error al crear cliente de administraci?n'
       try {
         logger.error('API /admin/vendors', 'Error creating admin client', clientError as Error)
       } catch {
@@ -194,7 +194,7 @@ export async function GET() {
       } catch {
         console.error('No users data returned')
       }
-      return errorResponse('No se recibieron datos de usuarios', 'La API de Supabase no devolvió datos de usuarios.', 500)
+      return errorResponse('No se recibieron datos de usuarios', 'La API de Supabase no devolvi? datos de usuarios.', 500)
     }
 
     // Validar que usersData.users existe y es un array
@@ -207,7 +207,7 @@ export async function GET() {
       } catch {
         console.error('Invalid users data structure')
       }
-      return errorResponse('Estructura de datos de usuarios inválida', 'La respuesta de usuarios de Supabase no es un array válido.', 500)
+      return errorResponse('Estructura de datos de usuarios inv?lida', 'La respuesta de usuarios de Supabase no es un array v?lido.', 500)
     }
 
     try {
@@ -232,14 +232,13 @@ export async function GET() {
       return errorResponse('Supabase client error', errorMsg, 500)
     }
 
-    // Obtener estadísticas de cotizaciones por vendedor
-    let quotesData, quotesError
+    // Obtener estad?sticas de cotizaciones por vendedor
+    let quotesData
     try {
       const quotesResult = await supabase
         .from('quotes')
         .select('vendor_id, total_amount, status')
       quotesData = quotesResult.data
-      quotesError = quotesResult.error
     } catch (quotesQueryError) {
       try {
         logger.warn('API /admin/vendors', 'Error loading quotes stats', sanitizeForLogging({ 
@@ -249,10 +248,9 @@ export async function GET() {
         console.warn('Error loading quotes stats:', quotesQueryError)
       }
       quotesData = null
-      quotesError = quotesQueryError instanceof Error ? quotesQueryError : new Error(String(quotesQueryError))
     }
 
-    // Calcular estadísticas por vendedor
+    // Calcular estad?sticas por vendedor
     const statsMap = new Map<string, { count: number; sales: number }>()
     if (quotesData) {
       quotesData.forEach((quote) => {
@@ -268,13 +266,12 @@ export async function GET() {
     }
 
     // Obtener roles de perfiles usando el cliente admin para evitar problemas con RLS
-    let profilesData, profilesError
+    let profilesData
     try {
       const profilesResult = await adminClient
         .from('profiles')
         .select('id, role, full_name')
       profilesData = profilesResult.data
-      profilesError = profilesResult.error
     } catch (profilesQueryError) {
       try {
         logger.warn('API /admin/vendors', 'Error loading profiles', sanitizeForLogging({ 
@@ -284,7 +281,6 @@ export async function GET() {
         console.warn('Error loading profiles:', profilesQueryError)
       }
       profilesData = null
-      profilesError = profilesQueryError instanceof Error ? profilesQueryError : new Error(String(profilesQueryError))
     }
     
     const profilesMap = new Map<string, { role: 'admin' | 'vendor'; full_name: string | null }>()
@@ -298,7 +294,7 @@ export async function GET() {
             // Convertir a string y normalizar
             const roleStr = String(profile.role).trim().toLowerCase()
             
-            // Verificar explícitamente si es 'admin'
+            // Verificar expl?citamente si es 'admin'
             if (roleStr === 'admin') {
               role = 'admin'
             } else {
@@ -323,7 +319,7 @@ export async function GET() {
             role,
             full_name: profile.full_name,
           })
-        } catch (profileError) {
+        } catch {
           // Si hay error procesando un perfil, usar defaults
           profilesMap.set(profile.id, {
             role: 'vendor',
@@ -336,7 +332,7 @@ export async function GET() {
     // Usar los usuarios directamente (ya validados arriba)
     const users = usersData.users
 
-    // Combinar datos de usuarios con estadísticas y roles
+    // Combinar datos de usuarios con estad?sticas y roles
     const vendorsWithStats = users.map((user) => {
       try {
         const stats = statsMap.get(user.id) || { count: 0, sales: 0 }
@@ -379,7 +375,7 @@ export async function GET() {
         } catch {
           console.error('Error processing user:', user?.id)
         }
-        // Retornar un objeto básico para este usuario
+        // Retornar un objeto b?sico para este usuario
         return {
           id: user.id,
           email: user.email || '',
@@ -410,8 +406,8 @@ export async function GET() {
       response.headers.set('X-XSS-Protection', '1; mode=block')
       response.headers.set('Content-Type', 'application/json')
       return response
-    } catch (responseError) {
-      // Si crear la respuesta falla, usar método alternativo
+    } catch {
+      // Si crear la respuesta falla, usar m?todo alternativo
       return new NextResponse(
         JSON.stringify({ data: vendorsWithStats }),
         {
@@ -450,8 +446,150 @@ export async function GET() {
     // SIEMPRE devolver JSON, nunca dejar que Vercel devuelva HTML
     return errorResponse(
       'Internal server error',
-      errorMessage || 'Un error inesperado ocurrió en el servidor',
+      errorMessage || 'Un error inesperado ocurri? en el servidor',
       500
     )
+  }
+}
+
+/**
+ * POST /api/admin/vendors - Create new vendor/admin user
+ * Requires admin role
+ */
+export async function POST(request: Request) {
+  try {
+    let createAdminClient, logger, sanitizeForLogging, getUserFromSession, checkAdmin
+
+    try {
+      const supabaseJs = await import('@supabase/supabase-js')
+      createAdminClient = supabaseJs.createClient
+
+      const loggerModule = await import('@/lib/utils/logger')
+      logger = loggerModule.logger
+
+      const securityModule = await import('@/lib/utils/security')
+      sanitizeForLogging = securityModule.sanitizeForLogging
+
+      const middlewareModule = await import('@/lib/api/middleware')
+      getUserFromSession = middlewareModule.getUserFromSession
+      checkAdmin = middlewareModule.checkAdmin
+    } catch (importError) {
+      return errorResponse(
+        'Module import error',
+        importError instanceof Error ? importError.message : 'Error al cargar m?dulos necesarios',
+        500
+      )
+    }
+
+    let user, authError
+    try {
+      const sessionResult = await getUserFromSession()
+      user = sessionResult.user
+      authError = sessionResult.error
+    } catch (sessionError) {
+      const errorMsg = sessionError instanceof Error ? sessionError.message : 'Error al obtener sesi?n'
+      return errorResponse('Session error', errorMsg, 500)
+    }
+
+    if (!user || authError) {
+      return errorResponse('Unauthorized', authError || 'No se encontr? sesi?n de usuario', 401)
+    }
+
+    let isAdmin = false
+    try {
+      isAdmin = await checkAdmin(user.id, user.email)
+    } catch (checkError) {
+      const errorMsg = checkError instanceof Error ? checkError.message : 'Error al verificar rol de administrador'
+      return errorResponse('Authorization error', errorMsg, 500)
+    }
+
+    if (!isAdmin) {
+      try {
+        logger.warn('API /admin/vendors', 'Non-admin attempted vendor creation', sanitizeForLogging({
+          userId: user.id,
+        }))
+      } catch {
+        console.warn('Non-admin attempted vendor creation:', user.id)
+      }
+      return errorResponse('Forbidden', 'Acceso denegado. Se requiere rol de administrador.', 403)
+    }
+
+    const body = await request.json()
+    const name = typeof body?.name === 'string' ? body.name.trim() : ''
+    const email = typeof body?.email === 'string' ? body.email.trim() : ''
+    const phone = typeof body?.phone === 'string' ? body.phone.trim() : ''
+    const password = typeof body?.password === 'string' ? body.password : ''
+    const role = body?.role === 'admin' ? 'admin' : 'vendor'
+
+    if (!email || !password) {
+      return errorResponse('Validation error', 'Email y contrase?a son requeridos', 400)
+    }
+
+    if (password.length < 6) {
+      return errorResponse('Validation error', 'La contrase?a debe tener al menos 6 caracteres', 400)
+    }
+
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!supabaseUrl || !supabaseServiceKey) {
+      const errorMsg = 'SUPABASE_SERVICE_ROLE_KEY no est? configurado. Verifica las variables de entorno en Vercel.'
+      return errorResponse('Server configuration error', errorMsg, 500)
+    }
+
+    const adminClient = createAdminClient(supabaseUrl, supabaseServiceKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    })
+
+    const { data: createdUser, error: createError } = await adminClient.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        name,
+        phone,
+      },
+    })
+
+    if (createError || !createdUser?.user) {
+      const errorMsg = createError?.message || 'Error al crear el usuario'
+      return errorResponse('Create user error', errorMsg, 400)
+    }
+
+    const created = createdUser.user
+
+    const { error: profileError } = await adminClient
+      .from('profiles')
+      .upsert({
+        id: created.id,
+        role,
+        full_name: name || null,
+      }, { onConflict: 'id' })
+
+    if (profileError) {
+      try {
+        logger.warn('API /admin/vendors', 'Profile upsert failed after user creation', sanitizeForLogging({
+          userId: created.id,
+          error: profileError.message,
+        }))
+      } catch {
+        // ignore logging issues
+      }
+    }
+
+    return NextResponse.json({
+      data: {
+        id: created.id,
+        email: created.email,
+        role,
+      },
+      message: 'Vendedor creado exitosamente',
+    })
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    return errorResponse('Internal server error', errorMessage || 'Un error inesperado ocurri? en el servidor', 500)
   }
 }

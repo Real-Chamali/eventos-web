@@ -1,9 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useHotkeys } from 'react-hotkeys-hook'
-import { toast } from 'react-hot-toast'
 import { 
   Home, 
   FileText, 
@@ -11,12 +10,10 @@ import {
   Calendar, 
   Users, 
   Settings, 
-  Search,
   BarChart3,
   Command,
 } from 'lucide-react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './Dialog'
-import { cn } from '@/lib/utils/cn'
 
 interface Shortcut {
   keys: string

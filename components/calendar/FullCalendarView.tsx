@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
@@ -9,12 +9,11 @@ import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import listPlugin from '@fullcalendar/list'
+import type { DateClickArg, EventClickArg, EventContentArg } from '@fullcalendar/core'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import PaymentModal from '@/components/payments/PaymentModal'
-import { DollarSign, Calendar as CalendarIcon, CheckCircle2, AlertCircle, XCircle, Clock, MoreVertical } from 'lucide-react'
-import { cn } from '@/lib/utils/cn'
-import Button from '@/components/ui/Button'
+import { DollarSign, CheckCircle2 } from 'lucide-react'
 
 interface CalendarEvent {
   id: string
@@ -34,6 +33,26 @@ interface CalendarEvent {
     financialStatus: 'PENDING' | 'PARTIAL' | 'PAID' | 'CANCELLED'
     eventStatus: string
   }
+}
+
+interface QuoteClient {
+  id: string
+  name: string
+}
+
+interface QuoteRow {
+  id: string
+  total_amount: number | null
+  client_id?: string | null
+  clients?: QuoteClient | QuoteClient[] | null
+}
+
+interface EventRow {
+  id: string
+  start_date: string
+  end_date?: string | null
+  status?: string | null
+  quotes?: QuoteRow | QuoteRow[] | null
 }
 
 interface FullCalendarViewProps {
@@ -80,9 +99,9 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
         .order('start_date', { ascending: true })
 
       if (eventsError) {
-        const errorObj = eventsError as any
-        logger.error('FullCalendarView', 'Error loading events', new Error(eventsError.message || String(eventsError)))
-        toastError(`Error al cargar eventos: ${errorObj.message || eventsError.message || 'Error desconocido'}`)
+        const errorMessage = eventsError.message || String(eventsError)
+        logger.error('FullCalendarView', 'Error loading events', new Error(errorMessage))
+        toastError(`Error al cargar eventos: ${errorMessage || 'Error desconocido'}`)
         setEvents([])
         return
       }
@@ -93,8 +112,8 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
       }
 
       // Obtener resumen financiero para cada cotización
-      const quoteIds = (eventsData || [])
-        .map((e: any) => {
+      const quoteIds = ((eventsData || []) as EventRow[])
+        .map((e) => {
           const quote = Array.isArray(e.quotes) ? e.quotes[0] : e.quotes
           return quote?.id
         })
@@ -115,7 +134,7 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
       })
 
       // Procesar eventos para FullCalendar
-      const calendarEvents: CalendarEvent[] = (eventsData || []).map((eventRaw: any) => {
+      const calendarEvents: CalendarEvent[] = ((eventsData || []) as EventRow[]).map((eventRaw) => {
         // El !inner garantiza que siempre hay quote y client
         const quote = Array.isArray(eventRaw.quotes) ? eventRaw.quotes[0] : eventRaw.quotes
         const client = quote?.clients 
@@ -221,7 +240,7 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
     return () => clearInterval(interval)
   }, [loadEvents])
 
-  const handleEventClick = useCallback((clickInfo: any) => {
+  const handleEventClick = useCallback((clickInfo: EventClickArg) => {
     const event = clickInfo.event
     const props = event.extendedProps as CalendarEvent['extendedProps']
     
@@ -235,7 +254,7 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
     }
   }, [onEventClick])
 
-  const handleDateClick = useCallback((dateClickInfo: any) => {
+  const handleDateClick = useCallback((dateClickInfo: DateClickArg) => {
     // Permitir crear eventos desde el calendario
     // Por ahora solo mostrar información
     toastSuccess(`Fecha seleccionada: ${format(dateClickInfo.date, 'PPP', { locale: es })}`)
@@ -248,7 +267,7 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
     setPaymentModalOpen(true)
   }, [])
 
-  const eventContent = useCallback((eventInfo: any) => {
+  const eventContent = useCallback((eventInfo: EventContentArg) => {
     const props = eventInfo.event.extendedProps as CalendarEvent['extendedProps']
     const canRegisterPayment = props.balanceDue > 0 && props.financialStatus !== 'CANCELLED'
     

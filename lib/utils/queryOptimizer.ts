@@ -5,9 +5,15 @@
 
 /**
  * Tipo genérico para queries de Supabase
- * Usamos any para evitar problemas con tipos complejos de PostgrestQueryBuilder
+ * Definición mínima para encadenar métodos comunes
  */
-type SupabaseQuery<T = any> = any
+interface SupabaseQuery<T = unknown> {
+  gte: (field: string, value: string) => SupabaseQuery<T>
+  lte: (field: string, value: string) => SupabaseQuery<T>
+  order: (field: string, options?: { ascending: boolean }) => SupabaseQuery<T>
+  eq: (field: string, value: string) => SupabaseQuery<T>
+  select: (fields: string) => SupabaseQuery<T>
+}
 
 /**
  * Optimizar query para usar índices de fecha

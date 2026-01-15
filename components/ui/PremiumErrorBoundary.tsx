@@ -5,7 +5,6 @@ import { AlertTriangle, RefreshCw, Home, Mail, X } from 'lucide-react'
 import { logger } from '@/lib/utils/logger'
 import Button from './Button'
 import { motion } from 'framer-motion'
-import { cn } from '@/lib/utils/cn'
 
 interface Props {
   children: ReactNode
@@ -41,7 +40,7 @@ export class PremiumErrorBoundary extends Component<Props, State> {
         stack: error.stack?.substring(0, 500),
         errorId,
       })
-    } catch (e) {
+    } catch {
       // Si el logging falla, no hacer nada
     }
     return {

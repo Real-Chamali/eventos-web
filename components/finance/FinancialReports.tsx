@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import Badge from '@/components/ui/Badge'
@@ -27,11 +27,7 @@ export default function FinancialReports() {
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
 
-  useEffect(() => {
-    loadData()
-  }, [user])
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true)
       const userId = user?.id
@@ -52,7 +48,11 @@ export default function FinancialReports() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
+
+  useEffect(() => {
+    loadData()
+  }, [loadData])
 
   if (loading) {
     return (

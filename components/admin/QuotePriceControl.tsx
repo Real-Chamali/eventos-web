@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import Badge from '@/components/ui/Badge'
@@ -33,6 +33,18 @@ interface PriceChangeLog {
   created_at: string
 }
 
+interface PriceChangeLogRow {
+  id: string
+  old_price: number | string | null
+  new_price: number | string | null
+  discount_percent: number | string | null
+  discount_amount: number | string | null
+  reason: string | null
+  created_at: string
+  authorized_by?: { full_name?: string | null } | null
+  changed_by?: { full_name?: string | null } | null
+}
+
 export default function QuotePriceControl({ quoteId }: QuotePriceControlProps) {
   const [discountSummary, setDiscountSummary] = useState<{
     originalTotal: number
@@ -47,11 +59,7 @@ export default function QuotePriceControl({ quoteId }: QuotePriceControlProps) {
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
-  useEffect(() => {
-    loadPriceControlData()
-  }, [quoteId])
-
-  const loadPriceControlData = async () => {
+  const loadPriceControlData = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -77,7 +85,7 @@ export default function QuotePriceControl({ quoteId }: QuotePriceControlProps) {
         .order('created_at', { ascending: false })
       
       if (!error && data) {
-        setPriceChanges(data.map((item: any) => ({
+        setPriceChanges((data as PriceChangeLogRow[]).map((item) => ({
           id: item.id,
           old_price: Number(item.old_price),
           new_price: Number(item.new_price),
@@ -94,7 +102,11 @@ export default function QuotePriceControl({ quoteId }: QuotePriceControlProps) {
     } finally {
       setLoading(false)
     }
-  }
+  }, [quoteId, supabase])
+
+  useEffect(() => {
+    loadPriceControlData()
+  }, [loadPriceControlData])
 
   if (loading) {
     return (

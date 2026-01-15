@@ -4,7 +4,7 @@
 
 'use client'
 
-import { InputHTMLAttributes, forwardRef, useState, useEffect } from 'react'
+import { InputHTMLAttributes, forwardRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils/cn'
 import { CheckCircle2, XCircle, AlertCircle, Eye, EyeOff } from 'lucide-react'
@@ -41,21 +41,19 @@ const PremiumInput = forwardRef<HTMLInputElement, PremiumInputProps>(
     const [internalError, setInternalError] = useState<string | undefined>(undefined)
     const [showPassword, setShowPassword] = useState(false)
     const [isFocused, setIsFocused] = useState(false)
-    const [value, setValue] = useState(props.value?.toString() || props.defaultValue?.toString() || '')
+    const [value, setValue] = useState(props.defaultValue?.toString() || '')
+    const isControlled = props.value !== undefined
+    const currentValue = isControlled ? props.value?.toString() || '' : value
 
     const isPassword = type === 'password'
     const displayType = isPassword && showPassword ? 'text' : type
     const hasError = error || internalError
-    const isValid = success || (value && !hasError && validator ? validator(value).isValid : false)
-
-    useEffect(() => {
-      if (props.value !== undefined) {
-        setValue(props.value.toString())
-      }
-    }, [props.value])
+    const isValid = success || (currentValue && !hasError && validator ? validator(currentValue).isValid : false)
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      setValue(e.target.value)
+      if (!isControlled) {
+        setValue(e.target.value)
+      }
       onChange?.(e)
 
       // Validación en tiempo real si hay validator
@@ -71,8 +69,8 @@ const PremiumInput = forwardRef<HTMLInputElement, PremiumInputProps>(
 
     const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
       setIsFocused(false)
-      if (validateOnBlur && validator && value) {
-        const validation = validator(value)
+      if (validateOnBlur && validator && currentValue) {
+        const validation = validator(currentValue)
         if (!validation.isValid) {
           setInternalError(validation.error)
         } else {
@@ -96,6 +94,13 @@ const PremiumInput = forwardRef<HTMLInputElement, PremiumInputProps>(
       onAnimationIteration,
       ...motionProps 
     } = props
+
+    void onDrag
+    void onDragStart
+    void onDragEnd
+    void onAnimationStart
+    void onAnimationEnd
+    void onAnimationIteration
 
     return (
       <div className="w-full">
@@ -135,7 +140,7 @@ const PremiumInput = forwardRef<HTMLInputElement, PremiumInputProps>(
             animate={animated && isFocused ? { scale: 1.01 } : { scale: 1 }}
             transition={{ duration: 0.2 }}
             {...motionProps}
-            value={value}
+            value={currentValue}
           />
           {isPassword && (
             <button

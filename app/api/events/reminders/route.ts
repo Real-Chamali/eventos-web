@@ -5,6 +5,10 @@ import { logger } from '@/lib/utils/logger'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 
+type ClientInfo = { name?: string | null; phone?: string | null }
+type QuoteInfo = { clients?: ClientInfo | ClientInfo[] | null } | null
+type EventWithQuote = { id: string; start_date: string; quotes?: QuoteInfo | QuoteInfo[] | null }
+
 /**
  * GET /api/events/reminders
  * Envía recordatorios de WhatsApp para eventos próximos
@@ -82,9 +86,9 @@ export async function GET(request: NextRequest) {
 
     // Enviar recordatorios para eventos de mañana
     if (eventsTomorrow && eventsTomorrow.length > 0) {
-      for (const event of eventsTomorrow) {
+      for (const event of eventsTomorrow as EventWithQuote[]) {
         try {
-          const quote = event.quotes as any
+          const quote = Array.isArray(event.quotes) ? event.quotes[0] : event.quotes
           if (!quote || !quote.clients) continue
 
           const clientsArray = Array.isArray(quote.clients) ? quote.clients : [quote.clients]
@@ -125,9 +129,9 @@ export async function GET(request: NextRequest) {
 
     // Enviar recordatorios para eventos de la próxima semana
     if (eventsNextWeek && eventsNextWeek.length > 0) {
-      for (const event of eventsNextWeek) {
+      for (const event of eventsNextWeek as EventWithQuote[]) {
         try {
-          const quote = event.quotes as any
+          const quote = Array.isArray(event.quotes) ? event.quotes[0] : event.quotes
           if (!quote || !quote.clients) continue
 
           const clientsArray = Array.isArray(quote.clients) ? quote.clients : [quote.clients]

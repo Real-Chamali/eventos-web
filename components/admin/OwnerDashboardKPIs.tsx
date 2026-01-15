@@ -6,7 +6,7 @@
 'use client'
 
 import { Card, CardContent } from '@/components/ui/Card'
-import { DollarSign, Clock, Calendar, AlertTriangle, TrendingUp, Users } from 'lucide-react'
+import { DollarSign, Clock, Calendar, AlertTriangle } from 'lucide-react'
 import type { OwnerKPIs } from '@/lib/utils/ownerDashboard'
 import Skeleton from '@/components/ui/Skeleton'
 

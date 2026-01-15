@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // Service Worker para PWA - Versión Premium con Background Sync
 const CACHE_NAME = 'eventos-crm-v4'
 const RUNTIME_CACHE = 'eventos-runtime-v4'

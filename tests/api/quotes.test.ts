@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Tests para API routes de cotizaciones
  * Verifica creación, actualización, y validaciones

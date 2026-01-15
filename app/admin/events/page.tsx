@@ -68,6 +68,13 @@ export default function AdminEventsPage() {
     }
   }
 
+  const getQuoteTotal = (quote: unknown) => {
+    if (!quote || typeof quote !== 'object') return 0
+    const record = quote as { total_amount?: number | null; total_price?: number | null }
+    const value = record.total_amount ?? record.total_price
+    return typeof value === 'number' ? value : Number(value) || 0
+  }
+
   const stats = useMemo(() => ({
     total: events.length,
     confirmed: events.filter(e => e.status === 'confirmed').length,
@@ -302,11 +309,7 @@ export default function AdminEventsPage() {
                           style: 'currency',
                           currency: 'MXN',
                           minimumFractionDigits: 2,
-                        }).format(
-                          (event.quote as any)?.total_amount || 
-                          (event.quote as any)?.total_price || 
-                          0
-                        )}
+                        }).format(getQuoteTotal(event.quote))}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">

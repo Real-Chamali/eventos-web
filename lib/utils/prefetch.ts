@@ -45,7 +45,7 @@ export async function prefetchData(url: string) {
     if (response.ok) {
       return await response.json()
     }
-  } catch (error) {
+  } catch {
     // Silenciar errores de prefetch (no crítico)
     logger.debug('Prefetch', 'Prefetch failed', { url })
   }

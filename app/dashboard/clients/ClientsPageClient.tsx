@@ -2,11 +2,10 @@
 
 import { useState, useRef, useMemo, memo, useCallback } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useClients, useToast, useIsAdmin, useDebounce, useWindowSize } from '@/lib/hooks'
+import { useClients, useToast, useIsAdmin, useWindowSize } from '@/lib/hooks'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import Button from '@/components/ui/Button'
 import Badge from '@/components/ui/Badge'
 import Link from 'next/link'
@@ -151,44 +150,6 @@ export default function ClientsPageClient() {
   })
   
   // Scroll suave a un elemento específico
-  const scrollToIndex = useCallback((index: number) => {
-    virtualizer.scrollToIndex(index, {
-      align: 'start',
-      behavior: 'smooth',
-    })
-  }, [virtualizer])
-
-  if (loading) {
-    return (
-      <div className="space-y-8 p-6 lg:p-8">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <Skeleton className="h-10 w-48" />
-            <Skeleton className="h-6 w-64" />
-          </div>
-          <Skeleton className="h-12 w-40" />
-        </div>
-        <Card>
-          <CardContent className="p-6">
-            <Skeleton className="h-64 w-full" />
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="space-y-8 p-6 lg:p-8">
-        <EmptyState
-          icon={<Users className="h-10 w-10" />}
-          title="Error al cargar clientes"
-          description={error.message || 'Ocurrió un error al cargar los clientes. Por favor, intenta de nuevo.'}
-        />
-      </div>
-    )
-  }
-
   const handleEdit = useCallback((client: Client) => {
     setSelectedClient(client)
     setEditDialogOpen(true)
@@ -233,6 +194,37 @@ export default function ClientsPageClient() {
       toastError('Error al eliminar el cliente: ' + (error instanceof Error ? error.message : String(error)))
     }
   }, [clientToDelete, supabase, toastSuccess, toastError, refresh, isAdmin])
+
+  if (loading) {
+    return (
+      <div className="space-y-8 p-6 lg:p-8">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-6 w-64" />
+          </div>
+          <Skeleton className="h-12 w-40" />
+        </div>
+        <Card>
+          <CardContent className="p-6">
+            <Skeleton className="h-64 w-full" />
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-8 p-6 lg:p-8">
+        <EmptyState
+          icon={<Users className="h-10 w-10" />}
+          title="Error al cargar clientes"
+          description={error.message || 'Ocurrió un error al cargar los clientes. Por favor, intenta de nuevo.'}
+        />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-8 p-6 lg:p-8">

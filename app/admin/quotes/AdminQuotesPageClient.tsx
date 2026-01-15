@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useAdminQuotes } from '@/lib/hooks/useAdminQuotes'
 import { useIsAdmin } from '@/lib/hooks'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
@@ -15,7 +15,6 @@ import { es } from 'date-fns/locale'
 import EmptyState from '@/components/ui/EmptyState'
 import Skeleton from '@/components/ui/Skeleton'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
 import {
@@ -49,16 +48,17 @@ export default function AdminQuotesPageClient() {
   const { quotes, loading: isLoading, refresh } = useAdminQuotes()
   const { isAdmin, loading: adminLoading } = useIsAdmin()
   const router = useRouter()
-  const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'confirmed' | 'cancelled' | 'draft'>('all')
 
-  // Si no es admin, redirigir
-  if (!adminLoading && !isAdmin) {
-    router.push('/dashboard/quotes')
-    return null
-  }
+  const shouldRedirect = !adminLoading && !isAdmin
+
+  useEffect(() => {
+    if (shouldRedirect) {
+      router.push('/dashboard/quotes')
+    }
+  }, [shouldRedirect, router])
 
   const handleDeleteQuote = async (quoteId: string) => {
     try {
@@ -121,6 +121,10 @@ export default function AdminQuotesPageClient() {
         <Skeleton className="h-96 w-full rounded-xl" />
       </div>
     )
+  }
+
+  if (shouldRedirect) {
+    return null
   }
 
   return (

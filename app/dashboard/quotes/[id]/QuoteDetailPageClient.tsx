@@ -32,7 +32,7 @@ import {
   TableRow,
 } from '@/components/ui/Table'
 import Skeleton from '@/components/ui/Skeleton'
-import { Download, Edit, ArrowLeft, CheckCircle2, Mail, User, Sparkles, FileText, DollarSign, Trash2 } from 'lucide-react'
+import { Download, Edit, ArrowLeft, CheckCircle2, Mail, User, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import PaymentsList from '@/components/payments/PaymentsList'
 import QuotePriceControl from '@/components/admin/QuotePriceControl'

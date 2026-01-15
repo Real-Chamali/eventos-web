@@ -7,11 +7,20 @@
 
 import { logger } from '@/lib/utils/logger'
 
+interface SanitizerOptions {
+  ALLOWED_TAGS?: string[]
+  ALLOWED_ATTR?: string[]
+}
+
+interface Sanitizer {
+  sanitize: (dirty: string, options?: SanitizerOptions) => string
+}
+
 // Función de sanitización que NO depende de jsdom
 // Usa escape básico de HTML para evitar problemas con jsdom en producción
-function createBasicSanitizer() {
+function createBasicSanitizer(): Sanitizer {
   return {
-    sanitize: (dirty: string, options?: any) => {
+    sanitize: (dirty: string, options?: SanitizerOptions) => {
       // Escape básico de HTML - suficiente para prevenir XSS
       let sanitized = dirty
         .replace(/</g, '&lt;')
@@ -38,8 +47,8 @@ function createBasicSanitizer() {
 
 // DOMPurify se carga solo cuando es necesario y con manejo de errores
 // En producción, usar siempre el sanitizador básico para evitar jsdom
-let DOMPurify: any = null
-async function getDOMPurify() {
+let DOMPurify: Sanitizer | null = null
+async function getDOMPurify(): Promise<Sanitizer> {
   if (!DOMPurify) {
     // En producción, usar siempre sanitizador básico para evitar jsdom
     if (process.env.NODE_ENV === 'production') {
@@ -50,7 +59,7 @@ async function getDOMPurify() {
     try {
       const dompurifyModule = await import('isomorphic-dompurify')
       DOMPurify = dompurifyModule.default || dompurifyModule
-    } catch (error) {
+    } catch {
       // Si falla la importación, usar sanitizador básico
       // No usar logger aquí porque podría causar dependencia circular
       // Este warning es aceptable en este contexto
@@ -74,7 +83,7 @@ const webCrypto: Crypto = (typeof globalThis !== 'undefined' && globalThis.crypt
  * Helper para importar crypto de Node.js solo cuando sea necesario
  * Esto evita que Next.js lo detecte en tiempo de build para Edge Runtime
  */
-async function getNodeCrypto(): Promise<any> {
+async function getNodeCrypto(): Promise<typeof import('crypto') | null> {
   // Verificar si estamos en Node.js runtime
   const isNodeRuntime = typeof process !== 'undefined' 
     && typeof process.env !== 'undefined'

@@ -198,7 +198,6 @@ export async function exportToPDF(data: {
 
     const doc = createPDFDocument()
     const pageWidth = doc.internal.pageSize.getWidth()
-    const pageHeight = doc.internal.pageSize.getHeight()
     const margin = 20
 
     // Header

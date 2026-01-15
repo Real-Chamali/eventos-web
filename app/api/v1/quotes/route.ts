@@ -8,8 +8,6 @@ import { checkAdmin } from '@/lib/api/middleware'
 
 // Constantes de validación
 const MAX_BODY_SIZE = 1024 * 1024 // 1MB
-const MAX_LIMIT = 100
-const DEFAULT_LIMIT = 50
 
 /**
  * Helper para agregar headers de seguridad

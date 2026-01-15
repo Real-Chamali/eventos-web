@@ -1,9 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { NextRequest } from 'next/server'
 import { logger } from '@/lib/utils/logger'
 import { sendEmail, EmailOptions } from '@/lib/integrations/email'
 import { getAuthenticatedUser, checkApiKeyPermissions } from '@/lib/api/authHelper'
-import { checkAdmin, errorResponse, successResponse, validateMethod, checkRateLimitAsync, handleAPIError } from '@/lib/api/middleware'
+import { errorResponse, successResponse, validateMethod, checkRateLimitAsync, handleAPIError } from '@/lib/api/middleware'
 import { sanitizeForLogging } from '@/lib/utils/security'
 
 /**

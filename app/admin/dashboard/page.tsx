@@ -14,19 +14,14 @@ import Button from '@/components/ui/Button'
 import PageHeader from '@/components/ui/PageHeader'
 import {
   DollarSign,
-  TrendingUp,
-  TrendingDown,
   Calendar,
   AlertTriangle,
   Users,
   BarChart3,
   FileText,
-  Download,
   Eye,
   Clock,
   Target,
-  Plus,
-  CreditCard,
 } from 'lucide-react'
 import EventsCalendar from '@/components/calendar/EventsCalendar'
 import {
@@ -43,9 +38,7 @@ import {
 } from '@/lib/utils/ownerDashboard'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { cn } from '@/lib/utils/cn'
 import { logger } from '@/lib/utils/logger'
 
 export default function OwnerDashboardPage() {
@@ -55,7 +48,6 @@ export default function OwnerDashboardPage() {
   const [eventsAtRisk, setEventsAtRisk] = useState<EventAtRisk[]>([])
   const [cashFlow, setCashFlow] = useState<CashFlowSummary | null>(null)
   const [loading, setLoading] = useState(true)
-  const router = useRouter()
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -106,19 +98,6 @@ export default function OwnerDashboardPage() {
   useEffect(() => {
     loadDashboardData()
   }, [loadDashboardData])
-
-  const getRiskColor = (riskLevel: string) => {
-    switch (riskLevel) {
-      case 'CRITICAL':
-        return 'bg-red-100 dark:bg-red-950/30 text-red-700 dark:text-red-300 border-red-300 dark:border-red-800'
-      case 'HIGH':
-        return 'bg-orange-100 dark:bg-orange-950/30 text-orange-700 dark:text-orange-300 border-orange-300 dark:border-orange-800'
-      case 'MEDIUM':
-        return 'bg-yellow-100 dark:bg-yellow-950/30 text-yellow-700 dark:text-yellow-300 border-yellow-300 dark:border-yellow-800'
-      default:
-        return 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700'
-    }
-  }
 
   if (loading) {
     return (

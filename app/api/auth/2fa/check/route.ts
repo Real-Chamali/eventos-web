@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 
 export async function GET(request: NextRequest) {
+  void request
   try {
     const supabase = await createClient()
     const {
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
     const twoFactorEnabled = user.user_metadata?.two_factor_enabled === true
 
     return NextResponse.json({ enabled: twoFactorEnabled })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

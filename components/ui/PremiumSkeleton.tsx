@@ -43,6 +43,13 @@ export default function PremiumSkeleton({
     ...motionProps 
   } = props
 
+  void onDrag
+  void onDragStart
+  void onDragEnd
+  void onAnimationStart
+  void onAnimationEnd
+  void onAnimationIteration
+
   if (variant === 'text' && lines > 1) {
     return (
       <div className={cn('space-y-2', className)} {...motionProps}>

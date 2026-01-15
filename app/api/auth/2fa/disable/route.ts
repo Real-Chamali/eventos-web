@@ -3,6 +3,7 @@ import { createClient } from '@/utils/supabase/server'
 import { logger } from '@/lib/utils/logger'
 
 export async function POST(request: NextRequest) {
+  void request
   try {
     const supabase = await createClient()
     const {

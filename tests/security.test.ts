@@ -1,4 +1,4 @@
-import { sanitizeHTML, sanitizeHTMLSync, sanitizeText, generateCSRFToken, validateCSRFToken } from '@/lib/utils/security'
+import { sanitizeHTML, sanitizeText, generateCSRFToken, validateCSRFToken } from '@/lib/utils/security'
 
 describe('Security Utils', () => {
   describe('sanitizeHTML', () => {

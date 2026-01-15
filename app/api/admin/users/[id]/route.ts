@@ -15,7 +15,7 @@ export async function PATCH(
   try {
     const { id } = await params
     const body = await request.json()
-    const { name, email, password } = body
+    const { name, email, password, phone } = body
 
     const supabase = await createClient()
     const {
@@ -83,6 +83,23 @@ export async function PATCH(
           error: metadataError.message,
           targetUserId: id,
         })
+      }
+    }
+
+    // Actualizar metadata si hay phone
+    if (phone !== undefined) {
+      const { error: metadataError } = await adminClient.auth.admin.updateUserById(id, {
+        user_metadata: { phone },
+      })
+
+      if (metadataError) {
+        logger.error('API /admin/users/[id]', 'Error updating user metadata', metadataError as Error, {
+          targetUserId: id,
+        })
+        return NextResponse.json(
+          { error: 'Error al actualizar metadata del usuario: ' + metadataError.message },
+          { status: 500 }
+        )
       }
     }
 

@@ -103,8 +103,7 @@ function determineErrorType(error: unknown): ErrorType {
  */
 function getSafeErrorMessage(
   error: unknown,
-  errorType: ErrorType,
-  context: string
+  errorType: ErrorType
 ): string {
   const isDevelopment = process.env.NODE_ENV === 'development'
 
@@ -152,7 +151,7 @@ export function handleError(
   statusCode?: number
 ): NextResponse<ErrorResponse> {
   const errorType = determineErrorType(error)
-  const safeMessage = getSafeErrorMessage(error, errorType, context)
+  const safeMessage = getSafeErrorMessage(error, errorType)
 
   // Determinar código de estado HTTP si no se proporciona
   let httpStatus = statusCode
@@ -245,11 +244,11 @@ export function handleValidationError(
 /**
  * Wrapper para funciones async que maneja errores automáticamente
  */
-export function withErrorHandling<T extends (...args: any[]) => Promise<any>>(
+export function withErrorHandling<T extends (...args: unknown[]) => Promise<unknown>>(
   fn: T,
   context: string
 ): T {
-  return (async (...args: any[]) => {
+  return (async (...args: Parameters<T>) => {
     try {
       return await fn(...args)
     } catch (error) {

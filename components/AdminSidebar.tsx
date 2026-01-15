@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
-import { useRouter } from 'next/navigation'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
 import { Settings, DollarSign, LogOut, Shield, BarChart3, Calendar, Users, TrendingUp, FileText } from 'lucide-react'
@@ -12,7 +11,6 @@ import Button from './ui/Button'
 
 export default function AdminSidebar() {
   const pathname = usePathname()
-  const router = useRouter()
   const supabase = createClient()
   const { error: toastError } = useToast()
 

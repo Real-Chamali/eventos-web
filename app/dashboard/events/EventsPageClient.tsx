@@ -8,7 +8,6 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import SearchInput from '@/components/ui/SearchInput'
 import Badge from '@/components/ui/Badge'
 import Button from '@/components/ui/Button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import { PartyPopper, Filter, Calendar as CalendarIcon, User, DollarSign, ArrowRight, Plus, Edit, Trash2 } from 'lucide-react'
 import Link from 'next/link'
 import { format } from 'date-fns'
@@ -60,20 +59,32 @@ interface Event {
   }[]
 }
 
+type RawClient = { name: string | null; email: string | null }
+type RawQuote = {
+  id: string
+  total_amount: number | null
+  status: string
+  vendor_id?: string | null
+  client?: RawClient | RawClient[] | null
+}
+type RawEvent = Omit<Event, 'quote'> & { quote?: RawQuote | RawQuote[] | null }
+
 // Componente de fila memoizado para evitar re-renders innecesarios
 const EventRow = memo(function EventRow({
   event,
-  isAdmin,
+  canManage,
   onEdit,
   onDeleteClick,
+  onView,
   getStatusBadge,
   formatCurrency,
   formatDateTime,
 }: {
   event: Event
-  isAdmin: boolean
+  canManage: boolean
   onEdit: (event: Event) => void
   onDeleteClick: (id: string) => void
+  onView: (event: Event) => void
   getStatusBadge: (status: string) => React.ReactNode
   formatCurrency: (amount: number) => string
   formatDateTime: (dateString: string) => string
@@ -86,7 +97,12 @@ const EventRow = memo(function EventRow({
   const clientEmail = client?.email || ''
 
   return (
-    <div className="group border-b border-gray-200 dark:border-gray-800 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 transition-colors">
+    <div
+      className="group border-b border-gray-200 dark:border-gray-800 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/20 transition-colors cursor-pointer"
+      onClick={() => onView(event)}
+      role="button"
+      tabIndex={0}
+    >
       <div className="grid grid-cols-12 gap-4 px-6 py-4 items-center">
         <div className="col-span-3">
           <div className="flex items-center space-x-3">
@@ -131,12 +147,15 @@ const EventRow = memo(function EventRow({
         </div>
         <div className="col-span-2 text-right">
           <div className="flex items-center justify-end gap-2">
-            {isAdmin && (
+            {canManage && (
               <>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onEdit(event)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onEdit(event)
+                  }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                   title="Editar evento"
                 >
@@ -145,7 +164,10 @@ const EventRow = memo(function EventRow({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => onDeleteClick(event.id)}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onDeleteClick(event.id)
+                  }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
                   title="Eliminar evento"
                 >
@@ -154,7 +176,12 @@ const EventRow = memo(function EventRow({
               </>
             )}
             <Link href={`/dashboard/events/${event.id}`}>
-              <Button variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                onClick={(e) => e.stopPropagation()}
+              >
                 Ver detalles
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
@@ -174,6 +201,7 @@ export default function EventsPageClient() {
   const [dateFilter, setDateFilter] = useState<'all' | 'today' | 'week' | 'month' | 'upcoming'>('all')
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<{
     id: string
     quote_id: string
@@ -181,8 +209,10 @@ export default function EventsPageClient() {
     end_date: string | null
     status: string
   } | null>(null)
+  const [selectedEventDetails, setSelectedEventDetails] = useState<Event | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [eventToDelete, setEventToDelete] = useState<string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
   const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
   const { isAdmin } = useIsAdmin()
@@ -195,26 +225,13 @@ export default function EventsPageClient() {
     return Math.max(400, Math.min(800, baseHeight))
   }, [windowHeight])
 
-  useEffect(() => {
-    loadEvents()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     try {
       setLoading(true)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
+      setCurrentUserId(user.id)
 
-      // Verificar si es admin para determinar qué eventos mostrar
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .maybeSingle()
-      
-      const isAdmin = profile?.role === 'admin'
-      
       // RLS maneja automáticamente el filtrado por rol
       // Los vendors solo ven sus eventos, los admins ven todos
       const { data, error } = await supabase
@@ -256,7 +273,7 @@ export default function EventsPageClient() {
 
       // Procesar datos para manejar arrays de quotes y clientes
       // Normalizar estructura de datos de Supabase
-      const processedEvents = (data || []).map((event: any) => {
+      const processedEvents = ((data || []) as RawEvent[]).map((event) => {
         // Normalizar quote (puede venir como array o objeto)
         let quote = event.quote
         if (Array.isArray(quote)) {
@@ -289,7 +306,11 @@ export default function EventsPageClient() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase, toastError])
+
+  useEffect(() => {
+    loadEvents()
+  }, [loadEvents])
 
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
@@ -350,13 +371,6 @@ export default function EventsPageClient() {
   })
   
   // Scroll suave a un elemento específico
-  const scrollToIndex = useCallback((index: number) => {
-    virtualizer.scrollToIndex(index, {
-      align: 'start',
-      behavior: 'smooth',
-    })
-  }, [virtualizer])
-
   const getStatusBadge = (status: string) => {
     switch (status?.toLowerCase()) {
       case 'confirmed':
@@ -409,6 +423,11 @@ export default function EventsPageClient() {
     })
     setEditDialogOpen(true)
   }, [toastError])
+
+  const handleViewDetails = useCallback((event: Event) => {
+    setSelectedEventDetails(event)
+    setDetailsDialogOpen(true)
+  }, [])
 
   const handleDeleteClick = useCallback((eventId: string) => {
     setEventToDelete(eventId)
@@ -686,9 +705,10 @@ export default function EventsPageClient() {
                       >
                         <EventRow
                           event={event}
-                          isAdmin={isAdmin}
+                          canManage={isAdmin || (!!currentUserId && (Array.isArray(event.quote) ? event.quote[0]?.vendor_id : event.quote?.vendor_id) === currentUserId)}
                           onEdit={handleEdit}
                           onDeleteClick={handleDeleteClick}
+                          onView={handleViewDetails}
                           getStatusBadge={getStatusBadge}
                           formatCurrency={formatCurrency}
                           formatDateTime={formatDateTime}
@@ -712,25 +732,22 @@ export default function EventsPageClient() {
         }}
       />
 
-      {/* Diálogo de Editar Evento - Solo para admin */}
-      {isAdmin && (
-        <EditEventDialog
-          open={editDialogOpen}
-          onClose={() => {
-            setEditDialogOpen(false)
-            setSelectedEvent(null)
-          }}
-          onSuccess={() => {
-            loadEvents()
-            setSelectedEvent(null)
-          }}
-          event={selectedEvent}
-        />
-      )}
+      {/* Diálogo de Editar Evento */}
+      <EditEventDialog
+        open={editDialogOpen}
+        onClose={() => {
+          setEditDialogOpen(false)
+          setSelectedEvent(null)
+        }}
+        onSuccess={() => {
+          loadEvents()
+          setSelectedEvent(null)
+        }}
+        event={selectedEvent}
+      />
 
-      {/* Diálogo de Confirmación para Borrar - Solo para admin */}
-      {isAdmin && (
-        <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+      {/* Diálogo de Confirmación para Borrar */}
+      <Dialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle className="text-xl font-bold text-red-600 dark:text-red-400">
@@ -757,7 +774,119 @@ export default function EventsPageClient() {
           </div>
         </DialogContent>
       </Dialog>
-      )}
+      
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Detalles del evento</DialogTitle>
+            <DialogDescription>
+              Información completa del evento seleccionado.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedEventDetails && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Cliente</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">
+                    {(Array.isArray(selectedEventDetails.quote) ? selectedEventDetails.quote[0]?.client?.name : selectedEventDetails.quote?.client?.name) || 'Sin cliente'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Total cotización</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">
+                    {(Array.isArray(selectedEventDetails.quote) ? selectedEventDetails.quote[0]?.total_amount : selectedEventDetails.quote?.total_amount)
+                      ? formatCurrency(Array.isArray(selectedEventDetails.quote) ? selectedEventDetails.quote[0]?.total_amount || 0 : selectedEventDetails.quote?.total_amount || 0)
+                      : '—'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Estado</p>
+                  <div className="mt-1">{getStatusBadge(selectedEventDetails.status)}</div>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Fecha inicio</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">
+                    {selectedEventDetails.start_date ? formatDateTime(selectedEventDetails.start_date) : 'Sin fecha'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Fecha fin</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">
+                    {selectedEventDetails.end_date ? formatDateTime(selectedEventDetails.end_date) : 'Sin fecha'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Horario</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">
+                    {selectedEventDetails.start_time || 'Por definir'} - {selectedEventDetails.end_time || 'Por definir'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Ubicación</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">
+                    {selectedEventDetails.location || 'Sin ubicación'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Invitados</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">
+                    {selectedEventDetails.guest_count ?? 'N/A'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Tipo de evento</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">
+                    {selectedEventDetails.event_type || 'Sin definir'}
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Contacto de emergencia</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">
+                    {selectedEventDetails.emergency_contact || 'Sin contacto'}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Teléfono de emergencia</p>
+                  <p className="text-base font-semibold text-gray-900 dark:text-white">
+                    {selectedEventDetails.emergency_phone || 'Sin teléfono'}
+                  </p>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Requerimientos especiales</p>
+                <p className="text-base text-gray-900 dark:text-white">
+                  {selectedEventDetails.special_requirements || 'Sin requerimientos'}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-600 dark:text-gray-400">Notas adicionales</p>
+                <p className="text-base text-gray-900 dark:text-white">
+                  {selectedEventDetails.additional_notes || 'Sin notas'}
+                </p>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="ghost" onClick={() => setDetailsDialogOpen(false)}>
+                  Cerrar
+                </Button>
+                {(isAdmin || (!!currentUserId && (Array.isArray(selectedEventDetails.quote) ? selectedEventDetails.quote[0]?.vendor_id : selectedEventDetails.quote?.vendor_id) === currentUserId)) && (
+                  <Button
+                    variant="premium"
+                    onClick={() => {
+                      setDetailsDialogOpen(false)
+                      handleEdit(selectedEventDetails)
+                    }}
+                  >
+                    Editar evento
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

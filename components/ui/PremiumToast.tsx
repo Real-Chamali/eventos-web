@@ -4,7 +4,11 @@ import { Toaster, Toast, ToastBar, toast } from 'react-hot-toast'
 import { CheckCircle2, XCircle, AlertCircle, Info, X, Loader2, Sparkles } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils/cn'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
+
+type WindowWithWebkitAudio = Window & {
+  webkitAudioContext?: typeof AudioContext
+}
 
 const toastVariants = {
   success: {
@@ -49,7 +53,10 @@ function playToastSound(type: string) {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
   
   try {
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const windowWithWebkit = window as WindowWithWebkitAudio
+    const AudioContextCtor = window.AudioContext || windowWithWebkit.webkitAudioContext
+    if (!AudioContextCtor) return
+    const audioContext = new AudioContextCtor()
     const oscillator = audioContext.createOscillator()
     const gainNode = audioContext.createGain()
     
@@ -71,7 +78,7 @@ function playToastSound(type: string) {
     
     oscillator.start(audioContext.currentTime)
     oscillator.stop(audioContext.currentTime + 0.1)
-  } catch (e) {
+  } catch {
     // Silenciar errores de audio
   }
 }
@@ -84,12 +91,29 @@ function CustomToast({ t }: CustomToastProps) {
   
   const config = toastVariants[variant]
   const Icon = config.icon
-  const [isVisible, setIsVisible] = useState(false)
   const hasPlayedSound = useRef(false)
+  const particleOffsets = useMemo(() => {
+    const hashString = (input: string) => {
+      let hash = 0
+      for (let i = 0; i < input.length; i += 1) {
+        hash = (hash * 31 + input.charCodeAt(i)) % 1000
+      }
+      return hash
+    }
+
+    return Array.from({ length: 3 }, (_, index) => {
+      const seed = hashString(`${t.id}-${index}`)
+      const offset = (seed % 200) - 100
+      const offset2 = ((seed * 7) % 200) - 100
+      return {
+        x: `${50 + offset}%`,
+        y: `${50 + offset2}%`,
+      }
+    })
+  }, [t.id])
 
   useEffect(() => {
     if (t.visible && !hasPlayedSound.current) {
-      setIsVisible(true)
       // Reproducir sonido solo para success y error
       if (variant === 'success' || variant === 'error') {
         playToastSound(variant)
@@ -220,9 +244,9 @@ function CustomToast({ t }: CustomToastProps) {
       {/* Partículas de éxito (solo para success) */}
       {variant === 'success' && (
         <AnimatePresence>
-          {isVisible && (
+          {t.visible && (
             <>
-              {[...Array(3)].map((_, i) => (
+              {particleOffsets.map((offset, i) => (
                 <motion.div
                   key={i}
                   className="absolute pointer-events-none"
@@ -233,8 +257,8 @@ function CustomToast({ t }: CustomToastProps) {
                     opacity: 1,
                   }}
                   animate={{
-                    x: `${50 + (Math.random() - 0.5) * 100}%`,
-                    y: `${50 + (Math.random() - 0.5) * 100}%`,
+                    x: offset.x,
+                    y: offset.y,
                     scale: [0, 1, 0],
                     opacity: [1, 1, 0],
                   }}

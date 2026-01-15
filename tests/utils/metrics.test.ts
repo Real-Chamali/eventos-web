@@ -12,10 +12,7 @@ describe('Metrics utilities', () => {
 
   describe('trackPerformance', () => {
     it('tracks performance metrics', () => {
-      const start = Date.now()
       metrics.trackPerformance('test-operation', 100, { test: true })
-      const duration = Date.now() - start
-
       const performanceMetrics = metrics.getPerformanceMetrics()
       const lastMetric = performanceMetrics[performanceMetrics.length - 1]
 

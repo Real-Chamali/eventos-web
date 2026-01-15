@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { createClient } from '@/utils/supabase/server'
 import { TOTP } from 'otpauth'
 import QRCode from 'qrcode'
 import { logger } from '@/lib/utils/logger'
-import { getAuthenticatedUser, checkApiKeyPermissions } from '@/lib/api/authHelper'
+import { getAuthenticatedUser } from '@/lib/api/authHelper'
 import { errorResponse, successResponse, validateMethod, checkRateLimitAsync, handleAPIError } from '@/lib/api/middleware'
 import { sanitizeForLogging } from '@/lib/utils/security'
 

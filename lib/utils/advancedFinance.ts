@@ -101,6 +101,70 @@ export interface ExecutiveFinancialSummary {
   averageQuoteValue: number
 }
 
+interface ServiceProfitabilityRow {
+  service_id: string
+  service_name: string
+  base_price?: number | string | null
+  cost_price?: number | string | null
+  unit_profit?: number | string | null
+  margin_percent?: number | string | null
+  times_sold?: number | string | null
+  total_quantity_sold?: number | string | null
+  total_revenue?: number | string | null
+  total_profit?: number | string | null
+  average_sale_price?: number | string | null
+  min_sale_price?: number | string | null
+  max_sale_price?: number | string | null
+}
+
+interface ClientProfitabilityRow {
+  client_id: string
+  client_name: string
+  email?: string | null
+  total_quotes?: number | string | null
+  confirmed_quotes?: number | string | null
+  total_sales?: number | string | null
+  total_profit?: number | string | null
+  average_quote_value?: number | string | null
+  total_paid?: number | string | null
+  total_pending?: number | string | null
+  last_quote_date?: string | null
+}
+
+interface CashFlowProjectionRow {
+  date: string
+  day_type: 'weekday' | 'weekend'
+  deposits_received?: number | string | null
+  payments_received?: number | string | null
+  total_inflow?: number | string | null
+  payments_due?: number | string | null
+  deposits_due?: number | string | null
+  total_outflow?: number | string | null
+  net_flow?: number | string | null
+  cumulative_balance?: number | string | null
+}
+
+interface MonthlyComparisonRow {
+  month: string
+  month_name: string
+  confirmed_quotes?: number | string | null
+  total_sales?: number | string | null
+  total_profit?: number | string | null
+  unique_clients?: number | string | null
+  sales_change_percent?: number | string | null
+  profit_change_percent?: number | string | null
+  quotes_change_percent?: number | string | null
+  margin_percent?: number | string | null
+}
+
+interface FinancialAlertRow {
+  alert_type: string
+  alert_level: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'WARNING'
+  alert_message: string
+  alert_value?: number | string | null
+  alert_date?: string | null
+}
+
 /**
  * Obtiene rentabilidad por servicio
  */
@@ -118,7 +182,7 @@ export async function getServiceProfitability(): Promise<ServiceProfitability[]>
       return []
     }
     
-    return (data || []).map((s: any) => ({
+    return ((data || []) as ServiceProfitabilityRow[]).map((s) => ({
       serviceId: s.service_id,
       serviceName: s.service_name,
       basePrice: Number(s.base_price || 0),
@@ -157,7 +221,7 @@ export async function getClientProfitability(): Promise<ClientProfitability[]> {
       return []
     }
     
-    return (data || []).map((c: any) => ({
+    return ((data || []) as ClientProfitabilityRow[]).map((c) => ({
       clientId: c.client_id,
       clientName: c.client_name,
       email: c.email,
@@ -196,7 +260,7 @@ export async function getAdvancedCashFlowProjection(
       return []
     }
     
-    return (data || []).map((cf: any) => ({
+    return ((data || []) as CashFlowProjectionRow[]).map((cf) => ({
       date: cf.date,
       dayType: cf.day_type as 'weekday' | 'weekend',
       depositsReceived: Number(cf.deposits_received || 0),
@@ -234,7 +298,7 @@ export async function getMonthlyComparisonWithPercentages(
       return []
     }
     
-    return (data || []).map((m: any) => ({
+    return ((data || []) as MonthlyComparisonRow[]).map((m) => ({
       month: m.month,
       monthName: m.month_name,
       confirmedQuotes: Number(m.confirmed_quotes || 0),
@@ -315,7 +379,7 @@ export async function getFinancialAlerts(): Promise<FinancialAlert[]> {
       return []
     }
     
-    return (data || []).map((a: any) => ({
+    return ((data || []) as FinancialAlertRow[]).map((a) => ({
       alertType: a.alert_type,
       alertLevel: a.alert_level as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'WARNING',
       alertMessage: a.alert_message,

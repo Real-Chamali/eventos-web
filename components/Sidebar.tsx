@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
-import { useRouter } from 'next/navigation'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
 import { Home, FileText, Plus, LogOut, User, Calendar, BarChart3, Settings, Sparkles, PartyPopper } from 'lucide-react'
@@ -12,7 +11,6 @@ import Button from '@/components/ui/Button'
 
 export default function Sidebar() {
   const pathname = usePathname()
-  const router = useRouter()
   const supabase = createClient()
   const { error: toastError } = useToast()
 

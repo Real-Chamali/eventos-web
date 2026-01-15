@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Tests para el componente QuotesList
  * Verifica funcionalidad de paginación infinita y filtros
@@ -36,7 +37,6 @@ describe('QuotesList', () => {
   })
 
   it('debería mostrar skeleton mientras carga', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useInfiniteQuotes } = require('@/lib/hooks/useInfiniteQuotes')
     useInfiniteQuotes.mockReturnValue({
       quotes: [],
@@ -53,7 +53,6 @@ describe('QuotesList', () => {
   })
 
   it('debería mostrar lista de cotizaciones', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useInfiniteQuotes } = require('@/lib/hooks/useInfiniteQuotes')
     useInfiniteQuotes.mockReturnValue({
       quotes: mockQuotes,
@@ -73,7 +72,6 @@ describe('QuotesList', () => {
   })
 
   it('debería filtrar cotizaciones por término de búsqueda', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useInfiniteQuotes } = require('@/lib/hooks/useInfiniteQuotes')
     useInfiniteQuotes.mockReturnValue({
       quotes: [
@@ -103,7 +101,6 @@ describe('QuotesList', () => {
   })
 
   it('debería mostrar estado vacío cuando no hay cotizaciones', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useInfiniteQuotes } = require('@/lib/hooks/useInfiniteQuotes')
     useInfiniteQuotes.mockReturnValue({
       quotes: [],
@@ -120,7 +117,6 @@ describe('QuotesList', () => {
   })
 
   it('debería mostrar error cuando hay un problema', () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { useInfiniteQuotes } = require('@/lib/hooks/useInfiniteQuotes')
     useInfiniteQuotes.mockReturnValue({
       quotes: [],

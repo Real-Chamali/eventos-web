@@ -4,7 +4,6 @@ import { useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
-import { useRouter } from 'next/navigation'
 import { logger } from '@/lib/utils/logger'
 import { useToast } from '@/lib/hooks'
 import { X, LogOut, LucideIcon } from 'lucide-react'
@@ -38,7 +37,6 @@ export default function MobileSidebar({
   headerIconBg,
 }: MobileSidebarProps) {
   const pathname = usePathname()
-  const router = useRouter()
   const supabase = createClient()
   const { error: toastError } = useToast()
   const sidebarRef = useRef<HTMLDivElement>(null)

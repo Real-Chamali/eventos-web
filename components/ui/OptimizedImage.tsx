@@ -69,7 +69,7 @@ export function OptimizedImage({
   if (fill) {
     return (
       <div className={cn('relative overflow-hidden', containerClassName)}>
-        <Image {...imageProps} fill />
+        <Image {...imageProps} alt={alt} fill />
       </div>
     )
   }
@@ -78,6 +78,7 @@ export function OptimizedImage({
     <div className={cn('relative overflow-hidden', containerClassName)}>
       <Image
         {...imageProps}
+        alt={alt}
         width={width || 800}
         height={height || 600}
       />

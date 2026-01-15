@@ -152,6 +152,7 @@ class Logger {
     let sanitizedData = data
     if (data) {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { sanitizeForLogging } = require('./security')
         sanitizedData = sanitizeForLogging(data)
       } catch {

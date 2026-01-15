@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Tests para el hook useDashboardStats
  * Verifica cálculo correcto de estadísticas
@@ -36,7 +37,6 @@ describe('useDashboardStats', () => {
 
   it('debería calcular estadísticas correctamente', async () => {
     // Mock de datos de Supabase
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { createClient } = require('@/utils/supabase/client')
     const mockSupabase = createClient()
     
@@ -65,7 +65,6 @@ describe('useDashboardStats', () => {
   })
 
   it('debería manejar errores correctamente', async () => {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { createClient } = require('@/utils/supabase/client')
     const mockSupabase = createClient()
     

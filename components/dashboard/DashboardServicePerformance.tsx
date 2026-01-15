@@ -9,7 +9,7 @@ import { useServicePerformance } from '@/lib/hooks/useServicePerformance'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import Chart from '@/components/ui/Chart'
 import Skeleton from '@/components/ui/Skeleton'
-import { Package, TrendingUp } from 'lucide-react'
+import { Package } from 'lucide-react'
 
 export function DashboardServicePerformance() {
   const { services, loading } = useServicePerformance()

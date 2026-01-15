@@ -5,7 +5,6 @@
  * y feedback visual en todas las acciones
  */
 
-import { motion } from 'framer-motion'
 
 /**
  * Variantes de animación para botones

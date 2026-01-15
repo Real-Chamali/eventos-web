@@ -1,9 +1,9 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
 /**
  * Tests de integración para el flujo completo de cotizaciones
  * Verifica creación, aprobación, y registro de pagos
  */
 
-import { createClient } from '@/utils/supabase/client'
 import { createAuditLog } from '@/lib/utils/audit'
 
 // Mock de Supabase

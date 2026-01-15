@@ -5,11 +5,11 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/Table'
 import Badge from '@/components/ui/Badge'
-import { Calendar, TrendingUp, TrendingDown, DollarSign, Target } from 'lucide-react'
+import { Calendar, TrendingUp, TrendingDown } from 'lucide-react'
 import { createClient } from '@/utils/supabase/client'
 import { format, isValid } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -26,6 +26,17 @@ interface DateProfitability {
   totalProfit: number
   averageRevenuePerEvent: number
   averageProfitPerEvent: number
+}
+
+interface ProfitabilityRow {
+  event_date: string | null
+  events_count?: number | string | null
+  confirmed_count?: number | string | null
+  reserved_count?: number | string | null
+  total_revenue?: number | string | null
+  total_profit?: number | string | null
+  average_revenue_per_event?: number | string | null
+  average_profit_per_event?: number | string | null
 }
 
 // Función helper para formatear fechas de manera segura
@@ -50,11 +61,7 @@ export default function StrategicCalendar() {
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month' | 'quarter' | 'year'>('month')
   const supabase = createClient()
 
-  useEffect(() => {
-    loadProfitabilityData()
-  }, [selectedPeriod])
-
-  const loadProfitabilityData = async () => {
+  const loadProfitabilityData = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -70,14 +77,14 @@ export default function StrategicCalendar() {
       }
       
       // Filtrar y validar datos, asegurando que las fechas sean válidas
-      setProfitabilityData((data || [])
-        .filter((item: any) => {
+      setProfitabilityData(((data || []) as ProfitabilityRow[])
+        .filter((item) => {
           // Validar que event_date existe y es válido
           if (!item.event_date) return false
           const date = new Date(item.event_date)
           return isValid(date)
         })
-        .map((item: any) => ({
+        .map((item) => ({
           eventDate: item.event_date,
           eventsCount: Number(item.events_count || 0),
           confirmedCount: Number(item.confirmed_count || 0),
@@ -92,7 +99,11 @@ export default function StrategicCalendar() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedPeriod, supabase])
+
+  useEffect(() => {
+    loadProfitabilityData()
+  }, [loadProfitabilityData])
 
   // Calcular estadísticas
   const stats = profitabilityData.reduce((acc, item) => {

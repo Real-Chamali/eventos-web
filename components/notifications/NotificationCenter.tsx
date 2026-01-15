@@ -30,6 +30,10 @@ interface Notification {
   }
 }
 
+type WindowWithWebkitAudio = Window & {
+  webkitAudioContext?: typeof AudioContext
+}
+
 export default function NotificationCenter() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
@@ -75,7 +79,10 @@ export default function NotificationCenter() {
             // Reproducir sonido de notificación
             if (typeof window !== 'undefined' && 'AudioContext' in window) {
               try {
-                const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)()
+                const windowWithWebkit = window as WindowWithWebkitAudio
+                const AudioContextCtor = window.AudioContext || windowWithWebkit.webkitAudioContext
+                if (!AudioContextCtor) return
+                const audioContext = new AudioContextCtor()
                 const oscillator = audioContext.createOscillator()
                 const gainNode = audioContext.createGain()
                 

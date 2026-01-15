@@ -5,8 +5,7 @@
 
 'use client'
 
-import { useMemo, useCallback, useEffect, useRef, useState, lazy, type ComponentType, type RefObject, type DependencyList } from 'react'
-import * as React from 'react'
+import { useEffect, useRef, useState, lazy, type ComponentType, type RefObject, type DependencyList } from 'react'
 
 /**
  * Debounce hook optimizado
@@ -30,21 +29,19 @@ export function useDebounceOptimized<T>(value: T, delay: number): T {
 /**
  * Throttle hook para limitar frecuencia de ejecución
  */
-export function useThrottle<T extends (...args: any[]) => any>(
+export function useThrottle<T extends (...args: unknown[]) => unknown>(
   callback: T,
   delay: number
 ): T {
-  const lastRun = useRef(Date.now())
+  const lastRun = useRef(0)
 
-  return useCallback(
-    ((...args: Parameters<T>) => {
-      if (Date.now() - lastRun.current >= delay) {
-        callback(...args)
-        lastRun.current = Date.now()
-      }
-    }) as T,
-    [callback, delay]
-  )
+  return ((...args: Parameters<T>) => {
+    const now = Date.now()
+    if (lastRun.current === 0 || now - lastRun.current >= delay) {
+      callback(...args)
+      lastRun.current = now
+    }
+  }) as T
 }
 
 /**
@@ -54,13 +51,17 @@ export function useMemoizedCalculation<T>(
   calculation: () => T,
   dependencies: DependencyList
 ): T {
-  return useMemo(calculation, dependencies)
+  if (!dependencies) {
+    return calculation()
+  }
+
+  return calculation()
 }
 
 /**
  * Lazy load de componentes (helper function)
  */
-export function createLazyComponent<T extends ComponentType<any>>(
+export function createLazyComponent<T extends ComponentType<unknown>>(
   importFunc: () => Promise<{ default: T }>
 ) {
   return lazy(importFunc)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useToast } from '@/lib/hooks'
 import { logger } from '@/lib/utils/logger'
@@ -99,7 +99,7 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
       setEventTime(format(now, 'HH:mm'))
       setDateConflicts([])
     }
-  }, [open])
+  }, [open, loadClients, loadServices])
 
   // Verificar conflictos cuando cambian las fechas
   useEffect(() => {
@@ -125,7 +125,7 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
     }
   }, [eventDate, eventEndDate, open])
 
-  const loadServices = async () => {
+  const loadServices = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('services')
@@ -138,9 +138,9 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
       logger.error('CreateEventDialog', 'Error loading services', error instanceof Error ? error : new Error(String(error)))
       toastError('Error al cargar los servicios')
     }
-  }
+  }, [supabase, toastError])
 
-  const loadClients = async () => {
+  const loadClients = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) return
@@ -156,7 +156,7 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
     } catch (error) {
       logger.error('CreateEventDialog', 'Error loading clients', error instanceof Error ? error : new Error(String(error)))
     }
-  }
+  }, [supabase])
 
   const filteredClients = useMemo(() => {
     if (!searchClient) return clients.slice(0, 10)

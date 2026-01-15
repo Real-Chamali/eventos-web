@@ -26,7 +26,7 @@ import {
 import Input from '@/components/ui/Input'
 import Textarea from '@/components/ui/Textarea'
 import Button from '@/components/ui/Button'
-import { DollarSign, CreditCard, Wallet, Building2, FileText, Receipt, Calendar, AlertCircle } from 'lucide-react'
+import { DollarSign, CreditCard, Wallet, Building2, FileText, Receipt, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { useEffect } from 'react'
 
@@ -83,7 +83,7 @@ function RegisterPaymentDialog({
     setValue,
     watch,
   } = useForm<PaymentFormData>({
-    resolver: zodResolver(paymentSchema) as any,
+    resolver: zodResolver(paymentSchema),
     defaultValues: {
       amount: balanceDue,
       payment_date: format(new Date(), 'yyyy-MM-dd'),

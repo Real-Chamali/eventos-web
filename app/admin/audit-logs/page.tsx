@@ -5,9 +5,9 @@
 
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import Input from '@/components/ui/Input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/Select'
@@ -49,6 +49,13 @@ interface AuditLog {
   user_name?: string
 }
 
+type AuditLogRow = AuditLog & {
+  profiles?: {
+    email?: string | null
+    full_name?: string | null
+  } | null
+}
+
 const ACTIONS = ['CREATE', 'UPDATE', 'DELETE', 'READ', 'LOGIN', 'LOGOUT', 'EXPORT', 'REPORT']
 const TABLES = ['quotes', 'clients', 'events', 'services', 'partial_payments', 'profiles', 'notifications']
 
@@ -60,13 +67,13 @@ export default function AuditLogsPage() {
   const [tableFilter, setTableFilter] = useState<string>('all')
   const [dateFrom, setDateFrom] = useState<string>('')
   const [dateTo, setDateTo] = useState<string>('')
-  const [userIdFilter, setUserIdFilter] = useState<string>('')
+  const [userIdFilter] = useState<string>('')
   const [expandedLogs, setExpandedLogs] = useState<Set<string>>(new Set())
   const { success: toastSuccess, error: toastError } = useToast()
 
   const supabase = createClient()
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -110,7 +117,7 @@ export default function AuditLogsPage() {
       if (error) throw error
 
       // Mapear datos con información de usuario
-      const logsWithUsers = (data || []).map((log: any) => ({
+      const logsWithUsers = ((data || []) as AuditLogRow[]).map((log) => ({
         ...log,
         user_email: log.profiles?.email || 'Usuario desconocido',
         user_name: log.profiles?.full_name || null,
@@ -123,11 +130,11 @@ export default function AuditLogsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [actionFilter, tableFilter, dateFrom, dateTo, userIdFilter, supabase, toastError])
 
   useEffect(() => {
     fetchLogs()
-  }, [actionFilter, tableFilter, dateFrom, dateTo, userIdFilter])
+  }, [fetchLogs])
 
   // Filtrar por término de búsqueda
   const filteredLogs = useMemo(() => {

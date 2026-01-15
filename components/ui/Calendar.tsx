@@ -1,17 +1,17 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { logger } from '@/lib/utils/logger'
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths, startOfWeek, endOfWeek, addDays, addWeeks, subWeeks, isValid } from 'date-fns'
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths, startOfWeek, addDays } from 'date-fns'
 import { es } from 'date-fns/locale'
 import { cn } from '@/lib/utils/cn'
 import { safeCreateDate } from '@/lib/utils/premiumHelpers'
 import Badge from './Badge'
 import Skeleton from './Skeleton'
 import Button from './Button'
-import { getAvailabilityColor, getAvailabilityLabel, type AvailabilityStatus } from '@/lib/utils/calendarIntelligence'
+import { getAvailabilityLabel, type AvailabilityStatus } from '@/lib/utils/calendarIntelligence'
 
 interface EventDate {
   date: string
@@ -395,36 +395,29 @@ export default function Calendar() {
                   </span>
                   {dayEvents && dayEvents.count > 0 && (
                     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center space-x-1">
-                      {(() => {
-                        const colorClass = getAvailabilityColor(availabilityStatus)
-                        return (
-                          <>
-                            <span className={cn(
-                              "h-2 w-2 rounded-full",
-                              isConfirmed ? "bg-blue-600 dark:bg-blue-400" :
-                              isReserved ? "bg-yellow-600 dark:bg-yellow-400" :
-                              isCancelled ? "bg-gray-400 dark:bg-gray-600" :
-                              "bg-green-600 dark:bg-green-400"
-                            )}></span>
-                            {dayEvents.count > 1 && (
-                              <span className={cn(
-                                "text-xs font-semibold px-1 rounded",
-                                isConfirmed ? "text-blue-700 dark:text-blue-300" :
-                                isReserved ? "text-yellow-700 dark:text-yellow-300" :
-                                "text-gray-700 dark:text-gray-300"
-                              )}>
-                                {dayEvents.count}
-                              </span>
-                            )}
-                            {isConfirmed && (
-                              <span className="text-xs" title="Bloqueado - Confirmado">🔒</span>
-                            )}
-                            {isReserved && !isConfirmed && (
-                              <span className="text-xs" title="Reservado">⚠️</span>
-                            )}
-                          </>
-                        )
-                      })()}
+                      <span className={cn(
+                        "h-2 w-2 rounded-full",
+                        isConfirmed ? "bg-blue-600 dark:bg-blue-400" :
+                        isReserved ? "bg-yellow-600 dark:bg-yellow-400" :
+                        isCancelled ? "bg-gray-400 dark:bg-gray-600" :
+                        "bg-green-600 dark:bg-green-400"
+                      )}></span>
+                      {dayEvents.count > 1 && (
+                        <span className={cn(
+                          "text-xs font-semibold px-1 rounded",
+                          isConfirmed ? "text-blue-700 dark:text-blue-300" :
+                          isReserved ? "text-yellow-700 dark:text-yellow-300" :
+                          "text-gray-700 dark:text-gray-300"
+                        )}>
+                          {dayEvents.count}
+                        </span>
+                      )}
+                      {isConfirmed && (
+                        <span className="text-xs" title="Bloqueado - Confirmado">🔒</span>
+                      )}
+                      {isReserved && !isConfirmed && (
+                        <span className="text-xs" title="Reservado">⚠️</span>
+                      )}
                     </div>
                   )}
                   {!dayEvents && isCurrentMonth && (

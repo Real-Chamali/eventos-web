@@ -9,6 +9,7 @@ import { logger } from '@/lib/utils/logger'
  * IMPORTANTE: Esta ruta debe ser pública (sin autenticación) para que la PWA funcione
  */
 export async function GET(request: NextRequest) {
+  void request
   // Esta ruta es pública - no requiere autenticación
   try {
     // Leer el archivo del manifest desde public

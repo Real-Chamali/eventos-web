@@ -1,5 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
+import { NextRequest } from 'next/server'
 import { clearRoleCache, checkAdmin, errorResponse, successResponse, validateMethod, checkRateLimitAsync, handleAPIError } from '@/lib/api/middleware'
 import { getAuthenticatedUser, checkApiKeyPermissions } from '@/lib/api/authHelper'
 import { logger } from '@/lib/utils/logger'

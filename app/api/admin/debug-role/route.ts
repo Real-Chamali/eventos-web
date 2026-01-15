@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/utils/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { logger } from '@/lib/utils/logger'
 import { sanitizeForLogging } from '@/lib/utils/security'

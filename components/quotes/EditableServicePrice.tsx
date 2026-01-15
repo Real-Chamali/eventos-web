@@ -24,7 +24,6 @@ interface EditableServicePriceProps {
 export default function EditableServicePrice({
   quoteServiceId,
   quoteId,
-  serviceName,
   currentPrice,
   quantity,
   quoteStatus,

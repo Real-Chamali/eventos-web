@@ -8,6 +8,28 @@ interface PageProps {
   params: Promise<{ id: string }>
 }
 
+interface Quote {
+  id: string
+  client_id: string
+  total_price: number
+  status: string
+  created_at: string
+  updated_at?: string
+  event_date?: string | null
+  client?: {
+    name: string
+    email: string
+  }
+  quote_services?: Array<{
+    id: string
+    quantity: number
+    final_price: number
+    service?: {
+      name: string
+    }
+  }>
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params
   const supabase = await createClient()
@@ -63,8 +85,9 @@ export default async function QuoteDetailPage({ params }: PageProps) {
   const { id } = await params
   const supabase = await createClient()
   
+  let quote: Quote | null = null
   try {
-    const { data: quote } = await supabase
+    const { data } = await supabase
       .from('quotes')
       .select(`
         *,
@@ -79,12 +102,14 @@ export default async function QuoteDetailPage({ params }: PageProps) {
       .eq('id', id)
       .single()
 
-    if (!quote) {
+    if (!data) {
       notFound()
     }
 
-    return <QuoteDetailPageClient initialQuote={quote} />
+    quote = data as Quote
   } catch {
-    return <QuoteDetailPageClient />
+    quote = null
   }
+
+  return quote ? <QuoteDetailPageClient initialQuote={quote} /> : <QuoteDetailPageClient />
 }
