@@ -66,7 +66,10 @@ interface EventRow {
   id: string
   start_date: string
   end_date?: string | null
+  start_time?: string | null
+  end_time?: string | null
   status?: string | null
+  quote_id?: string | null
   quotes?: QuoteRow | QuoteRow[] | null
 }
 
@@ -156,8 +159,9 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
           ? (Array.isArray(quote.clients) ? quote.clients[0] : quote.clients)
           : null
 
+        const quoteId = quote?.id || eventRaw.quote_id || ''
         const totalAmount = quote?.total_amount || 0
-        const totalPaid = paymentsByQuote.get(quote?.id) || 0
+        const totalPaid = quoteId ? paymentsByQuote.get(quoteId) || 0 : 0
         const balanceDue = Math.max(totalAmount - totalPaid, 0)
         
         // Determinar estado financiero
@@ -222,7 +226,7 @@ export default function FullCalendarView({ onEventClick }: FullCalendarViewProps
           textColor,
           extendedProps: {
             eventId: eventRaw.id,
-            quoteId: quote.id,
+            quoteId,
             clientName: client?.name || 'Sin cliente',
             totalAmount,
             totalPaid,
