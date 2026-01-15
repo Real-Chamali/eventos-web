@@ -36,11 +36,11 @@ const paymentSchema = z.object({
   payment_method: z.enum(['cash', 'transfer', 'card', 'check', 'other']),
   reference_number: z.string().optional(),
   notes: z.string().optional(),
-  is_deposit: z.boolean().default(false),
+  is_deposit: z.boolean().optional().default(false),
   due_date: z.string().optional(),
 })
 
-type PaymentFormData = z.infer<typeof paymentSchema>
+type PaymentFormData = z.input<typeof paymentSchema>
 
 interface RegisterPaymentDialogProps {
   quoteId: string
