@@ -88,19 +88,6 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
   const supabase = createClient()
   const { success: toastSuccess, error: toastError } = useToast()
 
-  useEffect(() => {
-    if (open) {
-      loadServices()
-      loadClients()
-      // Establecer fecha y hora por defecto (hoy, hora actual + 1 hora)
-      const now = new Date()
-      now.setHours(now.getHours() + 1)
-      setEventDate(format(now, 'yyyy-MM-dd'))
-      setEventTime(format(now, 'HH:mm'))
-      setDateConflicts([])
-    }
-  }, [open, loadClients, loadServices])
-
   // Verificar conflictos cuando cambian las fechas
   useEffect(() => {
     if (eventDate && open) {
@@ -157,6 +144,19 @@ export default function CreateEventDialog({ open, onClose, onSuccess }: CreateEv
       logger.error('CreateEventDialog', 'Error loading clients', error instanceof Error ? error : new Error(String(error)))
     }
   }, [supabase])
+
+  useEffect(() => {
+    if (open) {
+      loadServices()
+      loadClients()
+      // Establecer fecha y hora por defecto (hoy, hora actual + 1 hora)
+      const now = new Date()
+      now.setHours(now.getHours() + 1)
+      setEventDate(format(now, 'yyyy-MM-dd'))
+      setEventTime(format(now, 'HH:mm'))
+      setDateConflicts([])
+    }
+  }, [open, loadClients, loadServices])
 
   const filteredClients = useMemo(() => {
     if (!searchClient) return clients.slice(0, 10)
