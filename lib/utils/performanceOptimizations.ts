@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useEffect, useRef, useState, lazy, type ComponentType, type RefObject, type DependencyList } from 'react'
+import { useEffect, useRef, useState, useCallback, lazy, type ComponentType, type RefObject, type DependencyList } from 'react'
 
 /**
  * Debounce hook optimizado

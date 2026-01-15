@@ -149,6 +149,40 @@ export function generateEventStructuredData(event: {
 /**
  * Genera structured data JSON-LD para cotizaciones
  */
+export interface QuoteSeoStructuredData {
+  '@context': string
+  '@type': string
+  identifier: string
+  customer: {
+    '@type': string
+    name: string
+  }
+  totalPaymentDue: {
+    '@type': string
+    currency: string
+    value: number
+  }
+  status: string
+  dateCreated?: string
+  scheduledPaymentDate?: string
+  dateModified?: string
+  paymentStatus?: string
+  itemListElement?: Array<{
+    '@type': string
+    position: number
+    item: {
+      '@type': string
+      name: string
+      quantity: number
+      price: {
+        '@type': string
+        currency: string
+        value: number
+      }
+    }
+  }>
+}
+
 export function generateQuoteStructuredData(quote: {
   id: string
   clientName: string
@@ -162,42 +196,8 @@ export function generateQuoteStructuredData(quote: {
     quantity: number
     price: number
   }>
-}) {
-  interface StructuredData {
-    '@context': string
-    '@type': string
-    identifier: string
-    customer: {
-      '@type': string
-      name: string
-    }
-    totalPaymentDue: {
-      '@type': string
-      currency: string
-      value: number
-    }
-    status: string
-    dateCreated?: string
-    scheduledPaymentDate?: string
-    dateModified?: string
-    paymentStatus?: string
-    itemListElement?: Array<{
-      '@type': string
-      position: number
-      item: {
-        '@type': string
-        name: string
-        quantity: number
-        price: {
-          '@type': string
-          currency: string
-          value: number
-        }
-      }
-    }>
-  }
-
-  const structuredData: StructuredData = {
+}): QuoteSeoStructuredData {
+  const structuredData: QuoteSeoStructuredData = {
     '@context': 'https://schema.org',
     '@type': 'Invoice',
     identifier: quote.id,
@@ -244,7 +244,22 @@ export function generateQuoteStructuredData(quote: {
 /**
  * Genera structured data JSON-LD para organización
  */
-export function generateOrganizationStructuredData() {
+export interface OrganizationSeoStructuredData {
+  '@context': string
+  '@type': 'Organization'
+  name: string
+  url: string
+  logo: {
+    '@type': 'ImageObject'
+    url: string
+    width: number
+    height: number
+  }
+  description: string
+  sameAs: string[]
+}
+
+export function generateOrganizationStructuredData(): OrganizationSeoStructuredData {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',

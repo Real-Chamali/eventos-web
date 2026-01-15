@@ -16,9 +16,10 @@ type RawQuote = {
   vendor_id?: string | null
   client?: RawClient | RawClient[] | null
 }
+type EventWithQuote = Omit<Event, 'quote'> & { quote?: RawQuote | null }
 type RawEvent = Omit<Event, 'quote'> & { quote?: RawQuote | RawQuote[] | null }
 
-const fetcher = async (): Promise<Event[]> => {
+const fetcher = async (): Promise<EventWithQuote[]> => {
   const supabase = createClient()
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   
@@ -95,12 +96,12 @@ const fetcher = async (): Promise<Event[]> => {
       ...event,
       status: frontendStatus,
       quote: quote || null,
-    } as Event
+    } as EventWithQuote
   })
 }
 
 export function useEvents() {
-  const { data, error, isLoading, mutate } = useSWR<Event[]>(
+  const { data, error, isLoading, mutate } = useSWR<EventWithQuote[]>(
     'events',
     fetcher,
     {

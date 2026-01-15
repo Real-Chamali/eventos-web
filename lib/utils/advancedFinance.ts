@@ -83,7 +83,7 @@ export interface FinancialAlert {
   alertLevel: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'WARNING'
   alertMessage: string
   alertValue: number
-  alertDate: string
+  alertDate: string | null
 }
 
 export interface ExecutiveFinancialSummary {
@@ -224,7 +224,7 @@ export async function getClientProfitability(): Promise<ClientProfitability[]> {
     return ((data || []) as ClientProfitabilityRow[]).map((c) => ({
       clientId: c.client_id,
       clientName: c.client_name,
-      email: c.email,
+      email: c.email ?? null,
       totalQuotes: Number(c.total_quotes || 0),
       confirmedQuotes: Number(c.confirmed_quotes || 0),
       totalSales: Number(c.total_sales || 0),
@@ -232,7 +232,7 @@ export async function getClientProfitability(): Promise<ClientProfitability[]> {
       averageQuoteValue: Number(c.average_quote_value || 0),
       totalPaid: Number(c.total_paid || 0),
       totalPending: Number(c.total_pending || 0),
-      lastQuoteDate: c.last_quote_date,
+      lastQuoteDate: c.last_quote_date ?? null,
     }))
   } catch (error) {
     logger.error('advancedFinance', 'Failed to get client profitability', error as Error)
@@ -384,7 +384,7 @@ export async function getFinancialAlerts(): Promise<FinancialAlert[]> {
       alertLevel: a.alert_level as 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'WARNING',
       alertMessage: a.alert_message,
       alertValue: Number(a.alert_value || 0),
-      alertDate: a.alert_date,
+      alertDate: a.alert_date ?? null,
     }))
   } catch (error) {
     logger.error('advancedFinance', 'Failed to get financial alerts', error as Error)

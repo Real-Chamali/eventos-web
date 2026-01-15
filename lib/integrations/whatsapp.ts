@@ -2,11 +2,13 @@ import { logger } from '@/lib/utils/logger'
 
 type TwilioClient = {
   messages: {
-    create: (params: { to: string; from: string; body: string; mediaUrl?: string[] }) => Promise<unknown>
+    create: (params: { to: string; from: string; body: string; mediaUrl?: string[] }) => Promise<{ sid: string }>
   }
 }
 
-type TwilioModule = typeof import('twilio')
+type TwilioModule = {
+  default?: (accountSid?: string, authToken?: string) => TwilioClient
+}
 
 // Importar Twilio solo cuando sea necesario (solo en servidor)
 let twilioModule: TwilioModule | null = null
@@ -17,7 +19,7 @@ const getTwilio = async (): Promise<TwilioModule | null> => {
     return null
   }
   if (!twilioModule) {
-    twilioModule = await import('twilio')
+    twilioModule = (await import('twilio')) as TwilioModule
   }
   return twilioModule
 }

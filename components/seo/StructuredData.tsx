@@ -15,6 +15,7 @@ import {
   type EventStructuredData,
   type QuoteStructuredData,
 } from '@/lib/utils/structuredData'
+import type { QuoteSeoStructuredData, OrganizationSeoStructuredData } from '@/lib/utils/seo'
 type WebSiteStructuredData = {
   name: string
   url: string
@@ -27,10 +28,14 @@ type WebSiteStructuredData = {
 
 type BreadcrumbItem = { name: string; url: string }
 
+const isJsonLd = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === 'object' && value !== null && '@context' in value
+}
+
 type StructuredDataProps =
-  | { type: 'organization'; data: OrganizationStructuredData }
+  | { type: 'organization'; data: OrganizationStructuredData | OrganizationSeoStructuredData }
   | { type: 'event'; data: EventStructuredData }
-  | { type: 'quote'; data: QuoteStructuredData }
+  | { type: 'quote'; data: QuoteStructuredData | QuoteSeoStructuredData }
   | { type: 'website'; data: WebSiteStructuredData }
   | { type: 'breadcrumb'; data: BreadcrumbItem[] }
 
@@ -39,13 +44,13 @@ export default function StructuredData({ type, data }: StructuredDataProps) {
 
   switch (type) {
     case 'organization':
-      schema = generateOrganizationSchema(data)
+      schema = isJsonLd(data) ? data : generateOrganizationSchema(data as OrganizationStructuredData)
       break
     case 'event':
       schema = generateEventSchema(data)
       break
     case 'quote':
-      schema = generateQuoteSchema(data)
+      schema = isJsonLd(data) ? data : generateQuoteSchema(data as QuoteStructuredData)
       break
     case 'website':
       schema = generateWebSiteSchema(data)

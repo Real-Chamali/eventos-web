@@ -307,7 +307,7 @@ export async function decryptData(encrypted: string, key?: string): Promise<stri
         // Intentar obtener crypto de Node.js solo si estamos en Node.js runtime
         const nodeCrypto = await getNodeCrypto()
         
-        if (!nodeCrypto || !nodeCrypto.default) {
+        if (!nodeCrypto) {
           throw new Error('Legacy format requires Node.js runtime')
         }
         const [saltHex, ivHex, authTagHex, encryptedData] = parts
@@ -316,9 +316,9 @@ export async function decryptData(encrypted: string, key?: string): Promise<stri
         const authTag = Buffer.from(authTagHex, 'hex')
         
         // Usar PBKDF2 de Node.js para compatibilidad
-        const derivedKey = nodeCrypto.default.pbkdf2Sync(encryptionKey, salt, 100000, 32, 'sha256')
+        const derivedKey = nodeCrypto.pbkdf2Sync(encryptionKey, salt, 100000, 32, 'sha256')
         
-        const decipher = nodeCrypto.default.createDecipheriv('aes-256-gcm', derivedKey, iv)
+        const decipher = nodeCrypto.createDecipheriv('aes-256-gcm', derivedKey, iv)
         decipher.setAuthTag(authTag)
         
         let decrypted = decipher.update(encryptedData, 'hex', 'utf8')
@@ -341,13 +341,13 @@ export async function decryptData(encrypted: string, key?: string): Promise<stri
         // Intentar obtener crypto de Node.js solo si estamos en Node.js runtime
         const nodeCrypto = await getNodeCrypto()
         
-        if (!nodeCrypto || !nodeCrypto.default) {
+        if (!nodeCrypto) {
           throw new Error('Very legacy format requires Node.js runtime')
         }
         // createDecipher está deprecado pero necesario para compatibilidad
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore - createDecipher deprecated
-        const decipher = nodeCrypto.default.createDecipher('aes-256-cbc', encryptionKey)
+        const decipher = nodeCrypto.createDecipher('aes-256-cbc', encryptionKey)
         let decrypted = decipher.update(encrypted, 'hex', 'utf8')
         decrypted += decipher.final('utf8')
         return decrypted
