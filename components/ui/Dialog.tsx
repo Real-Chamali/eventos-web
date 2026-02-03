@@ -35,8 +35,8 @@ const DialogContent = React.forwardRef<
       ref={ref}
       className={cn(
         'fixed z-50 grid w-full gap-4 border border-gray-200/60 bg-white/95 backdrop-blur-xl shadow-2xl duration-300',
-        // Mobile: fullscreen
-        'inset-0 max-h-screen rounded-none sm:rounded-2xl',
+        // Mobile: fullscreen; Desktop: scrollable when content overflows
+        'inset-0 max-h-[90vh] sm:max-h-[85vh] overflow-y-auto rounded-none sm:rounded-2xl',
         // Desktop: centered modal
         'sm:left-[50%] sm:top-[50%] sm:max-w-lg sm:translate-x-[-50%] sm:translate-y-[-50%]',
         // Animations
