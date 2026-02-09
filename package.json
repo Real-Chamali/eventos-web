@@ -11,7 +11,8 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "playwright": "playwright test",
-    "playwright:ui": "playwright test --ui"
+    "playwright:ui": "playwright test --ui",
+    "fix-admin": "node --env-file=.env.local scripts/fix-admin-login.mjs"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.20",

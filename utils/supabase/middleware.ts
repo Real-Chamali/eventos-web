@@ -1,38 +1,15 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import type { CookieOptions } from '@supabase/ssr'
-import { logger } from '@/lib/utils/logger'
 
 export async function updateSession(request: NextRequest) {
-  // Validar variables de entorno
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  
-  if (!supabaseUrl || !supabaseAnonKey) {
-    // Si faltan variables de entorno, permitir acceso pero loguear el problema
-    logger.error('Middleware', 'Missing Supabase environment variables', new Error('Missing env vars'), {
-      hasUrl: !!supabaseUrl,
-      hasKey: !!supabaseAnonKey,
-      pathname: request.nextUrl.pathname,
-    })
-    // Permitir acceso a login y raíz para que el usuario pueda ver el error
-    const pathname = request.nextUrl.pathname
-    if (pathname === '/login' || pathname === '/') {
-      return NextResponse.next({ request })
-    }
-    // Redirigir a login si no hay variables de entorno
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
-  }
-  
   let supabaseResponse = NextResponse.next({
     request,
   })
 
   const supabase = createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
         getAll() {
@@ -40,116 +17,54 @@ export async function updateSession(request: NextRequest) {
         },
         setAll(cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          // Recrear la respuesta para incluir las cookies actualizadas
           supabaseResponse = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
+            request,
           })
-          cookiesToSet.forEach(({ name, value, options }) => {
-            // Asegurar que las cookies de Supabase tengan los atributos correctos
-            const isProduction = process.env.NODE_ENV === 'production'
-            const isHttps = request.url.startsWith('https://')
-            
-            const cookieOptions: CookieOptions = {
-              ...options,
-              // SameSite: 'lax' funciona bien para la mayoría de casos
-              sameSite: options?.sameSite || (isHttps && isProduction ? 'lax' : 'lax'),
-              // Secure solo en HTTPS (producción)
-              secure: options?.secure ?? isHttps,
-              // Las cookies de Supabase necesitan ser accesibles desde JavaScript
-              // No usar httpOnly para cookies de autenticación de Supabase
-              domain: options?.domain,
-              path: options?.path || '/',
-              // Max age para persistencia
-              maxAge: options?.maxAge || 60 * 60 * 24 * 7, // 7 días por defecto
-            }
-            supabaseResponse.cookies.set(name, value, cookieOptions)
-          })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
         },
       },
     }
   )
 
-  // CRÍTICO: Refrescar la sesión ANTES de obtener el usuario
-  // Esto asegura que las cookies estén actualizadas y sincronizadas
-  await supabase.auth.getSession()
-
-  // Intentar obtener el usuario después de refrescar la sesión
-  let user = null
-  try {
-    const {
-      data: { user: authUser },
-      error: userError,
-    } = await supabase.auth.getUser()
-    
-    if (userError) {
-      // Si hay error, loguear pero no bloquear - dejar que el layout maneje
-      logger.warn('Middleware', 'Error getting user in middleware', {
-        error: userError.message,
-        pathname: request.nextUrl.pathname,
-        errorCode: userError.status,
-      })
-    } else {
-      user = authUser
-    }
-  } catch (error) {
-    // Si hay excepción, loguear pero no bloquear
-    logger.warn('Middleware', 'Exception getting user in middleware', {
-      error: error instanceof Error ? error.message : String(error),
-      pathname: request.nextUrl.pathname,
-    })
-  }
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
   const pathname = request.nextUrl.pathname
 
-  // Excluir solo rutas estáticas, NO APIs
-  // PERO incluir manifest.json que debe ser público para PWA
-  if (
-    pathname.startsWith('/_next') ||
-    pathname === '/favicon.ico' ||
-    pathname === '/manifest.json' ||
-    pathname.match(/\.(ico|png|jpg|jpeg|svg|gif|webp)$/)
-  ) {
-    return supabaseResponse
-  }
-
-  // Para rutas API, verificar autenticación pero no redirigir
-  // EXCEPTO manifest.json que debe ser público
-  if (pathname.startsWith('/api')) {
-    // Permitir manifest.json sin autenticación
-    if (pathname === '/api/manifest.json' || pathname.includes('/manifest.json')) {
-      return supabaseResponse
-    }
-    
-    if (!user) {
-      // Para APIs, retornar JSON en lugar de redirigir
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
-    // Permitir que el endpoint maneje autorización específica
-    return supabaseResponse
-  }
-
-  // Si el usuario no está autenticado
-  if (!user) {
-    // Permitir acceso a /login y / (la raíz redirigirá en el componente)
-    if (pathname === '/login' || pathname === '/') {
-      return supabaseResponse
-    }
-    // Redirigir cualquier otra ruta a /login
+  // Si el usuario no está autenticado y no está en /login, redirigir a /login
+  if (!user && pathname !== '/login' && !pathname.startsWith('/_next')) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // NOTA: Las redirecciones según rol se manejan en los layouts
-  // para evitar bucles de redirección entre middleware y layouts
-  // El perfil del usuario se obtiene en los layouts cuando es necesario
+  if (user) {
+    // OPTIMIZADO: Leer el rol desde los metadatos del usuario en lugar de consultar la DB.
+    const role = user.user_metadata?.role || 'vendor'
+    const url = request.nextUrl.clone()
+
+    // Si el usuario está autenticado y en /login, redirigir a su dashboard
+    if (pathname === '/login') {
+      url.pathname = role === 'admin' ? '/admin' : '/dashboard'
+      return NextResponse.redirect(url)
+    }
+
+    // Proteger rutas según el rol
+    // Si intenta acceder a /admin y no es admin
+    if (pathname.startsWith('/admin') && role !== 'admin') {
+      url.pathname = '/dashboard'
+      return NextResponse.redirect(url)
+    }
+
+    // Si intenta acceder a /dashboard y es admin
+    if (pathname.startsWith('/dashboard') && role === 'admin') {
+      url.pathname = '/admin'
+      return NextResponse.redirect(url)
+    }
+  }
 
   return supabaseResponse
 }
-
-
